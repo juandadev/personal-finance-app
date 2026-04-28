@@ -16,13 +16,14 @@ export const summaryStats: SummaryStat[] = [
 ]
 
 export const pots: Pot[] = [
-  { name: "Savings", amount: 159, color: "var(--color-chart-1)" },
-  { name: "Gift", amount: 40, color: "var(--color-chart-2)" },
-  { name: "Concert Ticket", amount: 110, color: "var(--color-chart-3)" },
-  { name: "New Laptop", amount: 10, color: "var(--color-chart-4)" },
+  { name: "Savings", amount: 159, target: 2000, color: "#277C78" },        // teal
+  { name: "Concert Ticket", amount: 110, target: 150, color: "#626070" },  // dark gray
+  { name: "Gift", amount: 40, target: 60, color: "#82C9D7" },              // cyan
+  { name: "New Laptop", amount: 10, target: 1000, color: "#F2CDAC" },      // peach
+  { name: "Holiday", amount: 531, target: 1440, color: "#826CB0" },        // purple
 ]
 
-export const totalSaved = pots.reduce((sum, pot) => sum + pot.amount, 0) + 531 // matches design's $850 total
+export const totalSaved = pots.reduce((sum, pot) => sum + pot.amount, 0)
 
 export const budgets: Budget[] = [
   { category: "Entertainment", maximum: 50, spent: 15, color: "#277C78" },  // teal

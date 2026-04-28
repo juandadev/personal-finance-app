@@ -21,7 +21,7 @@ export function PotsCard() {
         </div>
 
         <ul className="grid grid-cols-2 gap-4">
-          {pots.map((pot) => (
+          {pots.slice(0, 4).map((pot) => (
             <li key={pot.name}>
               <PotItem pot={pot} />
             </li>

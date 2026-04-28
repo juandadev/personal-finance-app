@@ -18,6 +18,7 @@ export interface SummaryStat {
 export interface Pot {
   name: string
   amount: number
+  target: number
   color: string
 }
 
