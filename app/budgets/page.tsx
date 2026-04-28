@@ -15,8 +15,8 @@ export default function BudgetsPage() {
 
   return (
     <AppShell activeKey="budgets">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-10 -mx-4 -mt-6 flex items-center justify-between bg-background px-4 py-4 md:-mx-10 md:-mt-8 md:px-10 md:py-6">
         <PageHeading title="Budgets" />
         <button
           type="button"
@@ -27,7 +27,7 @@ export default function BudgetsPage() {
       </div>
 
       {/* Main Content */}
-      <div className="mt-8 grid gap-6 lg:grid-cols-[380px_1fr]">
+      <div className="mt-6 grid gap-6 lg:grid-cols-[380px_1fr]">
         {/* Left Column: Spending Summary */}
         <div className="lg:sticky lg:top-10 lg:self-start">
           <SpendingSummary />
