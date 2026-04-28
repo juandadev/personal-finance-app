@@ -7,7 +7,7 @@ interface TotalBillsCardProps {
 
 export function TotalBillsCard({ amount }: TotalBillsCardProps) {
   return (
-    <div className="flex h-full flex-col rounded-xl bg-sidebar p-6 text-sidebar-primary-foreground md:flex-row md:items-center md:gap-5 lg:flex-col lg:items-start lg:gap-0">
+    <div className="flex lg:h-fit md:h-full flex-col rounded-xl bg-sidebar p-6 text-sidebar-primary-foreground md:flex-row md:items-center md:gap-5 lg:flex-col lg:items-start lg:gap-0">
       <div className="flex size-10 items-center justify-center rounded-lg border border-sidebar-primary-foreground/20">
         <ReceiptText className="size-5" aria-hidden />
       </div>

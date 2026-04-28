@@ -36,7 +36,7 @@ export function BillsSummaryCard({ bills }: BillsSummaryCardProps) {
   const dueSoonAmount = dueSoonBills.reduce((sum, b) => sum + b.amount, 0)
 
   return (
-    <div className="h-full rounded-xl bg-card p-6">
+    <div className="h-fit rounded-xl bg-card p-6">
       <h3 className="text-base font-bold text-card-foreground">Summary</h3>
       <div className="mt-2">
         <SummaryRow label="Paid Bills" count={paidBills.length} amount={paidAmount} />
