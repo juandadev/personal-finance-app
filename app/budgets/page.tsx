@@ -29,7 +29,7 @@ export default function BudgetsPage() {
       {/* Main Content */}
       <div className="mt-6 grid gap-6 lg:grid-cols-[380px_1fr]">
         {/* Left Column: Spending Summary */}
-        <div className="lg:sticky lg:top-10 lg:self-start">
+        <div className="self-start">
           <SpendingSummary />
         </div>
 
