@@ -29,7 +29,7 @@ export default function BudgetsPage() {
       {/* Main Content */}
       <div className="mt-6 lg:ml-[404px]">
         {/* Left Column: Spending Summary - Fixed on desktop */}
-        <div className="mb-6 lg:fixed lg:left-[300px] lg:top-[88px] lg:mb-0 lg:w-[380px]">
+        <div className="mb-6 lg:fixed lg:left-[300px] lg:mb-0 lg:w-[380px]">
           <SpendingSummary />
         </div>
 
