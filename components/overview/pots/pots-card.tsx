@@ -1,10 +1,14 @@
+"use client"
+
 import { PiggyBank } from "lucide-react"
-import { pots, totalSaved } from "@/lib/data"
+import { useFinance } from "@/hooks/use-finance"
 import { formatCurrency } from "@/lib/format"
 import { CardHeader } from "../card-header"
 import { PotItem } from "./pot-item"
 
 export function PotsCard() {
+  const { pots, totalSaved } = useFinance()
+
   return (
     <section className="rounded-xl bg-card p-6 shadow-sm md:p-8">
       <CardHeader title="Pots" actionLabel="See Details" href="/pots" />

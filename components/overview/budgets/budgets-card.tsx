@@ -1,9 +1,13 @@
-import { budgetLimit, budgetSpent, budgets } from "@/lib/data"
+"use client"
+
+import { useFinance } from "@/hooks/use-finance"
 import { CardHeader } from "../card-header"
 import { BudgetItem } from "./budget-item"
 import { BudgetsChart } from "./budgets-chart"
 
 export function BudgetsCard() {
+  const { budgets, budgetSpent, budgetLimit } = useFinance()
+
   return (
     <section className="rounded-xl bg-card p-6 shadow-sm md:p-8">
       <CardHeader title="Budgets" actionLabel="See Details" href="/budgets" />

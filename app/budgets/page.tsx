@@ -1,18 +1,8 @@
 import { AppShell } from "@/components/app-shell"
 import { PageHeading } from "@/components/overview/page-heading"
-import { SpendingSummary } from "@/components/budgets/spending-summary"
-import { BudgetCategoryCard } from "@/components/budgets/budget-category-card"
-import { budgets, transactions } from "@/lib/data"
-import type { TransactionCategory } from "@/lib/types"
+import { BudgetsPageContent } from "@/components/budgets/budgets-page-content"
 
 export default function BudgetsPage() {
-  // Get transactions for a specific category (only negative amounts = spending)
-  const getTransactionsForCategory = (category: TransactionCategory) => {
-    return transactions.filter(
-      (t) => t.category === category && t.amount < 0
-    )
-  }
-
   return (
     <AppShell activeKey="budgets">
       {/* Sticky Header */}
@@ -27,23 +17,7 @@ export default function BudgetsPage() {
       </div>
 
       {/* Main Content */}
-      <div className="lg:ml-[404px]">
-        {/* Left Column: Spending Summary - Fixed on desktop */}
-        <div className="lg:fixed lg:left-[300px] lg:mb-0 lg:w-[380px]">
-          <SpendingSummary />
-        </div>
-
-        {/* Right Column: Budget Cards */}
-        <div className="flex flex-col gap-6">
-          {budgets.map((budget) => (
-            <BudgetCategoryCard
-              key={budget.category}
-              budget={budget}
-              transactions={getTransactionsForCategory(budget.category)}
-            />
-          ))}
-        </div>
-      </div>
+      <BudgetsPageContent />
     </AppShell>
   )
 }

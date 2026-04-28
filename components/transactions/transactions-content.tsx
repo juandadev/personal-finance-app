@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { transactions as allTransactions, transactionCategories } from "@/lib/data"
+import { useFinance } from "@/hooks/use-finance"
 import type { SortOption, TransactionCategory } from "@/lib/types"
 import { ArrowUpDown, ListFilter } from "lucide-react"
 import { SearchInput } from "./search-input"
@@ -20,19 +20,19 @@ const sortOptions: { value: SortOption; label: string }[] = [
   { value: "lowest", label: "Lowest" },
 ]
 
-const categoryOptions: { value: TransactionCategory | "all"; label: string }[] = [
-  { value: "all", label: "All Transactions" },
-  ...transactionCategories.map((cat) => ({ value: cat, label: cat })),
-]
-
 export function TransactionsContent() {
+  const { transactions, transactionCategories } = useFinance()
   const [search, setSearch] = useState("")
   const [sortBy, setSortBy] = useState<SortOption>("latest")
   const [category, setCategory] = useState<TransactionCategory | "all">("all")
   const [currentPage, setCurrentPage] = useState(1)
+  const categoryOptions: { value: TransactionCategory | "all"; label: string }[] = [
+    { value: "all", label: "All Transactions" },
+    ...transactionCategories.map((cat) => ({ value: cat, label: cat })),
+  ]
 
   const filteredAndSorted = useMemo(() => {
-    let result = [...allTransactions]
+    let result = [...transactions]
 
     // Filter by search
     if (search) {
@@ -68,7 +68,7 @@ export function TransactionsContent() {
     }
 
     return result
-  }, [search, sortBy, category])
+  }, [transactions, search, sortBy, category])
 
   const totalPages = Math.max(1, Math.ceil(filteredAndSorted.length / ITEMS_PER_PAGE))
   const paginatedTransactions = filteredAndSorted.slice(

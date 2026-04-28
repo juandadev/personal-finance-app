@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { Public_Sans } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
+import { FinanceProvider } from "@/components/providers/finance-provider"
 import "./globals.css"
 
 const publicSans = Public_Sans({
@@ -23,7 +24,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${publicSans.variable} bg-background`}>
       <body className="font-sans antialiased">
-        {children}
+        <FinanceProvider>{children}</FinanceProvider>
         {process.env.NODE_ENV === "production" && <Analytics />}
       </body>
     </html>

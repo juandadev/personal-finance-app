@@ -1,7 +1,6 @@
 import { AppShell } from "@/components/app-shell"
 import { PageHeading } from "@/components/overview/page-heading"
-import { PotCard } from "@/components/pots/pot-card"
-import { pots } from "@/lib/data"
+import { PotsPageContent } from "@/components/pots/pots-page-content"
 
 export const metadata = {
   title: "Pots | Finance",
@@ -23,11 +22,7 @@ export default function PotsPage() {
       </div>
 
       {/* Pots Grid */}
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        {pots.map((pot) => (
-          <PotCard key={pot.name} pot={pot} />
-        ))}
-      </div>
+      <PotsPageContent />
     </AppShell>
   )
 }

@@ -1,8 +1,12 @@
-import { budgets, budgetSpent, budgetLimit } from "@/lib/data"
+"use client"
+
+import { useFinance } from "@/hooks/use-finance"
 import { BudgetsChart } from "@/components/overview/budgets/budgets-chart"
 import { SpendingSummaryItem } from "./spending-summary-item"
 
 export function SpendingSummary() {
+  const { budgets, budgetSpent, budgetLimit } = useFinance()
+
   return (
     <section className="rounded-xl bg-card p-5 md:p-8">
       {/* Mobile: stack vertically */}

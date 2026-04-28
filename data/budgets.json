@@ -1,0 +1,30 @@
+[
+  {
+    "id": "budget-entertainment-2024-08",
+    "categoryId": "cat-entertainment",
+    "period": "2024-08",
+    "limitCents": 5000,
+    "themeColor": "#277C78"
+  },
+  {
+    "id": "budget-bills-2024-08",
+    "categoryId": "cat-bills",
+    "period": "2024-08",
+    "limitCents": 75000,
+    "themeColor": "#82C9D7"
+  },
+  {
+    "id": "budget-dining-out-2024-08",
+    "categoryId": "cat-dining-out",
+    "period": "2024-08",
+    "limitCents": 7500,
+    "themeColor": "#F2CDAC"
+  },
+  {
+    "id": "budget-personal-care-2024-08",
+    "categoryId": "cat-personal-care",
+    "period": "2024-08",
+    "limitCents": 10000,
+    "themeColor": "#626070"
+  }
+]

@@ -1,0 +1,18 @@
+[
+  {
+    "budgetId": "budget-entertainment-2024-08",
+    "spentCents": 1500
+  },
+  {
+    "budgetId": "budget-bills-2024-08",
+    "spentCents": 15000
+  },
+  {
+    "budgetId": "budget-dining-out-2024-08",
+    "spentCents": 13300
+  },
+  {
+    "budgetId": "budget-personal-care-2024-08",
+    "spentCents": 4000
+  }
+]

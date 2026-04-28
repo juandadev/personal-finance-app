@@ -1,0 +1,62 @@
+[
+  {
+    "id": "cat-entertainment",
+    "name": "Entertainment",
+    "slug": "entertainment",
+    "sortOrder": 1
+  },
+  {
+    "id": "cat-bills",
+    "name": "Bills",
+    "slug": "bills",
+    "sortOrder": 2
+  },
+  {
+    "id": "cat-groceries",
+    "name": "Groceries",
+    "slug": "groceries",
+    "sortOrder": 3
+  },
+  {
+    "id": "cat-dining-out",
+    "name": "Dining Out",
+    "slug": "dining-out",
+    "sortOrder": 4
+  },
+  {
+    "id": "cat-transportation",
+    "name": "Transportation",
+    "slug": "transportation",
+    "sortOrder": 5
+  },
+  {
+    "id": "cat-personal-care",
+    "name": "Personal Care",
+    "slug": "personal-care",
+    "sortOrder": 6
+  },
+  {
+    "id": "cat-education",
+    "name": "Education",
+    "slug": "education",
+    "sortOrder": 7
+  },
+  {
+    "id": "cat-lifestyle",
+    "name": "Lifestyle",
+    "slug": "lifestyle",
+    "sortOrder": 8
+  },
+  {
+    "id": "cat-shopping",
+    "name": "Shopping",
+    "slug": "shopping",
+    "sortOrder": 9
+  },
+  {
+    "id": "cat-general",
+    "name": "General",
+    "slug": "general",
+    "sortOrder": 10
+  }
+]
