@@ -1,0 +1,42 @@
+import type { LucideIcon } from "lucide-react"
+
+export type NavKey = "overview" | "transactions" | "budgets" | "pots" | "recurring-bills"
+
+export interface NavItem {
+  key: NavKey
+  label: string
+  icon: LucideIcon
+  href: string
+}
+
+export interface SummaryStat {
+  label: string
+  amount: number
+  variant: "primary" | "default"
+}
+
+export interface Pot {
+  name: string
+  amount: number
+  color: string
+}
+
+export interface Budget {
+  category: string
+  amount: number
+  color: string
+}
+
+export interface Transaction {
+  id: string
+  name: string
+  avatarUrl: string
+  amount: number
+  date: string
+}
+
+export interface RecurringBillSummary {
+  label: string
+  amount: number
+  color: string
+}
