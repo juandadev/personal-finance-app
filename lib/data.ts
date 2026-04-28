@@ -1,5 +1,5 @@
 import { Home, ArrowDownUp, ChartPie, PiggyBank, ReceiptText } from "lucide-react"
-import type { Budget, NavItem, Pot, RecurringBillSummary, SummaryStat, Transaction } from "./types"
+import type { Budget, NavItem, Pot, RecurringBill, RecurringBillSummary, SummaryStat, Transaction } from "./types"
 
 export const navItems: NavItem[] = [
   { key: "overview", label: "Overview", icon: Home, href: "/" },
@@ -243,8 +243,21 @@ export const transactionCategories: Transaction["category"][] = [
   "General",
 ]
 
-export const recurringBills: RecurringBillSummary[] = [
+export const recurringBillsSummary: RecurringBillSummary[] = [
   { label: "Paid Bills", amount: 190.0, color: "var(--color-chart-1)" },
   { label: "Total Upcoming", amount: 194.98, color: "var(--color-chart-4)" },
   { label: "Due Soon", amount: 59.98, color: "var(--color-chart-2)" },
 ]
+
+export const recurringBills: RecurringBill[] = [
+  { id: "rb-1", name: "Spark Electric Solutions", avatarUrl: "https://i.pravatar.cc/80?img=25", amount: 100.0, dueDay: 2, status: "paid" },
+  { id: "rb-2", name: "Serenity Spa & Wellness", avatarUrl: "https://i.pravatar.cc/80?img=28", amount: 30.0, dueDay: 3, status: "paid" },
+  { id: "rb-3", name: "Elevate Education", avatarUrl: "https://i.pravatar.cc/80?img=33", amount: 50.0, dueDay: 4, status: "paid" },
+  { id: "rb-4", name: "Pixel Playground", avatarUrl: "https://i.pravatar.cc/80?img=20", amount: 10.0, dueDay: 11, status: "paid" },
+  { id: "rb-5", name: "Nimbus Data Storage", avatarUrl: "https://i.pravatar.cc/80?img=34", amount: 9.99, dueDay: 21, status: "due-soon" },
+  { id: "rb-6", name: "ByteWise", avatarUrl: "https://i.pravatar.cc/80?img=35", amount: 49.99, dueDay: 23, status: "due-soon" },
+  { id: "rb-7", name: "EcoFuel Energy", avatarUrl: "https://i.pravatar.cc/80?img=36", amount: 35.0, dueDay: 29, status: "upcoming" },
+  { id: "rb-8", name: "Aqua Flow Utilities", avatarUrl: "https://i.pravatar.cc/80?img=30", amount: 100.0, dueDay: 30, status: "upcoming" },
+]
+
+export const totalBillsAmount = recurringBills.reduce((sum, bill) => sum + bill.amount, 0)

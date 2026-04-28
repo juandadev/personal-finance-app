@@ -57,3 +57,14 @@ export interface RecurringBillSummary {
   amount: number
   color: string
 }
+
+export type BillStatus = "paid" | "upcoming" | "due-soon"
+
+export interface RecurringBill {
+  id: string
+  name: string
+  avatarUrl: string
+  amount: number
+  dueDay: number
+  status: BillStatus
+}
