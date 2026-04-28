@@ -27,13 +27,26 @@ export interface Budget {
   color: string
 }
 
+export type TransactionCategory = 
+  | "General"
+  | "Dining Out"
+  | "Groceries"
+  | "Entertainment"
+  | "Transportation"
+  | "Shopping"
+  | "Bills"
+  | "Personal Care"
+
 export interface Transaction {
   id: string
   name: string
   avatarUrl: string
   amount: number
   date: string
+  category: TransactionCategory
 }
+
+export type SortOption = "latest" | "oldest" | "a-z" | "z-a" | "highest" | "lowest"
 
 export interface RecurringBillSummary {
   label: string

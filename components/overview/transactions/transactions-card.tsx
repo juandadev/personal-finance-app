@@ -8,7 +8,7 @@ export function TransactionsCard() {
       <CardHeader title="Transactions" actionLabel="View All" href="/transactions" />
 
       <ul className="mt-2 divide-y divide-border">
-        {transactions.map((transaction) => (
+        {transactions.slice(0, 5).map((transaction) => (
           <li key={transaction.id}>
             <TransactionItem transaction={transaction} />
           </li>
