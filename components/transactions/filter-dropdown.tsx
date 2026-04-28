@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState, useEffect } from "react"
+import { useRef, useState, useEffect, type ReactNode } from "react"
 import { ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -9,6 +9,7 @@ interface FilterDropdownProps<T extends string> {
   value: T
   options: { value: T; label: string }[]
   onChange: (value: T) => void
+  icon?: ReactNode
   className?: string
 }
 
@@ -17,6 +18,7 @@ export function FilterDropdown<T extends string>({
   value,
   options,
   onChange,
+  icon,
   className,
 }: FilterDropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(false)
@@ -40,12 +42,25 @@ export function FilterDropdown<T extends string>({
 
   return (
     <div className={cn("flex items-center gap-2", className)} ref={containerRef}>
-      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className="hidden text-sm text-muted-foreground md:inline">{label}</span>
       <div className="relative">
+        {/* Mobile: Icon button */}
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="flex h-10 items-center gap-2 rounded-lg border border-muted-foreground/20 bg-card px-4 text-sm font-bold text-card-foreground transition-colors hover:border-muted-foreground/40 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+          className="flex size-10 items-center justify-center rounded-lg border border-muted-foreground/20 bg-card text-card-foreground transition-colors hover:border-muted-foreground/40 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary md:hidden"
+          aria-expanded={isOpen}
+          aria-haspopup="listbox"
+          aria-label={label}
+        >
+          {icon}
+        </button>
+
+        {/* Desktop: Full button with label */}
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="hidden h-10 items-center gap-2 rounded-lg border border-muted-foreground/20 bg-card px-4 text-sm font-bold text-card-foreground transition-colors hover:border-muted-foreground/40 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary md:flex"
           aria-expanded={isOpen}
           aria-haspopup="listbox"
         >

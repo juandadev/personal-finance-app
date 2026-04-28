@@ -1,20 +1,23 @@
 "use client"
 
 import { Search } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface SearchInputProps {
   value: string
   onChange: (value: string) => void
   placeholder?: string
+  className?: string
 }
 
 export function SearchInput({
   value,
   onChange,
   placeholder = "Search transaction",
+  className,
 }: SearchInputProps) {
   return (
-    <div className="relative">
+    <div className={cn("relative", className)}>
       <input
         type="text"
         value={value}

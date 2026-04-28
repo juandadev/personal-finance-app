@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react"
 import { transactions as allTransactions, transactionCategories } from "@/lib/data"
 import type { SortOption, TransactionCategory } from "@/lib/types"
+import { ArrowUpDown, ListFilter } from "lucide-react"
 import { SearchInput } from "./search-input"
 import { FilterDropdown } from "./filter-dropdown"
 import { TransactionsTable } from "./transactions-table"
@@ -92,22 +93,24 @@ export function TransactionsContent() {
   }
 
   return (
-    <div className="rounded-xl bg-card p-6 md:p-8">
+    <div className="rounded-xl bg-card p-5 md:p-8">
       {/* Filters */}
-      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <SearchInput value={search} onChange={handleSearchChange} />
-        <div className="flex flex-wrap items-center gap-4">
+      <div className="mb-6 flex items-center gap-3 md:justify-between md:gap-4">
+        <SearchInput value={search} onChange={handleSearchChange} className="flex-1 md:flex-initial" />
+        <div className="flex items-center gap-2 md:gap-4">
           <FilterDropdown
             label="Sort by"
             value={sortBy}
             options={sortOptions}
             onChange={handleSortChange}
+            icon={<ArrowUpDown className="size-5" aria-hidden />}
           />
           <FilterDropdown
             label="Category"
             value={category}
             options={categoryOptions}
             onChange={handleCategoryChange}
+            icon={<ListFilter className="size-5" aria-hidden />}
           />
         </div>
       </div>
