@@ -7,13 +7,13 @@ interface TotalBillsCardProps {
 
 export function TotalBillsCard({ amount }: TotalBillsCardProps) {
   return (
-    <div className="flex items-center gap-5 rounded-xl bg-sidebar p-6 text-sidebar-primary-foreground">
-      <div className="flex size-10 items-center justify-center rounded-lg bg-sidebar-primary-foreground/10 md:size-12">
-        <ReceiptText className="size-5 md:size-6" aria-hidden />
+    <div className="flex h-full flex-col rounded-xl bg-sidebar p-6 text-sidebar-primary-foreground md:flex-row md:items-center md:gap-5 lg:flex-col lg:items-start lg:gap-0">
+      <div className="flex size-10 items-center justify-center rounded-lg border border-sidebar-primary-foreground/20">
+        <ReceiptText className="size-5" aria-hidden />
       </div>
-      <div>
+      <div className="mt-6 md:mt-0 lg:mt-6">
         <p className="text-sm text-sidebar-primary-foreground/80">Total Bills</p>
-        <p className="mt-1 text-3xl font-bold">{formatCurrency(amount, { forceDecimals: true })}</p>
+        <p className="mt-2 text-3xl font-bold">{formatCurrency(amount, { forceDecimals: true })}</p>
       </div>
     </div>
   )

@@ -14,19 +14,17 @@ export default function RecurringBillsPage() {
       </div>
 
       {/* Main Content */}
-      <div className="mt-6 grid gap-6 lg:grid-cols-[340px_1fr]">
+      <div className="mt-6 flex flex-col gap-6 lg:flex-row">
         {/* Left Column: Total Bills & Summary */}
-        <div className="flex flex-col gap-6 md:flex-row md:gap-4 lg:flex-col lg:gap-6">
-          <div className="md:flex-1 lg:flex-none">
-            <TotalBillsCard amount={totalBillsAmount} />
-          </div>
-          <div className="md:flex-1 lg:flex-none">
-            <BillsSummaryCard bills={recurringBills} />
-          </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:w-[340px] lg:shrink-0 lg:grid-cols-1 lg:gap-6">
+          <TotalBillsCard amount={totalBillsAmount} />
+          <BillsSummaryCard bills={recurringBills} />
         </div>
 
         {/* Right Column: Bills Table */}
-        <BillsContent bills={recurringBills} />
+        <div className="flex-1">
+          <BillsContent bills={recurringBills} />
+        </div>
       </div>
     </AppShell>
   )
