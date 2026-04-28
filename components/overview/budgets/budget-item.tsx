@@ -12,7 +12,7 @@ export function BudgetItem({ budget }: BudgetItemProps) {
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs text-muted-foreground">{budget.category}</p>
         <p className="mt-1 text-sm font-bold text-foreground">
-          {formatCurrency(budget.amount, { forceDecimals: true })}
+          {formatCurrency(budget.maximum, { forceDecimals: true })}
         </p>
       </div>
     </div>

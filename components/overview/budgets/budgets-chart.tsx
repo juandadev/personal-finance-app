@@ -11,7 +11,7 @@ interface BudgetsChartProps {
 }
 
 export function BudgetsChart({ budgets, spent, limit }: BudgetsChartProps) {
-  const data = budgets.map((b) => ({ name: b.category, value: b.amount, color: b.color }))
+  const data = budgets.map((b) => ({ name: b.category, value: b.maximum, color: b.color }))
 
   return (
     <div className="relative mx-auto aspect-square w-full max-w-[260px]">

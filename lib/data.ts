@@ -25,14 +25,14 @@ export const pots: Pot[] = [
 export const totalSaved = pots.reduce((sum, pot) => sum + pot.amount, 0) + 531 // matches design's $850 total
 
 export const budgets: Budget[] = [
-  { category: "Entertainment", amount: 50, color: "var(--color-chart-3)" },
-  { category: "Bills", amount: 750, color: "var(--color-chart-2)" },
-  { category: "Dining Out", amount: 75, color: "var(--color-chart-1)" },
-  { category: "Personal Care", amount: 100, color: "var(--color-chart-4)" },
+  { category: "Entertainment", maximum: 50, spent: 15, color: "#277C78" },  // teal
+  { category: "Bills", maximum: 750, spent: 150, color: "#82C9D7" },        // light cyan
+  { category: "Dining Out", maximum: 75, spent: 133, color: "#F2CDAC" },    // peach
+  { category: "Personal Care", maximum: 100, spent: 40, color: "#626070" }, // slate
 ]
 
-export const budgetSpent = 338
-export const budgetLimit = 975
+export const budgetSpent = budgets.reduce((sum, b) => sum + b.spent, 0)
+export const budgetLimit = budgets.reduce((sum, b) => sum + b.maximum, 0)
 
 export const transactions: Transaction[] = [
   {
@@ -194,6 +194,38 @@ export const transactions: Transaction[] = [
     amount: -45.0,
     date: "1 Aug 2024",
     category: "Bills",
+  },
+  {
+    id: "t-21",
+    name: "Rina Sato",
+    avatarUrl: "https://i.pravatar.cc/80?img=31",
+    amount: -10.0,
+    date: "13 Jul 2024",
+    category: "Entertainment",
+  },
+  {
+    id: "t-22",
+    name: "Bravo Zen Spa",
+    avatarUrl: "https://i.pravatar.cc/80?img=32",
+    amount: -25.0,
+    date: "29 Aug 2024",
+    category: "Personal Care",
+  },
+  {
+    id: "t-23",
+    name: "Sofia Peterson",
+    avatarUrl: "https://i.pravatar.cc/80?img=22",
+    amount: -15.0,
+    date: "15 Aug 2024",
+    category: "Personal Care",
+  },
+  {
+    id: "t-24",
+    name: "Ella Phillips",
+    avatarUrl: "https://i.pravatar.cc/80?img=21",
+    amount: -45.0,
+    date: "10 Aug 2024",
+    category: "Dining Out",
   },
 ]
 

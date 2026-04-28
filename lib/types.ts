@@ -22,8 +22,9 @@ export interface Pot {
 }
 
 export interface Budget {
-  category: string
-  amount: number
+  category: TransactionCategory
+  maximum: number
+  spent: number
   color: string
 }
 
