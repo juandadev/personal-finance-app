@@ -198,14 +198,16 @@ export const transactions: Transaction[] = [
 ]
 
 export const transactionCategories: Transaction["category"][] = [
-  "General",
-  "Dining Out",
-  "Groceries",
   "Entertainment",
-  "Transportation",
-  "Shopping",
   "Bills",
+  "Groceries",
+  "Dining Out",
+  "Transportation",
   "Personal Care",
+  "Education",
+  "Lifestyle",
+  "Shopping",
+  "General",
 ]
 
 export const recurringBills: RecurringBillSummary[] = [

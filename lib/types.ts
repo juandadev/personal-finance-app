@@ -36,6 +36,8 @@ export type TransactionCategory =
   | "Shopping"
   | "Bills"
   | "Personal Care"
+  | "Education"
+  | "Lifestyle"
 
 export interface Transaction {
   id: string

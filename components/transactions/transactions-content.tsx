@@ -4,7 +4,7 @@ import { useMemo, useState } from "react"
 import { transactions as allTransactions, transactionCategories } from "@/lib/data"
 import type { SortOption, TransactionCategory } from "@/lib/types"
 import { SearchInput } from "./search-input"
-import { FilterSelect } from "./filter-select"
+import { FilterDropdown } from "./filter-dropdown"
 import { TransactionsTable } from "./transactions-table"
 import { Pagination } from "./pagination"
 
@@ -97,13 +97,13 @@ export function TransactionsContent() {
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <SearchInput value={search} onChange={handleSearchChange} />
         <div className="flex flex-wrap items-center gap-4">
-          <FilterSelect
+          <FilterDropdown
             label="Sort by"
             value={sortBy}
             options={sortOptions}
             onChange={handleSortChange}
           />
-          <FilterSelect
+          <FilterDropdown
             label="Category"
             value={category}
             options={categoryOptions}
