@@ -18,7 +18,7 @@ export function Sidebar({ activeKey }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "sticky top-0 hidden h-screen flex-col bg-sidebar text-sidebar-foreground transition-[width] duration-300 md:flex",
+        "sticky top-0 hidden h-screen flex-col bg-sidebar text-sidebar-foreground transition-[width] duration-300 lg:flex",
         collapsed ? "w-20" : "w-72",
       )}
       aria-label="Primary"
