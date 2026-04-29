@@ -5,7 +5,7 @@ interface PotProgressBarProps {
 
 export function PotProgressBar({ percentage, color }: PotProgressBarProps) {
   return (
-    <div className="h-2 w-full overflow-hidden rounded-full bg-background">
+    <div className="bg-background h-2 w-full overflow-hidden rounded-full">
       <div
         className="h-full rounded-full transition-all duration-300"
         style={{

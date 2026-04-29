@@ -23,10 +23,10 @@ export function SearchInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="h-10 w-full rounded-lg border border-muted-foreground/20 bg-card pl-4 pr-10 text-sm text-card-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary md:w-80"
+        className="border-muted-foreground/20 bg-card text-card-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary h-10 w-full rounded-lg border pr-10 pl-4 text-sm focus:ring-1 focus:outline-none md:w-80"
       />
       <Search
-        className="absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+        className="text-muted-foreground absolute top-1/2 right-3 size-4 -translate-y-1/2"
         aria-hidden
       />
     </div>

@@ -31,7 +31,7 @@ export function BillTableRow({ bill }: BillTableRowProps) {
   const isDueSoon = bill.status === "due-soon"
 
   return (
-    <tr className="border-b border-muted-foreground/10 last:border-b-0">
+    <tr className="border-muted-foreground/10 border-b last:border-b-0">
       <td className="py-4">
         <div className="flex items-center gap-3">
           <Image
@@ -41,19 +41,36 @@ export function BillTableRow({ bill }: BillTableRowProps) {
             height={40}
             className="size-10 rounded-full object-cover"
           />
-          <span className="font-bold text-card-foreground">{bill.name}</span>
+          <span className="text-card-foreground font-bold">{bill.name}</span>
         </div>
       </td>
       <td className="py-4">
         <div className="flex items-center gap-2">
-          <span className={cn("text-sm", isPaid ? "text-accent" : "text-muted-foreground")}>
+          <span
+            className={cn(
+              "text-sm",
+              isPaid ? "text-accent" : "text-muted-foreground",
+            )}
+          >
             {formatDueDate(bill.dueDay)}
           </span>
-          {isPaid && <CircleCheck className="size-4 text-accent" aria-label="Paid" />}
-          {isDueSoon && <CircleAlert className="size-4 text-destructive" aria-label="Due soon" />}
+          {isPaid && (
+            <CircleCheck className="text-accent size-4" aria-label="Paid" />
+          )}
+          {isDueSoon && (
+            <CircleAlert
+              className="text-destructive size-4"
+              aria-label="Due soon"
+            />
+          )}
         </div>
       </td>
-      <td className={cn("py-4 text-right text-sm font-bold", isDueSoon ? "text-destructive" : "text-card-foreground")}>
+      <td
+        className={cn(
+          "py-4 text-right text-sm font-bold",
+          isDueSoon ? "text-destructive" : "text-card-foreground",
+        )}
+      >
         {formatCurrency(bill.amount, { forceDecimals: true })}
       </td>
     </tr>
@@ -75,17 +92,36 @@ export function MobileBillRow({ bill }: BillTableRowProps) {
           className="size-10 rounded-full object-cover"
         />
         <div className="flex flex-col">
-          <span className="text-sm font-bold text-card-foreground">{bill.name}</span>
+          <span className="text-card-foreground text-sm font-bold">
+            {bill.name}
+          </span>
           <div className="mt-0.5 flex items-center gap-1">
-            <span className={cn("text-xs", isPaid ? "text-accent" : "text-muted-foreground")}>
+            <span
+              className={cn(
+                "text-xs",
+                isPaid ? "text-accent" : "text-muted-foreground",
+              )}
+            >
               {formatDueDate(bill.dueDay)}
             </span>
-            {isPaid && <CircleCheck className="size-3 text-accent" aria-label="Paid" />}
-            {isDueSoon && <CircleAlert className="size-3 text-destructive" aria-label="Due soon" />}
+            {isPaid && (
+              <CircleCheck className="text-accent size-3" aria-label="Paid" />
+            )}
+            {isDueSoon && (
+              <CircleAlert
+                className="text-destructive size-3"
+                aria-label="Due soon"
+              />
+            )}
           </div>
         </div>
       </div>
-      <span className={cn("text-sm font-bold", isDueSoon ? "text-destructive" : "text-card-foreground")}>
+      <span
+        className={cn(
+          "text-sm font-bold",
+          isDueSoon ? "text-destructive" : "text-card-foreground",
+        )}
+      >
         {formatCurrency(bill.amount, { forceDecimals: true })}
       </span>
     </li>

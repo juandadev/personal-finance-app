@@ -8,7 +8,11 @@ interface NavItemProps {
   collapsed?: boolean
 }
 
-export function NavItem({ item, active = false, collapsed = false }: NavItemProps) {
+export function NavItem({
+  item,
+  active = false,
+  collapsed = false,
+}: NavItemProps) {
   const Icon = item.icon
   return (
     <Link
@@ -17,17 +21,23 @@ export function NavItem({ item, active = false, collapsed = false }: NavItemProp
       className={cn(
         "group relative flex items-center gap-4 rounded-r-xl px-6 py-4 text-sm font-bold transition-colors",
         "text-sidebar-foreground hover:text-sidebar-primary-foreground",
-        active && "bg-sidebar-accent text-sidebar-accent-foreground hover:text-sidebar-accent-foreground",
+        active &&
+          "bg-sidebar-accent text-sidebar-accent-foreground hover:text-sidebar-accent-foreground",
         collapsed && "justify-center px-0",
       )}
     >
       {active && (
-        <span aria-hidden className="absolute inset-y-0 left-0 w-1 rounded-r bg-sidebar-primary" />
+        <span
+          aria-hidden
+          className="bg-sidebar-primary absolute inset-y-0 left-0 w-1 rounded-r"
+        />
       )}
       <Icon
         className={cn(
           "size-5 shrink-0",
-          active ? "text-sidebar-primary" : "text-sidebar-foreground group-hover:text-sidebar-primary-foreground",
+          active
+            ? "text-sidebar-primary"
+            : "text-sidebar-foreground group-hover:text-sidebar-primary-foreground",
         )}
         aria-hidden
       />

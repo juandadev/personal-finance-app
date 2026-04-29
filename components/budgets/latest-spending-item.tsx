@@ -17,13 +17,17 @@ export function LatestSpendingItem({ transaction }: LatestSpendingItemProps) {
           height={32}
           className="size-8 rounded-full object-cover"
         />
-        <span className="text-sm font-bold text-card-foreground">{transaction.name}</span>
+        <span className="text-card-foreground text-sm font-bold">
+          {transaction.name}
+        </span>
       </div>
       <div className="flex flex-col items-end">
-        <span className="text-sm font-bold text-card-foreground">
+        <span className="text-card-foreground text-sm font-bold">
           {formatCurrency(transaction.amount, { forceDecimals: true })}
         </span>
-        <span className="text-xs text-muted-foreground">{transaction.date}</span>
+        <span className="text-muted-foreground text-xs">
+          {transaction.date}
+        </span>
       </div>
     </div>
   )

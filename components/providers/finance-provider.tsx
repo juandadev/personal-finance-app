@@ -2,7 +2,11 @@
 
 import { createContext, useContext, useMemo, useReducer } from "react"
 import type { Dispatch, ReactNode } from "react"
-import { financeReducer, type FinanceActions, type FinanceAction } from "@/lib/finance/reducer"
+import {
+  financeReducer,
+  type FinanceActions,
+  type FinanceAction,
+} from "@/lib/finance/reducer"
 import { createInitialFinanceState } from "@/lib/finance/seed"
 import { selectFinanceViewModel } from "@/lib/finance/selectors"
 import type {
@@ -27,19 +31,28 @@ interface FinanceProviderProps {
 }
 
 export function FinanceProvider({ children }: FinanceProviderProps) {
-  const [state, dispatch] = useReducer(financeReducer, createInitialFinanceState())
+  const [state, dispatch] = useReducer(
+    financeReducer,
+    createInitialFinanceState(),
+  )
 
   const actions = useMemo<FinanceActions>(
     () => ({
       addTransaction: (transaction: TransactionRecord) =>
         dispatch({ type: "transaction/add", transaction }),
-      updateTransaction: (id: string, updates: Partial<Omit<TransactionRecord, "id">>) =>
-        dispatch({ type: "transaction/update", id, updates }),
-      deleteTransaction: (id: string) => dispatch({ type: "transaction/delete", id }),
+      updateTransaction: (
+        id: string,
+        updates: Partial<Omit<TransactionRecord, "id">>,
+      ) => dispatch({ type: "transaction/update", id, updates }),
+      deleteTransaction: (id: string) =>
+        dispatch({ type: "transaction/delete", id }),
       addBudget: (budget: BudgetRecord, spentCents?: number) =>
         dispatch({ type: "budget/add", budget, spentCents }),
-      updateBudget: (id: string, updates: Partial<Omit<BudgetRecord, "id">>, spentCents?: number) =>
-        dispatch({ type: "budget/update", id, updates, spentCents }),
+      updateBudget: (
+        id: string,
+        updates: Partial<Omit<BudgetRecord, "id">>,
+        spentCents?: number,
+      ) => dispatch({ type: "budget/update", id, updates, spentCents }),
       deleteBudget: (id: string) => dispatch({ type: "budget/delete", id }),
       addPot: (pot: PotRecord) => dispatch({ type: "pot/add", pot }),
       updatePot: (id: string, updates: Partial<Omit<PotRecord, "id">>) =>
@@ -55,7 +68,8 @@ export function FinanceProvider({ children }: FinanceProviderProps) {
         id: string,
         updates: Partial<Omit<RecurringBillRecord, "id">>,
       ) => dispatch({ type: "recurring-bill/update", id, updates }),
-      deleteRecurringBill: (id: string) => dispatch({ type: "recurring-bill/delete", id }),
+      deleteRecurringBill: (id: string) =>
+        dispatch({ type: "recurring-bill/delete", id }),
     }),
     [dispatch],
   )
@@ -70,7 +84,9 @@ export function FinanceProvider({ children }: FinanceProviderProps) {
     [actions, state],
   )
 
-  return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>
+  return (
+    <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>
+  )
 }
 
 export function useFinance(): FinanceContextValue {

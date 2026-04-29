@@ -8,10 +8,14 @@ export function TransactionsCard() {
   const { transactions } = useFinance()
 
   return (
-    <section className="rounded-xl bg-card p-6 shadow-sm md:p-8">
-      <CardHeader title="Transactions" actionLabel="View All" href="/transactions" />
+    <section className="bg-card rounded-xl p-6 shadow-sm md:p-8">
+      <CardHeader
+        title="Transactions"
+        actionLabel="View All"
+        href="/transactions"
+      />
 
-      <ul className="mt-2 divide-y divide-border">
+      <ul className="divide-border mt-2 divide-y">
         {transactions.slice(0, 5).map((transaction) => (
           <li key={transaction.id}>
             <TransactionItem transaction={transaction} />

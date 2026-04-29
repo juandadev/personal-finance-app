@@ -16,13 +16,13 @@ export function SpendingSummaryItem({ budget }: SpendingSummaryItemProps) {
           className="block h-5 w-1 rounded-full"
           style={{ backgroundColor: budget.color }}
         />
-        <span className="text-sm text-muted-foreground">{budget.category}</span>
+        <span className="text-muted-foreground text-sm">{budget.category}</span>
       </div>
       <div className="flex items-baseline gap-2">
-        <span className="text-sm font-bold text-foreground">
+        <span className="text-foreground text-sm font-bold">
           {formatCurrency(budget.spent, { forceDecimals: true })}
         </span>
-        <span className="text-xs text-muted-foreground">
+        <span className="text-muted-foreground text-xs">
           of {formatCurrency(budget.maximum, { forceDecimals: true })}
         </span>
       </div>

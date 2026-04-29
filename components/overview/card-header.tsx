@@ -14,7 +14,7 @@ export function CardHeader({ title, actionLabel, href }: CardHeaderProps) {
       {actionLabel && href && (
         <Link
           href={href}
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm transition-colors"
         >
           {actionLabel}
           <ChevronRight className="size-4" aria-hidden />

@@ -9,7 +9,10 @@ export function BudgetsPageContent() {
   const { budgets, transactions } = useFinance()
 
   const getTransactionsForCategory = (category: TransactionCategory) => {
-    return transactions.filter((transaction) => transaction.category === category && transaction.amount < 0)
+    return transactions.filter(
+      (transaction) =>
+        transaction.category === category && transaction.amount < 0,
+    )
   }
 
   return (

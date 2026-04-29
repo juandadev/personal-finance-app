@@ -9,7 +9,11 @@ interface PaginationProps {
   onPageChange: (page: number) => void
 }
 
-export function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) {
+export function Pagination({
+  currentPage,
+  totalPages,
+  onPageChange,
+}: PaginationProps) {
   const pages = Array.from({ length: totalPages }, (_, i) => i + 1)
 
   return (
@@ -17,7 +21,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
-        className="flex items-center gap-2 rounded-lg border border-muted-foreground/20 px-4 py-2 text-sm font-medium text-card-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+        className="border-muted-foreground/20 text-card-foreground hover:bg-muted flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
       >
         <ChevronLeft className="size-4" aria-hidden />
         Prev
@@ -32,7 +36,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
               "flex size-10 items-center justify-center rounded-lg text-sm font-medium transition-colors",
               page === currentPage
                 ? "bg-sidebar text-sidebar-primary-foreground"
-                : "border border-muted-foreground/20 text-card-foreground hover:bg-muted"
+                : "border-muted-foreground/20 text-card-foreground hover:bg-muted border",
             )}
           >
             {page}
@@ -43,7 +47,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
       <button
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
-        className="flex items-center gap-2 rounded-lg border border-muted-foreground/20 px-4 py-2 text-sm font-medium text-card-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+        className="border-muted-foreground/20 text-card-foreground hover:bg-muted flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
       >
         Next
         <ChevronRight className="size-4" aria-hidden />

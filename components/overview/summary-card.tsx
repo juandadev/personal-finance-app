@@ -18,7 +18,12 @@ export function SummaryCard({ stat }: SummaryCardProps) {
           : "bg-card text-card-foreground",
       )}
     >
-      <p className={cn("text-sm", isPrimary ? "text-primary-foreground/80" : "text-muted-foreground")}>
+      <p
+        className={cn(
+          "text-sm",
+          isPrimary ? "text-primary-foreground/80" : "text-muted-foreground",
+        )}
+      >
         {stat.label}
       </p>
       <p className="mt-3 text-3xl font-bold tracking-tight">

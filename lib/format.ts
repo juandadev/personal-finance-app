@@ -3,7 +3,10 @@
  * - Whole numbers render without decimals (e.g. $850).
  * - Non-whole numbers render with two decimals (e.g. $194.98).
  */
-export function formatCurrency(value: number, options?: { forceDecimals?: boolean }): string {
+export function formatCurrency(
+  value: number,
+  options?: { forceDecimals?: boolean },
+): string {
   const isWhole = Number.isInteger(value)
   const minimumFractionDigits = options?.forceDecimals ? 2 : isWhole ? 0 : 2
   const maximumFractionDigits = options?.forceDecimals ? 2 : isWhole ? 0 : 2

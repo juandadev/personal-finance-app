@@ -9,7 +9,7 @@ interface BottomNavProps {
 export function BottomNav({ activeKey }: BottomNavProps) {
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-50 flex bg-sidebar px-4 pb-2 pt-2 lg:hidden"
+      className="bg-sidebar fixed inset-x-0 bottom-0 z-50 flex px-4 pt-2 pb-2 lg:hidden"
       aria-label="Main navigation"
     >
       <ul className="flex flex-1 items-center justify-around">

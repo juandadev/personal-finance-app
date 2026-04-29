@@ -9,7 +9,7 @@ export function BillsTable({ bills }: BillsTableProps) {
   return (
     <>
       {/* Mobile list view */}
-      <ul className="divide-y divide-muted-foreground/10 md:hidden">
+      <ul className="divide-muted-foreground/10 divide-y md:hidden">
         {bills.map((bill) => (
           <MobileBillRow key={bill.id} bill={bill} />
         ))}
@@ -19,10 +19,16 @@ export function BillsTable({ bills }: BillsTableProps) {
       <div className="hidden md:block">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-muted-foreground/10">
-              <th className="pb-3 text-left text-xs font-normal text-muted-foreground">Bill Title</th>
-              <th className="pb-3 text-left text-xs font-normal text-muted-foreground">Due Date</th>
-              <th className="pb-3 text-right text-xs font-normal text-muted-foreground">Amount</th>
+            <tr className="border-muted-foreground/10 border-b">
+              <th className="text-muted-foreground pb-3 text-left text-xs font-normal">
+                Bill Title
+              </th>
+              <th className="text-muted-foreground pb-3 text-left text-xs font-normal">
+                Due Date
+              </th>
+              <th className="text-muted-foreground pb-3 text-right text-xs font-normal">
+                Amount
+              </th>
             </tr>
           </thead>
           <tbody>

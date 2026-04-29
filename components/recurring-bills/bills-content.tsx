@@ -30,7 +30,9 @@ export function BillsContent({ bills }: BillsContentProps) {
     // Filter by search
     if (search) {
       const searchLower = search.toLowerCase()
-      result = result.filter((bill) => bill.name.toLowerCase().includes(searchLower))
+      result = result.filter((bill) =>
+        bill.name.toLowerCase().includes(searchLower),
+      )
     }
 
     // Sort
@@ -59,7 +61,7 @@ export function BillsContent({ bills }: BillsContentProps) {
   }, [bills, search, sortBy])
 
   return (
-    <div className="rounded-xl bg-card p-5 md:p-8">
+    <div className="bg-card rounded-xl p-5 md:p-8">
       {/* Filters */}
       <div className="mb-6 flex items-center gap-3 md:gap-4">
         <SearchInput

@@ -11,7 +11,11 @@ interface BudgetsChartProps {
 }
 
 export function BudgetsChart({ budgets, spent, limit }: BudgetsChartProps) {
-  const data = budgets.map((b) => ({ name: b.category, value: b.maximum, color: b.color }))
+  const data = budgets.map((b) => ({
+    name: b.category,
+    value: b.maximum,
+    color: b.color,
+  }))
 
   return (
     <div className="relative mx-auto aspect-square w-full max-w-[260px]">
@@ -36,10 +40,12 @@ export function BudgetsChart({ budgets, spent, limit }: BudgetsChartProps) {
       </ResponsiveContainer>
 
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-        <p className="text-3xl font-bold tracking-tight text-foreground">
+        <p className="text-foreground text-3xl font-bold tracking-tight">
           {formatCurrency(spent)}
         </p>
-        <p className="mt-1 text-xs text-muted-foreground">of {formatCurrency(limit)} limit</p>
+        <p className="text-muted-foreground mt-1 text-xs">
+          of {formatCurrency(limit)} limit
+        </p>
       </div>
     </div>
   )

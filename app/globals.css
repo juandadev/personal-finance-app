@@ -1,12 +1,12 @@
-@import 'tailwindcss';
-@import 'tw-animate-css';
+@import "tailwindcss";
+@import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
 :root {
   /* Brand surfaces */
-  --background: #f8f4f0;       /* cream page background */
-  --foreground: #201f24;       /* primary text */
+  --background: #f8f4f0; /* cream page background */
+  --foreground: #201f24; /* primary text */
 
   --card: #ffffff;
   --card-foreground: #201f24;
@@ -24,7 +24,7 @@
   --muted: #f2f3f7;
   --muted-foreground: #696868;
 
-  --accent: #277c78;            /* teal/green accent (income, positive amounts) */
+  --accent: #277c78; /* teal/green accent (income, positive amounts) */
   --accent-foreground: #ffffff;
 
   --destructive: #c94736;
@@ -35,11 +35,11 @@
   --ring: #277c78;
 
   /* Chart palette tuned to the screenshot */
-  --chart-1: #277c78;            /* teal */
-  --chart-2: #82c9d7;            /* light cyan */
-  --chart-3: #626070;            /* slate */
-  --chart-4: #f2cdac;            /* peach */
-  --chart-5: #b3a8c9;            /* lavender */
+  --chart-1: #277c78; /* teal */
+  --chart-2: #82c9d7; /* light cyan */
+  --chart-3: #626070; /* slate */
+  --chart-4: #f2cdac; /* peach */
+  --chart-5: #b3a8c9; /* lavender */
 
   --radius: 0.75rem;
 

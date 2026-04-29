@@ -27,7 +27,10 @@ export function FilterDropdown<T extends string>({
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false)
       }
     }
@@ -41,14 +44,19 @@ export function FilterDropdown<T extends string>({
   }
 
   return (
-    <div className={cn("flex items-center gap-2", className)} ref={containerRef}>
-      <span className="hidden text-sm text-muted-foreground md:inline">{label}</span>
+    <div
+      className={cn("flex items-center gap-2", className)}
+      ref={containerRef}
+    >
+      <span className="text-muted-foreground hidden text-sm md:inline">
+        {label}
+      </span>
       <div className="relative">
         {/* Mobile: Icon button */}
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="flex size-10 items-center justify-center rounded-lg border border-muted-foreground/20 bg-card text-card-foreground transition-colors hover:border-muted-foreground/40 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary md:hidden"
+          className="border-muted-foreground/20 bg-card text-card-foreground hover:border-muted-foreground/40 focus:border-primary focus:ring-primary flex size-10 items-center justify-center rounded-lg border transition-colors focus:ring-1 focus:outline-none md:hidden"
           aria-expanded={isOpen}
           aria-haspopup="listbox"
           aria-label={label}
@@ -60,13 +68,16 @@ export function FilterDropdown<T extends string>({
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="hidden h-10 items-center gap-2 rounded-lg border border-muted-foreground/20 bg-card px-4 text-sm font-bold text-card-foreground transition-colors hover:border-muted-foreground/40 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary md:flex"
+          className="border-muted-foreground/20 bg-card text-card-foreground hover:border-muted-foreground/40 focus:border-primary focus:ring-primary hidden h-10 items-center gap-2 rounded-lg border px-4 text-sm font-bold transition-colors focus:ring-1 focus:outline-none md:flex"
           aria-expanded={isOpen}
           aria-haspopup="listbox"
         >
           {selectedLabel}
           <ChevronDown
-            className={cn("size-4 transition-transform", isOpen && "rotate-180")}
+            className={cn(
+              "size-4 transition-transform",
+              isOpen && "rotate-180",
+            )}
             aria-hidden
           />
         </button>
@@ -74,7 +85,7 @@ export function FilterDropdown<T extends string>({
         {isOpen && (
           <ul
             role="listbox"
-            className="absolute right-0 top-full z-50 mt-2 min-w-[140px] overflow-hidden rounded-lg bg-card shadow-lg"
+            className="bg-card absolute top-full right-0 z-50 mt-2 min-w-[140px] overflow-hidden rounded-lg shadow-lg"
           >
             {options.map((option, index) => (
               <li key={option.value}>
@@ -84,16 +95,16 @@ export function FilterDropdown<T extends string>({
                   aria-selected={option.value === value}
                   onClick={() => handleSelect(option.value)}
                   className={cn(
-                    "w-full px-5 py-3 text-left text-sm transition-colors hover:bg-muted/50",
+                    "hover:bg-muted/50 w-full px-5 py-3 text-left text-sm transition-colors",
                     option.value === value
-                      ? "font-bold text-card-foreground"
-                      : "text-muted-foreground"
+                      ? "text-card-foreground font-bold"
+                      : "text-muted-foreground",
                   )}
                 >
                   {option.label}
                 </button>
                 {index < options.length - 1 && (
-                  <div className="mx-4 border-b border-border" />
+                  <div className="border-border mx-4 border-b" />
                 )}
               </li>
             ))}

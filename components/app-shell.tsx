@@ -10,9 +10,11 @@ interface AppShellProps {
 
 export function AppShell({ activeKey, children }: AppShellProps) {
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="bg-background flex min-h-screen">
       <Sidebar activeKey={activeKey} />
-      <main className="flex-1 px-4 py-6 pb-24 md:px-10 md:py-8 lg:pb-10">{children}</main>
+      <main className="flex-1 px-4 py-6 pb-24 md:px-10 md:py-8 lg:pb-10">
+        {children}
+      </main>
       <BottomNav activeKey={activeKey} />
     </div>
   )

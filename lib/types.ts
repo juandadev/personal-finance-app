@@ -1,6 +1,11 @@
 import type { LucideIcon } from "lucide-react"
 
-export type NavKey = "overview" | "transactions" | "budgets" | "pots" | "recurring-bills"
+export type NavKey =
+  | "overview"
+  | "transactions"
+  | "budgets"
+  | "pots"
+  | "recurring-bills"
 
 export interface NavItem {
   key: NavKey
@@ -29,7 +34,7 @@ export interface Budget {
   color: string
 }
 
-export type TransactionCategory = 
+export type TransactionCategory =
   | "General"
   | "Dining Out"
   | "Groceries"
@@ -50,7 +55,13 @@ export interface Transaction {
   category: TransactionCategory
 }
 
-export type SortOption = "latest" | "oldest" | "a-z" | "z-a" | "highest" | "lowest"
+export type SortOption =
+  | "latest"
+  | "oldest"
+  | "a-z"
+  | "z-a"
+  | "highest"
+  | "lowest"
 
 export interface RecurringBillSummary {
   label: string

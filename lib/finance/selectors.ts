@@ -17,7 +17,11 @@ function byId<T extends { id: string }>(records: T[]): Map<string, T> {
   return new Map(records.map((record) => [record.id, record]))
 }
 
-function getRequired<T>(records: Map<string, T>, id: string, recordName: string): T {
+function getRequired<T>(
+  records: Map<string, T>,
+  id: string,
+  recordName: string,
+): T {
   const record = records.get(id)
 
   if (!record) {
@@ -42,7 +46,9 @@ function getOrderedCategories(categories: CategoryRecord[]): CategoryRecord[] {
   return [...categories].sort((a, b) => a.sortOrder - b.sortOrder)
 }
 
-function selectTransactionCategories(categories: CategoryRecord[]): TransactionCategory[] {
+function selectTransactionCategories(
+  categories: CategoryRecord[],
+): TransactionCategory[] {
   return getOrderedCategories(categories).map((category) => category.name)
 }
 
@@ -53,7 +59,11 @@ function selectTransactions(
 ) {
   return transactions.map((transaction) => {
     const category = getRequired(categories, transaction.categoryId, "category")
-    const counterparty = getRequired(counterparties, transaction.counterpartyId, "counterparty")
+    const counterparty = getRequired(
+      counterparties,
+      transaction.counterpartyId,
+      "counterparty",
+    )
 
     return {
       id: transaction.id,
@@ -92,7 +102,11 @@ function selectRecurringBills(
   counterparties: Map<string, CounterpartyRecord>,
 ): RecurringBill[] {
   return recurringBills.map((bill) => {
-    const counterparty = getRequired(counterparties, bill.counterpartyId, "counterparty")
+    const counterparty = getRequired(
+      counterparties,
+      bill.counterpartyId,
+      "counterparty",
+    )
 
     return {
       id: bill.id,
@@ -105,7 +119,9 @@ function selectRecurringBills(
   })
 }
 
-function selectRecurringBillsSummary(recurringBills: RecurringBill[]): FinanceViewModel["recurringBillsSummary"] {
+function selectRecurringBillsSummary(
+  recurringBills: RecurringBill[],
+): FinanceViewModel["recurringBillsSummary"] {
   const paidAmount = recurringBills
     .filter((bill) => bill.status === "paid")
     .reduce((sum, bill) => sum + bill.amount, 0)
@@ -118,7 +134,11 @@ function selectRecurringBillsSummary(recurringBills: RecurringBill[]): FinanceVi
 
   return [
     { label: "Paid Bills", amount: paidAmount, color: "var(--color-chart-1)" },
-    { label: "Total Upcoming", amount: upcomingAmount, color: "var(--color-chart-4)" },
+    {
+      label: "Total Upcoming",
+      amount: upcomingAmount,
+      color: "var(--color-chart-4)",
+    },
     { label: "Due Soon", amount: dueSoonAmount, color: "var(--color-chart-2)" },
   ]
 }
@@ -136,10 +156,24 @@ export function selectFinanceViewModel(state: FinanceState): FinanceViewModel {
       target: centsToDollars(pot.targetCents),
       color: pot.themeColor,
     }))
-  const budgets = selectBudgets(state.budgets, state.budgetSummaries, categories)
-  const transactions = selectTransactions(state.transactions, categories, counterparties)
-  const recurringBills = selectRecurringBills(state.recurringBills, counterparties)
-  const totalBillsAmount = recurringBills.reduce((sum, bill) => sum + bill.amount, 0)
+  const budgets = selectBudgets(
+    state.budgets,
+    state.budgetSummaries,
+    categories,
+  )
+  const transactions = selectTransactions(
+    state.transactions,
+    categories,
+    counterparties,
+  )
+  const recurringBills = selectRecurringBills(
+    state.recurringBills,
+    counterparties,
+  )
+  const totalBillsAmount = recurringBills.reduce(
+    (sum, bill) => sum + bill.amount,
+    0,
+  )
 
   return {
     summaryStats: [

@@ -26,7 +26,10 @@ export function TransactionsContent() {
   const [sortBy, setSortBy] = useState<SortOption>("latest")
   const [category, setCategory] = useState<TransactionCategory | "all">("all")
   const [currentPage, setCurrentPage] = useState(1)
-  const categoryOptions: { value: TransactionCategory | "all"; label: string }[] = [
+  const categoryOptions: {
+    value: TransactionCategory | "all"
+    label: string
+  }[] = [
     { value: "all", label: "All Transactions" },
     ...transactionCategories.map((cat) => ({ value: cat, label: cat })),
   ]
@@ -48,10 +51,14 @@ export function TransactionsContent() {
     // Sort
     switch (sortBy) {
       case "latest":
-        result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        result.sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+        )
         break
       case "oldest":
-        result.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        result.sort(
+          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+        )
         break
       case "a-z":
         result.sort((a, b) => a.name.localeCompare(b.name))
@@ -70,10 +77,13 @@ export function TransactionsContent() {
     return result
   }, [transactions, search, sortBy, category])
 
-  const totalPages = Math.max(1, Math.ceil(filteredAndSorted.length / ITEMS_PER_PAGE))
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredAndSorted.length / ITEMS_PER_PAGE),
+  )
   const paginatedTransactions = filteredAndSorted.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
+    currentPage * ITEMS_PER_PAGE,
   )
 
   // Reset to page 1 when filters change
@@ -93,10 +103,14 @@ export function TransactionsContent() {
   }
 
   return (
-    <div className="rounded-xl bg-card p-5 md:p-8">
+    <div className="bg-card rounded-xl p-5 md:p-8">
       {/* Filters */}
       <div className="mb-6 flex items-center gap-3 md:justify-between md:gap-4">
-        <SearchInput value={search} onChange={handleSearchChange} className="flex-1 md:flex-initial" />
+        <SearchInput
+          value={search}
+          onChange={handleSearchChange}
+          className="flex-1 md:flex-initial"
+        />
         <div className="flex items-center gap-2 md:gap-4">
           <FilterDropdown
             label="Sort by"

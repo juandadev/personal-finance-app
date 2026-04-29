@@ -12,7 +12,8 @@ const publicSans = Public_Sans({
 
 export const metadata: Metadata = {
   title: "finance — Personal Finance",
-  description: "Track your balance, budgets, pots, transactions and recurring bills.",
+  description:
+    "Track your balance, budgets, pots, transactions and recurring bills.",
   generator: "v0.app",
 }
 
