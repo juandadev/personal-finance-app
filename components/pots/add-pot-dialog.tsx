@@ -10,6 +10,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -21,129 +22,143 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useFinance } from "@/hooks/use-finance"
-import {
-  formatDollarInput,
-  parseDollarAmount,
-  themeOptions,
-} from "@/lib/finance/form-utils"
-import type { Budget } from "@/lib/types"
+import { parseDollarAmount, themeOptions } from "@/lib/finance/form-utils"
 import { cn } from "@/lib/utils"
 
-interface EditBudgetDialogProps {
-  budget: Budget
-  open: boolean
-  onOpenChange: (open: boolean) => void
+const maxPotNameLength = 30
+
+function createPotSlug(name: string) {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
 }
 
-export function EditBudgetDialog({
-  budget,
-  open,
-  onOpenChange,
-}: EditBudgetDialogProps) {
+function createUniquePotId(name: string, existingIds: Set<string>) {
+  const slug = createPotSlug(name) || "new-pot"
+  const baseId = `pot-${slug}`
+
+  if (!existingIds.has(baseId)) {
+    return baseId
+  }
+
+  let suffix = 2
+  let nextId = `${baseId}-${suffix}`
+
+  while (existingIds.has(nextId)) {
+    suffix += 1
+    nextId = `${baseId}-${suffix}`
+  }
+
+  return nextId
+}
+
+export function AddPotDialog() {
   const { state, actions } = useFinance()
-  const currentBudget = state.budgets.find((budgetRecord) => {
-    const category = state.categories.find(
-      (option) => option.id === budgetRecord.categoryId,
-    )
+  const [open, setOpen] = useState(false)
+  const [name, setName] = useState("")
+  const [target, setTarget] = useState("")
+  const [themeColor, setThemeColor] = useState<string>(themeOptions[0].value)
+  const [nameError, setNameError] = useState("")
+  const [targetError, setTargetError] = useState("")
 
-    return category?.name === budget.category
-  })
-  const currentCategoryId = currentBudget?.categoryId ?? ""
-  const [categoryId, setCategoryId] = useState(currentCategoryId)
-  const [maximumSpend, setMaximumSpend] = useState(
-    formatDollarInput(budget.maximum),
+  const existingPotIds = useMemo(
+    () => new Set(state.pots.map((pot) => pot.id)),
+    [state.pots],
   )
-  const [themeColor, setThemeColor] = useState<string>(budget.color)
-  const [amountError, setAmountError] = useState("")
-
-  const budgetedCategoryIds = useMemo(
-    () =>
-      new Set(
-        state.budgets
-          .filter((budgetRecord) => budgetRecord.id !== currentBudget?.id)
-          .map((budgetRecord) => budgetRecord.categoryId),
-      ),
-    [currentBudget?.id, state.budgets],
+  const existingPotNames = useMemo(
+    () => new Set(state.pots.map((pot) => pot.name.trim().toLowerCase())),
+    [state.pots],
   )
   const usedThemeColors = useMemo(
     () =>
-      new Set(
-        state.budgets
-          .filter((budgetRecord) => budgetRecord.id !== currentBudget?.id)
-          .map((budgetRecord) => budgetRecord.themeColor.toLowerCase()),
-      ),
-    [currentBudget?.id, state.budgets],
-  )
-  const orderedCategories = useMemo(
-    () => [...state.categories].sort((a, b) => a.sortOrder - b.sortOrder),
-    [state.categories],
+      new Set(state.pots.map((pot) => pot.themeColor.toLowerCase())),
+    [state.pots],
   )
   const selectedTheme = themeOptions.find((theme) => theme.value === themeColor)
+  const charactersLeft = maxPotNameLength - name.length
 
   const resetForm = () => {
-    setCategoryId(currentCategoryId)
-    setMaximumSpend(formatDollarInput(budget.maximum))
-    setThemeColor(budget.color)
-    setAmountError("")
+    setName("")
+    setTarget("")
+    setThemeColor(themeOptions[0].value)
+    setNameError("")
+    setTargetError("")
   }
 
   const handleOpenChange = (nextOpen: boolean) => {
-    if (nextOpen) {
+    setOpen(nextOpen)
+
+    if (!nextOpen) {
       resetForm()
     }
-
-    onOpenChange(nextOpen)
   }
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
-    if (!currentBudget) {
+    const trimmedName = name.trim()
+    const targetCents = parseDollarAmount(target)
+    let hasError = false
+
+    if (!trimmedName) {
+      setNameError("Enter a pot name.")
+      hasError = true
+    } else if (existingPotNames.has(trimmedName.toLowerCase())) {
+      setNameError("A pot with this name already exists.")
+      hasError = true
+    }
+
+    if (targetCents === null) {
+      setTargetError("Enter a target greater than $0.")
+      hasError = true
+    }
+
+    if (hasError || targetCents === null) {
       return
     }
 
-    const limitCents = parseDollarAmount(maximumSpend)
-
-    if (limitCents === null) {
-      setAmountError("Enter a maximum spend greater than $0.")
-      return
-    }
-
-    const category = orderedCategories.find(
-      (option) => option.id === categoryId,
-    )
-
-    if (!category) {
-      return
-    }
-
-    actions.updateBudget(currentBudget.id, {
-      categoryId: category.id,
-      limitCents,
+    actions.addPot({
+      id: createUniquePotId(trimmedName, existingPotIds),
+      name: trimmedName,
+      balanceCents: 0,
+      targetCents,
       themeColor,
+      sortOrder: Math.max(0, ...state.pots.map((pot) => pot.sortOrder)) + 1,
     })
-    onOpenChange(false)
+    setOpen(false)
+    resetForm()
   }
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>
+        <button
+          type="button"
+          className="bg-sidebar text-sidebar-primary-foreground hover:bg-sidebar/90 focus-visible:ring-ring rounded-lg px-4 py-3 text-sm font-bold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+        >
+          + Add New Pot
+        </button>
+      </DialogTrigger>
       <DialogContent
         className="bg-card max-w-140 gap-0 rounded-xl border-none p-8 shadow-xl sm:max-w-140"
         showCloseButton={false}
       >
         <DialogHeader className="pr-12 text-left">
           <DialogTitle className="text-[2rem] leading-tight font-bold tracking-[-0.02em]">
-            Edit Budget
+            Add New Pot
           </DialogTitle>
           <DialogDescription className="mt-5 text-sm leading-6">
-            As your budgets change, feel free to update your spending limits.
+            Create a pot to set savings targets. These can help keep you on
+            track as you save for special purchases.
           </DialogDescription>
         </DialogHeader>
 
         <DialogClose asChild>
           <button
             type="button"
-            aria-label="Close edit budget dialog"
+            aria-label="Close add pot dialog"
             className="text-muted-foreground hover:text-foreground focus-visible:ring-ring absolute top-9 right-8 flex size-7 items-center justify-center rounded-full border border-current transition-colors focus-visible:ring-2 focus-visible:outline-none"
           >
             <X className="size-4" aria-hidden />
@@ -153,52 +168,49 @@ export function EditBudgetDialog({
         <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <Label
-              htmlFor="edit-budget-category"
+              htmlFor="pot-name"
               className="text-muted-foreground text-xs font-bold"
             >
-              Budget Category
+              Pot Name
             </Label>
-            <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger
-                id="edit-budget-category"
-                className="h-11 w-full rounded-lg border-[#98908B] px-5 text-sm"
-              >
-                <SelectValue placeholder="Select a category" />
-              </SelectTrigger>
-              <SelectContent className="max-h-107.5">
-                {orderedCategories.map((category) => {
-                  const isAlreadyBudgeted = budgetedCategoryIds.has(category.id)
-
-                  return (
-                    <SelectItem
-                      key={category.id}
-                      value={category.id}
-                      disabled={isAlreadyBudgeted}
-                      className="border-border min-h-11 border-b py-3 pr-8 pl-4 last:border-b-0"
-                    >
-                      <span className="flex w-full items-center justify-between gap-6">
-                        <span className={cn(isAlreadyBudgeted && "opacity-35")}>
-                          {category.name}
-                        </span>
-                        {isAlreadyBudgeted && (
-                          <span className="text-muted-foreground text-xs">
-                            Already used
-                          </span>
-                        )}
-                      </span>
-                    </SelectItem>
-                  )
-                })}
-              </SelectContent>
-            </Select>
+            <Input
+              id="pot-name"
+              value={name}
+              onChange={(event) => {
+                setName(event.target.value)
+                setNameError("")
+              }}
+              maxLength={maxPotNameLength}
+              placeholder="e.g. Rainy Days"
+              aria-invalid={nameError ? "true" : "false"}
+              aria-describedby={
+                nameError ? "pot-name-error" : "pot-name-characters"
+              }
+              className="h-11 rounded-lg border-[#98908B] px-5 text-sm"
+            />
+            <div className="flex justify-end">
+              {nameError ? (
+                <p id="pot-name-error" className="text-destructive text-xs">
+                  {nameError}
+                </p>
+              ) : (
+                <p
+                  id="pot-name-characters"
+                  className="text-muted-foreground text-xs"
+                  aria-live="polite"
+                >
+                  {charactersLeft} characters left
+                </p>
+              )}
+            </div>
           </div>
 
           <div className="space-y-2">
             <Label
-              htmlFor="edit-maximum-spend"
+              htmlFor="pot-target"
               className="text-muted-foreground text-xs font-bold"
             >
-              Maximum Spend
+              Target
             </Label>
             <div className="relative">
               <span
@@ -208,40 +220,36 @@ export function EditBudgetDialog({
                 $
               </span>
               <Input
-                id="edit-maximum-spend"
+                id="pot-target"
                 inputMode="decimal"
-                value={maximumSpend}
+                value={target}
                 onChange={(event) => {
-                  setMaximumSpend(event.target.value)
-                  setAmountError("")
+                  setTarget(event.target.value)
+                  setTargetError("")
                 }}
-                aria-invalid={amountError ? "true" : "false"}
-                aria-describedby={
-                  amountError ? "edit-maximum-spend-error" : undefined
-                }
+                placeholder="e.g. 2000"
+                aria-invalid={targetError ? "true" : "false"}
+                aria-describedby={targetError ? "pot-target-error" : undefined}
                 className="h-11 rounded-lg border-[#98908B] pl-10 text-sm"
               />
             </div>
-            {amountError && (
-              <p
-                id="edit-maximum-spend-error"
-                className="text-destructive text-xs"
-              >
-                {amountError}
+            {targetError && (
+              <p id="pot-target-error" className="text-destructive text-xs">
+                {targetError}
               </p>
             )}
           </div>
 
           <div className="space-y-2">
             <Label
-              htmlFor="edit-budget-theme"
+              htmlFor="pot-theme"
               className="text-muted-foreground text-xs font-bold"
             >
               Theme
             </Label>
             <Select value={themeColor} onValueChange={setThemeColor}>
               <SelectTrigger
-                id="edit-budget-theme"
+                id="pot-theme"
                 className="h-11 w-full rounded-lg border-[#98908B] px-5 text-sm"
               >
                 <SelectValue>
@@ -291,10 +299,9 @@ export function EditBudgetDialog({
 
           <Button
             type="submit"
-            disabled={!currentBudget}
             className="h-13.25 w-full rounded-lg text-sm font-bold"
           >
-            Save Changes
+            Add Pot
           </Button>
         </form>
       </DialogContent>

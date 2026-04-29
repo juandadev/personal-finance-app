@@ -22,12 +22,12 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useFinance } from "@/hooks/use-finance"
-import { cn } from "@/lib/utils"
 import {
   getCurrentPeriod,
   parseDollarAmount,
   themeOptions,
-} from "./budget-form-utils"
+} from "@/lib/finance/form-utils"
+import { cn } from "@/lib/utils"
 
 export function AddBudgetDialog() {
   const { state, actions } = useFinance()
