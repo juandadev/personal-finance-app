@@ -17,6 +17,7 @@ import type {
   RecurringBillRecord,
   TransactionRecord,
 } from "@/lib/finance/types"
+import { SidebarProvider } from "@/components/ui/sidebar"
 
 interface FinanceContextValue extends FinanceViewModel {
   state: FinanceState
@@ -85,7 +86,11 @@ export function FinanceProvider({ children }: FinanceProviderProps) {
   )
 
   return (
-    <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>
+    <FinanceContext.Provider value={value}>
+      <SidebarProvider defaultOpen className="bg-background">
+        {children}
+      </SidebarProvider>
+    </FinanceContext.Provider>
   )
 }
 

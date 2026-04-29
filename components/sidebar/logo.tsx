@@ -10,7 +10,7 @@ interface LogoProps {
 }
 
 const logoTransition: Transition = {
-  duration: 0.25,
+  duration: 0.3,
   ease: [1, 0, 0, 1],
 }
 

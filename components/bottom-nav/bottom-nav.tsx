@@ -1,9 +1,8 @@
 import { navItems } from "@/lib/data"
-import type { NavKey } from "@/lib/types"
 import { BottomNavItem } from "./bottom-nav-item"
 
 interface BottomNavProps {
-  activeKey: NavKey
+  activeKey: string
 }
 
 export function BottomNav({ activeKey }: BottomNavProps) {
@@ -14,8 +13,8 @@ export function BottomNav({ activeKey }: BottomNavProps) {
     >
       <ul className="flex flex-1 items-center justify-around">
         {navItems.map((item) => (
-          <li key={item.key}>
-            <BottomNavItem item={item} active={activeKey === item.key} />
+          <li key={item.key} className="relative isolate">
+            <BottomNavItem item={item} active={activeKey === item.href} />
           </li>
         ))}
       </ul>

@@ -4,6 +4,8 @@ import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, VariantProps } from "class-variance-authority"
 import { PanelLeftClose, PanelLeftIcon, PanelLeftOpen } from "lucide-react"
+import { LayoutGroup, motion, useReducedMotion } from "motion/react"
+import type { Transition } from "motion/react"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
@@ -31,6 +33,11 @@ const SIDEBAR_WIDTH = "18rem"
 const SIDEBAR_WIDTH_MOBILE = "18rem"
 const SIDEBAR_WIDTH_ICON = "5rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
+const SIDEBAR_ACTIVE_INDICATOR_LAYOUT_ID = "sidebar-active-indicator"
+const SIDEBAR_ACTIVE_INDICATOR_TRANSITION: Transition = {
+  duration: 0.2,
+  ease: [0.79, 0.14, 0.15, 0.86],
+}
 
 type SidebarContextProps = {
   state: "expanded" | "collapsed"
@@ -218,7 +225,7 @@ function Sidebar({
       <div
         data-slot="sidebar-gap"
         className={cn(
-          "ease-in-out-expo relative w-(--sidebar-width) bg-transparent transition-[width] duration-250",
+          "ease-in-out-expo relative w-(--sidebar-width) bg-transparent transition-[width] duration-300",
           "group-data-[collapsible=offcanvas]:w-0",
           "group-data-[side=right]:rotate-180",
           variant === "floating" || variant === "inset"
@@ -229,7 +236,7 @@ function Sidebar({
       <div
         data-slot="sidebar-container"
         className={cn(
-          "ease-in-out-expo fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-250 md:flex",
+          "ease-in-out-expo fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-300 md:flex",
           side === "left"
             ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
             : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
@@ -244,7 +251,7 @@ function Sidebar({
         <div
           data-sidebar="sidebar"
           data-slot="sidebar-inner"
-          className="bg-sidebar group-data-[variant=floating]:border-sidebar-border flex h-full w-full flex-col group-data-[side=left]:rounded-r-2xl group-data-[side=right]:rounded-l-2xl group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:shadow-sm"
+          className="bg-sidebar group-data-[variant=floating]:border-sidebar-border flex h-full w-full flex-col gap-6 group-data-[side=left]:rounded-r-2xl group-data-[side=right]:rounded-l-2xl group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:shadow-sm"
         >
           {children}
         </div>
@@ -494,15 +501,17 @@ function SidebarGroupContent({
 
 function SidebarMenu({ className, ...props }: React.ComponentProps<"ul">) {
   return (
-    <ul
-      data-slot="sidebar-menu"
-      data-sidebar="menu"
-      className={cn(
-        "flex w-full min-w-0 flex-col gap-1 pr-6 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:pr-0",
-        className,
-      )}
-      {...props}
-    />
+    <LayoutGroup id="sidebar-menu">
+      <ul
+        data-slot="sidebar-menu"
+        data-sidebar="menu"
+        className={cn(
+          "flex w-full min-w-0 flex-col gap-1 pr-6 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:pr-0",
+          className,
+        )}
+        {...props}
+      />
+    </LayoutGroup>
   )
 }
 
@@ -518,12 +527,12 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
 }
 
 const sidebarMenuButtonVariants = cva(
-  "peer/menu-button group/sidebar-menu-button relative flex w-full items-center overflow-hidden text-left outline-hidden ring-sidebar-ring transition-[width,height,padding,color,background-color] focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 group-has-data-[sidebar=menu-action]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:before:bg-sidebar-primary data-[active=true]:before:absolute data-[active=true]:before:inset-y-0 data-[active=true]:before:left-0 data-[active=true]:before:w-1 data-[active=true]:before:rounded-r group-data-[collapsible=icon]:data-[active=true]:before:hidden group-data-[collapsible=icon]:[&>span:last-child]:sr-only [&>span:last-child]:truncate [&>svg]:size-5 [&>svg]:shrink-0 data-[active=true]:[&>svg]:text-sidebar-primary",
+  "peer/menu-button group/sidebar-menu-button relative isolate flex w-full items-center overflow-hidden text-left outline-hidden ring-sidebar-ring transition-[width,height,padding,color] focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 group-has-data-[sidebar=menu-action]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 group-data-[collapsible=icon]:[&>span:last-child]:sr-only [&>span:last-child]:relative [&>span:last-child]:z-10 [&>span:last-child]:truncate [&>svg]:relative [&>svg]:z-10 [&>svg]:size-5 [&>svg]:shrink-0 data-[active=true]:[&>svg]:text-sidebar-primary",
   {
     variants: {
       variant: {
         default:
-          "text-sidebar-foreground hover:bg-transparent hover:text-sidebar-primary-foreground hover:[&>svg]:text-sidebar-primary-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:font-bold data-[active=true]:text-sidebar-accent-foreground data-[active=true]:hover:bg-sidebar-accent data-[active=true]:hover:text-sidebar-accent-foreground",
+          "text-sidebar-foreground hover:bg-transparent hover:text-sidebar-primary-foreground hover:[&>svg]:text-sidebar-primary-foreground data-[active=true]:font-bold data-[active=true]:text-sidebar-accent-foreground data-[active=true]:hover:text-sidebar-accent-foreground",
         outline:
           "bg-background shadow-[0_0_0_1px_hsl(var(--sidebar-border))] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_hsl(var(--sidebar-accent))]",
       },
@@ -531,7 +540,7 @@ const sidebarMenuButtonVariants = cva(
         default:
           "h-14 gap-4 rounded-none rounded-r-xl px-6 text-sm font-bold group-data-[collapsible=icon]:size-12! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:p-0!",
         sm: "h-10 gap-3 rounded-none rounded-r-lg px-4 text-xs font-bold group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-lg group-data-[collapsible=icon]:p-0!",
-        lg: "h-14 gap-4 rounded-none rounded-r-xl px-6 text-sm font-bold group-data-[collapsible=icon]:size-12! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:p-0!",
+        lg: "h-14 gap-4 rounded-none rounded-r-xl px-8 py-4 text-base font-bold group-data-[collapsible=icon]:size-12! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:p-0!",
       },
     },
     defaultVariants: {
@@ -588,6 +597,33 @@ function SidebarMenuButton({
         {...tooltip}
       />
     </Tooltip>
+  )
+}
+
+function SidebarMenuActiveIndicator({
+  className,
+  ...props
+}: React.ComponentProps<typeof motion.div>) {
+  const shouldReduceMotion = useReducedMotion()
+
+  return (
+    <motion.div
+      data-slot="sidebar-menu-active-indicator"
+      data-sidebar="menu-active-indicator"
+      layoutId={SIDEBAR_ACTIVE_INDICATOR_LAYOUT_ID}
+      transition={
+        shouldReduceMotion
+          ? { duration: 0 }
+          : SIDEBAR_ACTIVE_INDICATOR_TRANSITION
+      }
+      className={cn(
+        "bg-sidebar-accent pointer-events-none absolute inset-0 z-0 rounded-r-xl",
+        "before:bg-sidebar-primary before:absolute before:inset-y-0 before:left-0 before:w-1 before:rounded-r",
+        "group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:before:hidden",
+        className,
+      )}
+      {...props}
+    />
   )
 }
 
@@ -762,6 +798,7 @@ export {
   SidebarInset,
   SidebarMenu,
   SidebarMenuAction,
+  SidebarMenuActiveIndicator,
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,

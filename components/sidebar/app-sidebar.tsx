@@ -1,7 +1,4 @@
-"use client"
-
 import { navItems } from "@/lib/data"
-import type { NavKey } from "@/lib/types"
 import {
   Sidebar,
   SidebarCollapseButton,
@@ -17,7 +14,7 @@ import { Logo } from "./logo"
 import { NavItem } from "./nav-item"
 
 interface AppSidebarProps {
-  activeKey: NavKey
+  activeKey: string
 }
 
 export function AppSidebar({ activeKey }: AppSidebarProps) {
@@ -37,7 +34,7 @@ export function AppSidebar({ activeKey }: AppSidebarProps) {
                     <NavItem
                       key={item.key}
                       item={item}
-                      active={activeKey === item.key}
+                      active={activeKey === item.href}
                     />
                   ))}
                 </SidebarMenu>

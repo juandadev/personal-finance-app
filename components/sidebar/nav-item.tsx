@@ -1,6 +1,10 @@
 import Link from "next/link"
 import type { NavItem as NavItemType } from "@/lib/types"
-import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar"
+import {
+  SidebarMenuActiveIndicator,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@/components/ui/sidebar"
 
 interface NavItemProps {
   item: NavItemType
@@ -12,6 +16,7 @@ export function NavItem({ item, active = false }: NavItemProps) {
 
   return (
     <SidebarMenuItem>
+      {active && <SidebarMenuActiveIndicator />}
       <SidebarMenuButton
         asChild
         isActive={active}

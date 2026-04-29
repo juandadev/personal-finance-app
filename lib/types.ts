@@ -1,14 +1,7 @@
 import type { LucideIcon } from "lucide-react"
 
-export type NavKey =
-  | "overview"
-  | "transactions"
-  | "budgets"
-  | "pots"
-  | "recurring-bills"
-
 export interface NavItem {
-  key: NavKey
+  key: string
   label: string
   icon: LucideIcon
   href: string
