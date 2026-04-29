@@ -3,6 +3,12 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@layer utilities {
+  .ease-in-out-expo {
+    transition-timing-function: cubic-bezier(1, 0, 0, 1);
+  }
+}
+
 :root {
   /* Brand surfaces */
   --background: #f8f4f0; /* cream page background */
