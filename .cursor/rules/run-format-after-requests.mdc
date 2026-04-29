@@ -1,0 +1,10 @@
+---
+description: Run project formatter after every completed request
+alwaysApply: true
+---
+
+# Format After Requests
+
+- Before finishing any request that involved work in this repository, run `pnpm run format`.
+- Treat formatting as part of the completion checklist, after edits and before the final response.
+- If `pnpm run format` cannot be run or fails, mention that in the final response with the reason.

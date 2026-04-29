@@ -72,8 +72,7 @@ export function AddPotDialog() {
     [state.pots],
   )
   const usedThemeColors = useMemo(
-    () =>
-      new Set(state.pots.map((pot) => pot.themeColor.toLowerCase())),
+    () => new Set(state.pots.map((pot) => pot.themeColor.toLowerCase())),
     [state.pots],
   )
   const selectedTheme = themeOptions.find((theme) => theme.value === themeColor)

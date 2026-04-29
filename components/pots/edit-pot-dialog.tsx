@@ -37,11 +37,7 @@ interface EditPotDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
-export function EditPotDialog({
-  pot,
-  open,
-  onOpenChange,
-}: EditPotDialogProps) {
+export function EditPotDialog({ pot, open, onOpenChange }: EditPotDialogProps) {
   const { state, actions } = useFinance()
   const currentPot = state.pots.find((potRecord) => potRecord.id === pot.id)
   const [name, setName] = useState(pot.name)
@@ -220,7 +216,10 @@ export function EditPotDialog({
               />
             </div>
             {targetError && (
-              <p id="edit-pot-target-error" className="text-destructive text-xs">
+              <p
+                id="edit-pot-target-error"
+                className="text-destructive text-xs"
+              >
                 {targetError}
               </p>
             )}

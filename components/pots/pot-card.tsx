@@ -117,11 +117,7 @@ export function PotCard({ pot }: PotCardProps) {
         open={isWithdrawOpen}
         onOpenChange={setIsWithdrawOpen}
       />
-      <EditPotDialog
-        pot={pot}
-        open={isEditOpen}
-        onOpenChange={setIsEditOpen}
-      />
+      <EditPotDialog pot={pot} open={isEditOpen} onOpenChange={setIsEditOpen} />
       <DeletePotDialog
         pot={pot}
         open={isDeleteOpen}
