@@ -10,7 +10,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -22,68 +21,86 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useFinance } from "@/hooks/use-finance"
+import type { Budget } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import {
-  getCurrentPeriod,
+  formatDollarInput,
   parseDollarAmount,
   themeOptions,
 } from "./budget-form-utils"
 
-export function AddBudgetDialog() {
+interface EditBudgetDialogProps {
+  budget: Budget
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
+
+export function EditBudgetDialog({
+  budget,
+  open,
+  onOpenChange,
+}: EditBudgetDialogProps) {
   const { state, actions } = useFinance()
-  const [open, setOpen] = useState(false)
-  const [categoryId, setCategoryId] = useState("")
-  const [maximumSpend, setMaximumSpend] = useState("")
-  const [themeColor, setThemeColor] = useState<string>(themeOptions[0].value)
+  const currentBudget = state.budgets.find((budgetRecord) => {
+    const category = state.categories.find(
+      (option) => option.id === budgetRecord.categoryId,
+    )
+
+    return category?.name === budget.category
+  })
+  const currentCategoryId = currentBudget?.categoryId ?? ""
+  const [categoryId, setCategoryId] = useState(currentCategoryId)
+  const [maximumSpend, setMaximumSpend] = useState(
+    formatDollarInput(budget.maximum),
+  )
+  const [themeColor, setThemeColor] = useState<string>(budget.color)
   const [amountError, setAmountError] = useState("")
 
   const budgetedCategoryIds = useMemo(
-    () => new Set(state.budgets.map((budget) => budget.categoryId)),
-    [state.budgets],
+    () =>
+      new Set(
+        state.budgets
+          .filter((budgetRecord) => budgetRecord.id !== currentBudget?.id)
+          .map((budgetRecord) => budgetRecord.categoryId),
+      ),
+    [currentBudget?.id, state.budgets],
   )
   const usedThemeColors = useMemo(
     () =>
-      new Set(state.budgets.map((budget) => budget.themeColor.toLowerCase())),
-    [state.budgets],
-  )
-
-  const availableCategories = useMemo(
-    () =>
-      state.categories
-        .filter((category) => !budgetedCategoryIds.has(category.id))
-        .sort((a, b) => a.sortOrder - b.sortOrder),
-    [budgetedCategoryIds, state.categories],
+      new Set(
+        state.budgets
+          .filter((budgetRecord) => budgetRecord.id !== currentBudget?.id)
+          .map((budgetRecord) => budgetRecord.themeColor.toLowerCase()),
+      ),
+    [currentBudget?.id, state.budgets],
   )
   const orderedCategories = useMemo(
     () => [...state.categories].sort((a, b) => a.sortOrder - b.sortOrder),
     [state.categories],
   )
-
-  const firstCategoryId = availableCategories[0]?.id ?? ""
-  const selectedCategoryId = availableCategories.some(
-    (category) => category.id === categoryId,
-  )
-    ? categoryId
-    : firstCategoryId
   const selectedTheme = themeOptions.find((theme) => theme.value === themeColor)
 
   const resetForm = () => {
-    setCategoryId("")
-    setMaximumSpend("")
-    setThemeColor(themeOptions[0].value)
+    setCategoryId(currentCategoryId)
+    setMaximumSpend(formatDollarInput(budget.maximum))
+    setThemeColor(budget.color)
     setAmountError("")
   }
 
   const handleOpenChange = (nextOpen: boolean) => {
-    setOpen(nextOpen)
-
-    if (!nextOpen) {
+    if (nextOpen) {
       resetForm()
     }
+
+    onOpenChange(nextOpen)
   }
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+
+    if (!currentBudget) {
+      return
+    }
 
     const limitCents = parseDollarAmount(maximumSpend)
 
@@ -92,58 +109,41 @@ export function AddBudgetDialog() {
       return
     }
 
-    const category = availableCategories.find(
-      (option) => option.id === selectedCategoryId,
+    const category = orderedCategories.find(
+      (option) => option.id === categoryId,
     )
 
     if (!category) {
       return
     }
 
-    const period = state.budgets[0]?.period ?? getCurrentPeriod()
-
-    actions.addBudget(
-      {
-        id: `budget-${category.slug}-${period}`,
-        categoryId: category.id,
-        period,
-        limitCents,
-        themeColor,
-      },
-      0,
-    )
-    setOpen(false)
-    resetForm()
+    actions.updateBudget(currentBudget.id, {
+      categoryId: category.id,
+      limitCents,
+      themeColor,
+    })
+    onOpenChange(false)
   }
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <button
-          type="button"
-          className="bg-sidebar text-sidebar-primary-foreground hover:bg-sidebar/90 focus-visible:ring-ring rounded-lg px-4 py-3 text-sm font-bold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-        >
-          + Add New Budget
-        </button>
-      </DialogTrigger>
       <DialogContent
         className="bg-card max-w-140 gap-0 rounded-xl border-none p-8 shadow-xl sm:max-w-140"
         showCloseButton={false}
       >
         <DialogHeader className="pr-12 text-left">
           <DialogTitle className="text-[2rem] leading-tight font-bold tracking-[-0.02em]">
-            Add New Budget
+            Edit Budget
           </DialogTitle>
           <DialogDescription className="mt-5 text-sm leading-6">
-            Choose a category to set a spending budget. These categories can
-            help you monitor spending.
+            As your budgets change, feel free to update your spending limits.
           </DialogDescription>
         </DialogHeader>
 
         <DialogClose asChild>
           <button
             type="button"
-            aria-label="Close add budget dialog"
+            aria-label="Close edit budget dialog"
             className="text-muted-foreground hover:text-foreground focus-visible:ring-ring absolute top-9 right-8 flex size-7 items-center justify-center rounded-full border border-current transition-colors focus-visible:ring-2 focus-visible:outline-none"
           >
             <X className="size-4" aria-hidden />
@@ -153,18 +153,14 @@ export function AddBudgetDialog() {
         <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <Label
-              htmlFor="budget-category"
+              htmlFor="edit-budget-category"
               className="text-muted-foreground text-xs font-bold"
             >
               Budget Category
             </Label>
-            <Select
-              value={selectedCategoryId}
-              onValueChange={setCategoryId}
-              disabled={availableCategories.length === 0}
-            >
+            <Select value={categoryId} onValueChange={setCategoryId}>
               <SelectTrigger
-                id="budget-category"
+                id="edit-budget-category"
                 className="h-11 w-full rounded-lg border-[#98908B] px-5 text-sm"
               >
                 <SelectValue placeholder="Select a category" />
@@ -193,23 +189,13 @@ export function AddBudgetDialog() {
                     </SelectItem>
                   )
                 })}
-                {orderedCategories.length === 0 && (
-                  <SelectItem value="empty" disabled>
-                    No categories available
-                  </SelectItem>
-                )}
               </SelectContent>
             </Select>
-            {availableCategories.length === 0 && (
-              <p className="text-muted-foreground text-xs">
-                Every category already has a budget.
-              </p>
-            )}
           </div>
 
           <div className="space-y-2">
             <Label
-              htmlFor="maximum-spend"
+              htmlFor="edit-maximum-spend"
               className="text-muted-foreground text-xs font-bold"
             >
               Maximum Spend
@@ -222,23 +208,25 @@ export function AddBudgetDialog() {
                 $
               </span>
               <Input
-                id="maximum-spend"
+                id="edit-maximum-spend"
                 inputMode="decimal"
                 value={maximumSpend}
                 onChange={(event) => {
                   setMaximumSpend(event.target.value)
                   setAmountError("")
                 }}
-                placeholder="e.g. 2000"
                 aria-invalid={amountError ? "true" : "false"}
                 aria-describedby={
-                  amountError ? "maximum-spend-error" : undefined
+                  amountError ? "edit-maximum-spend-error" : undefined
                 }
                 className="h-11 rounded-lg border-[#98908B] pl-10 text-sm"
               />
             </div>
             {amountError && (
-              <p id="maximum-spend-error" className="text-destructive text-xs">
+              <p
+                id="edit-maximum-spend-error"
+                className="text-destructive text-xs"
+              >
                 {amountError}
               </p>
             )}
@@ -246,14 +234,14 @@ export function AddBudgetDialog() {
 
           <div className="space-y-2">
             <Label
-              htmlFor="budget-theme"
+              htmlFor="edit-budget-theme"
               className="text-muted-foreground text-xs font-bold"
             >
               Theme
             </Label>
             <Select value={themeColor} onValueChange={setThemeColor}>
               <SelectTrigger
-                id="budget-theme"
+                id="edit-budget-theme"
                 className="h-11 w-full rounded-lg border-[#98908B] px-5 text-sm"
               >
                 <SelectValue>
@@ -303,10 +291,10 @@ export function AddBudgetDialog() {
 
           <Button
             type="submit"
-            disabled={availableCategories.length === 0}
+            disabled={!currentBudget}
             className="h-13.25 w-full rounded-lg text-sm font-bold"
           >
-            Add Budget
+            Save Changes
           </Button>
         </form>
       </DialogContent>
