@@ -151,6 +151,7 @@ export function selectFinanceViewModel(state: FinanceState): FinanceViewModel {
   const pots = [...state.pots]
     .sort((a, b) => a.sortOrder - b.sortOrder)
     .map((pot) => ({
+      id: pot.id,
       name: pot.name,
       amount: centsToDollars(pot.balanceCents),
       target: centsToDollars(pot.targetCents),

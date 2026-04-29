@@ -21,6 +21,7 @@ export interface SummaryStat {
 }
 
 export interface Pot {
+  id: string
   name: string
   amount: number
   target: number
