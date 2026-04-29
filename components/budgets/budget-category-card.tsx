@@ -1,8 +1,19 @@
+"use client"
+
+import { useState } from "react"
 import Link from "next/link"
 import { MoreHorizontal, ChevronRight } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { formatCurrency } from "@/lib/format"
 import type { Budget, Transaction } from "@/lib/types"
 import { BudgetProgressBar } from "./budget-progress-bar"
+import { DeleteBudgetDialog } from "./delete-budget-dialog"
+import { EditBudgetDialog } from "./edit-budget-dialog"
 import { LatestSpendingItem } from "./latest-spending-item"
 
 interface BudgetCategoryCardProps {
@@ -14,6 +25,8 @@ export function BudgetCategoryCard({
   budget,
   transactions,
 }: BudgetCategoryCardProps) {
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const remaining = Math.max(budget.maximum - budget.spent, 0)
   const latestTransactions = transactions.slice(0, 3)
 
@@ -31,13 +44,35 @@ export function BudgetCategoryCard({
             {budget.category}
           </h2>
         </div>
-        <button
-          type="button"
-          className="text-muted-foreground hover:text-foreground transition-colors"
-          aria-label={`More options for ${budget.category}`}
-        >
-          <MoreHorizontal className="size-5" />
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="text-muted-foreground hover:text-foreground focus-visible:ring-ring flex size-11 items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:outline-none"
+              aria-label={`More options for ${budget.category}`}
+            >
+              <MoreHorizontal className="size-5" aria-hidden />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            sideOffset={8}
+            className="w-33.5 rounded-lg border-none bg-white p-3 shadow-[0_16px_32px_rgba(0,0,0,0.18)]"
+          >
+            <DropdownMenuItem
+              className="focus:bg-background h-10 cursor-pointer rounded-md px-2 text-sm text-[#201F24]"
+              onSelect={() => setIsEditOpen(true)}
+            >
+              Edit Budget
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="focus:bg-background h-10 cursor-pointer rounded-md px-2 text-sm text-[#C94736] focus:text-[#C94736]"
+              onSelect={() => setIsDeleteOpen(true)}
+            >
+              Delete Budget
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Maximum */}
@@ -93,6 +128,16 @@ export function BudgetCategoryCard({
           ))}
         </ul>
       </div>
+      <EditBudgetDialog
+        budget={budget}
+        open={isEditOpen}
+        onOpenChange={setIsEditOpen}
+      />
+      <DeleteBudgetDialog
+        budget={budget}
+        open={isDeleteOpen}
+        onOpenChange={setIsDeleteOpen}
+      />
     </section>
   )
 }

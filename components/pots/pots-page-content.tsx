@@ -9,7 +9,7 @@ export function PotsPageContent() {
   return (
     <div className="mt-6 grid gap-6 lg:grid-cols-2">
       {pots.map((pot) => (
-        <PotCard key={pot.name} pot={pot} />
+        <PotCard key={pot.id} pot={pot} />
       ))}
     </div>
   )
