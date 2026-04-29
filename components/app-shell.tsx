@@ -1,7 +1,8 @@
 import type { ReactNode } from "react"
-import { Sidebar } from "./sidebar/sidebar"
+import { AppSidebar } from "./sidebar/app-sidebar"
 import { BottomNav } from "./bottom-nav/bottom-nav"
 import type { NavKey } from "@/lib/types"
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 
 interface AppShellProps {
   activeKey: NavKey
@@ -10,12 +11,12 @@ interface AppShellProps {
 
 export function AppShell({ activeKey, children }: AppShellProps) {
   return (
-    <div className="bg-background flex min-h-screen">
-      <Sidebar activeKey={activeKey} />
-      <main className="flex-1 px-4 py-6 pb-24 md:px-10 md:py-8 lg:pb-10">
+    <SidebarProvider defaultOpen className="bg-background">
+      <AppSidebar activeKey={activeKey} />
+      <SidebarInset className="px-4 py-6 pb-24 md:px-10 md:py-8 lg:pb-10">
         {children}
-      </main>
+      </SidebarInset>
       <BottomNav activeKey={activeKey} />
-    </div>
+    </SidebarProvider>
   )
 }
