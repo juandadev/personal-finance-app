@@ -303,9 +303,9 @@ function SidebarCollapseButton({
         toggleSidebar()
       }}
       className={cn(
-        "text-sidebar-foreground hover:text-sidebar-primary-foreground flex h-12 items-center gap-4 rounded-r-xl px-2 text-sm font-bold hover:bg-transparent",
+        "text-sidebar-foreground hover:text-sidebar-primary-foreground flex h-12 items-center justify-start gap-4 rounded-r-xl px-2 text-sm font-bold hover:bg-transparent",
         "focus-visible:ring-sidebar-ring focus-visible:ring-2 focus-visible:ring-offset-0",
-        "group-data-[collapsible=icon]:size-12 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:px-0",
+        "group-data-[collapsible=icon]:size-12 group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:[&>span:last-child]:sr-only",
         className,
       )}
       aria-label={collapsed ? "Expand menu" : "Minimize menu"}
@@ -316,7 +316,7 @@ function SidebarCollapseButton({
       ) : (
         <PanelLeftClose className="size-5" aria-hidden />
       )}
-      {!collapsed && <span>Minimize Menu</span>}
+      <span>Minimize Menu</span>
     </Button>
   )
 }
@@ -394,7 +394,7 @@ function SidebarFooter({ className, ...props }: React.ComponentProps<"div">) {
       data-slot="sidebar-footer"
       data-sidebar="footer"
       className={cn(
-        "flex flex-col gap-2 px-6 pb-10 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:px-0",
+        "flex flex-col gap-2 px-6 pb-10 group-data-[collapsible=icon]:items-start",
         className,
       )}
       {...props}
@@ -506,7 +506,7 @@ function SidebarMenu({ className, ...props }: React.ComponentProps<"ul">) {
         data-slot="sidebar-menu"
         data-sidebar="menu"
         className={cn(
-          "flex w-full min-w-0 flex-col gap-1 pr-6 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:pr-0",
+          "flex w-full min-w-0 flex-col gap-1 pr-6 group-data-[collapsible=icon]:items-start",
           className,
         )}
         {...props}
@@ -520,14 +520,14 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
     <li
       data-slot="sidebar-menu-item"
       data-sidebar="menu-item"
-      className={cn("group/menu-item relative", className)}
+      className={cn("group/menu-item relative w-full", className)}
       {...props}
     />
   )
 }
 
 const sidebarMenuButtonVariants = cva(
-  "peer/menu-button group/sidebar-menu-button relative isolate flex w-full items-center overflow-hidden text-left outline-hidden ring-sidebar-ring transition-[width,height,padding,color] focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 group-has-data-[sidebar=menu-action]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 group-data-[collapsible=icon]:[&>span:last-child]:sr-only [&>span:last-child]:relative [&>span:last-child]:z-10 [&>span:last-child]:truncate [&>svg]:relative [&>svg]:z-10 [&>svg]:size-5 [&>svg]:shrink-0 data-[active=true]:[&>svg]:text-sidebar-primary",
+  "peer/menu-button group/sidebar-menu-button relative isolate flex w-full items-center overflow-hidden text-left outline-hidden ring-sidebar-ring transition-[padding] focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 group-has-data-[sidebar=menu-action]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 group-data-[collapsible=icon]:[&>span:last-child]:sr-only [&>span:last-child]:relative [&>span:last-child]:z-10 [&>span:last-child]:truncate [&>svg]:relative [&>svg]:z-10 [&>svg]:size-5 [&>svg]:shrink-0 data-[active=true]:[&>svg]:text-sidebar-primary",
   {
     variants: {
       variant: {
@@ -538,9 +538,9 @@ const sidebarMenuButtonVariants = cva(
       },
       size: {
         default:
-          "h-14 gap-4 rounded-none rounded-r-xl px-6 text-sm font-bold group-data-[collapsible=icon]:size-12! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:p-0!",
-        sm: "h-10 gap-3 rounded-none rounded-r-lg px-4 text-xs font-bold group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-lg group-data-[collapsible=icon]:p-0!",
-        lg: "h-14 gap-4 rounded-none rounded-r-xl px-8 py-4 text-base font-bold group-data-[collapsible=icon]:size-12! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:p-0!",
+          "h-14 gap-4 rounded-none rounded-r-xl px-6 text-sm font-bold group-data-[collapsible=icon]:justify-start group-data-[collapsible=icon]:px-3",
+        sm: "h-10 gap-3 rounded-none rounded-r-lg px-4 text-xs font-bold group-data-[collapsible=icon]:justify-start group-data-[collapsible=icon]:px-2",
+        lg: "h-14 gap-4 rounded-none rounded-r-xl px-8 py-4 text-base font-bold group-data-[collapsible=icon]:justify-start group-data-[collapsible=icon]:px-4",
       },
     },
     defaultVariants: {
@@ -618,8 +618,7 @@ function SidebarMenuActiveIndicator({
       }
       className={cn(
         "bg-sidebar-accent pointer-events-none absolute inset-0 z-0 rounded-r-xl",
-        "before:bg-sidebar-primary before:absolute before:inset-y-0 before:left-0 before:w-1 before:rounded-r",
-        "group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:before:hidden",
+        "before:bg-sidebar-primary before:absolute before:inset-y-0 before:left-0 before:w-1",
         className,
       )}
       {...props}
