@@ -3,7 +3,6 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, VariantProps } from "class-variance-authority"
-import { PanelLeftClose, PanelLeftIcon, PanelLeftOpen } from "lucide-react"
 import { LayoutGroup, motion, useReducedMotion } from "motion/react"
 import type { Transition } from "motion/react"
 
@@ -26,6 +25,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import MinimizeMenuIcon from "@/components/icons/MinimizeMenuIcon"
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
@@ -260,32 +260,6 @@ function Sidebar({
   )
 }
 
-function SidebarTrigger({
-  className,
-  onClick,
-  ...props
-}: React.ComponentProps<typeof Button>) {
-  const { toggleSidebar } = useSidebar()
-
-  return (
-    <Button
-      data-sidebar="trigger"
-      data-slot="sidebar-trigger"
-      variant="ghost"
-      size="icon"
-      className={cn("size-7", className)}
-      onClick={(event) => {
-        onClick?.(event)
-        toggleSidebar()
-      }}
-      {...props}
-    >
-      <PanelLeftIcon />
-      <span className="sr-only">Toggle Sidebar</span>
-    </Button>
-  )
-}
-
 function SidebarCollapseButton({
   className,
   onClick,
@@ -311,11 +285,10 @@ function SidebarCollapseButton({
       aria-label={collapsed ? "Expand menu" : "Minimize menu"}
       {...props}
     >
-      {collapsed ? (
-        <PanelLeftOpen className="size-5" aria-hidden />
-      ) : (
-        <PanelLeftClose className="size-5" aria-hidden />
-      )}
+      <MinimizeMenuIcon
+        className={cn("size-5", collapsed && "rotate-180")}
+        aria-hidden
+      />
       <span>Minimize Menu</span>
     </Button>
   )
@@ -808,6 +781,5 @@ export {
   SidebarProvider,
   SidebarRail,
   SidebarSeparator,
-  SidebarTrigger,
   useSidebar,
 }

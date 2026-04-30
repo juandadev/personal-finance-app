@@ -1,9 +1,13 @@
+import type { ComponentType } from "react"
 import type { LucideIcon } from "lucide-react"
+import type { IconProps } from "@/types"
+
+export type NavIcon = LucideIcon | ComponentType<IconProps>
 
 export interface NavItem {
   key: string
   label: string
-  icon: LucideIcon
+  icon: NavIcon
   href: string
 }
 

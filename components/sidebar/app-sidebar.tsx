@@ -44,7 +44,7 @@ export function AppSidebar({ activeKey }: AppSidebarProps) {
         </SidebarContent>
 
         <SidebarFooter>
-          <SidebarCollapseButton className="" />
+          <SidebarCollapseButton />
         </SidebarFooter>
       </Sidebar>
     </div>
