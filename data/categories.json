@@ -2,61 +2,51 @@
   {
     "id": "cat-entertainment",
     "name": "Entertainment",
-    "slug": "entertainment",
-    "sortOrder": 1
+    "slug": "entertainment"
   },
   {
     "id": "cat-bills",
     "name": "Bills",
-    "slug": "bills",
-    "sortOrder": 2
+    "slug": "bills"
   },
   {
     "id": "cat-groceries",
     "name": "Groceries",
-    "slug": "groceries",
-    "sortOrder": 3
+    "slug": "groceries"
   },
   {
     "id": "cat-dining-out",
     "name": "Dining Out",
-    "slug": "dining-out",
-    "sortOrder": 4
+    "slug": "dining-out"
   },
   {
     "id": "cat-transportation",
     "name": "Transportation",
-    "slug": "transportation",
-    "sortOrder": 5
+    "slug": "transportation"
   },
   {
     "id": "cat-personal-care",
     "name": "Personal Care",
-    "slug": "personal-care",
-    "sortOrder": 6
+    "slug": "personal-care"
   },
   {
     "id": "cat-education",
     "name": "Education",
-    "slug": "education",
-    "sortOrder": 7
+    "slug": "education"
   },
   {
     "id": "cat-lifestyle",
     "name": "Lifestyle",
-    "slug": "lifestyle",
-    "sortOrder": 8
+    "slug": "lifestyle"
   },
   {
     "id": "cat-shopping",
     "name": "Shopping",
-    "slug": "shopping",
-    "sortOrder": 9
+    "slug": "shopping"
   },
   {
     "id": "cat-general",
     "name": "General",
-    "slug": "general",
-    "sortOrder": 10
+    "slug": "general"
   }
 ]

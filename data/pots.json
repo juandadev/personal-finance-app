@@ -4,39 +4,34 @@
     "name": "Savings",
     "balanceCents": 15900,
     "targetCents": 200000,
-    "themeColor": "chart-1",
-    "sortOrder": 1
+    "themeColor": "chart-1"
   },
   {
     "id": "pot-gift",
     "name": "Gift",
     "balanceCents": 4000,
     "targetCents": 6000,
-    "themeColor": "chart-2",
-    "sortOrder": 2
+    "themeColor": "chart-2"
   },
   {
     "id": "pot-concert-ticket",
     "name": "Concert Ticket",
     "balanceCents": 11000,
     "targetCents": 15000,
-    "themeColor": "chart-3",
-    "sortOrder": 3
+    "themeColor": "chart-3"
   },
   {
     "id": "pot-new-laptop",
     "name": "New Laptop",
     "balanceCents": 1000,
     "targetCents": 100000,
-    "themeColor": "chart-4",
-    "sortOrder": 4
+    "themeColor": "chart-4"
   },
   {
     "id": "pot-holiday",
     "name": "Holiday",
     "balanceCents": 53100,
     "targetCents": 144000,
-    "themeColor": "finance-purple",
-    "sortOrder": 5
+    "themeColor": "finance-purple"
   }
 ]

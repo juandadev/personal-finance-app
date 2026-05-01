@@ -75,10 +75,6 @@ export function EditBudgetDialog({
       ),
     [currentBudget?.id, state.budgets],
   )
-  const orderedCategories = useMemo(
-    () => [...state.categories].sort((a, b) => a.sortOrder - b.sortOrder),
-    [state.categories],
-  )
   const selectedTheme = themeOptions.find((theme) => theme.value === themeColor)
 
   const resetForm = () => {
@@ -110,9 +106,7 @@ export function EditBudgetDialog({
       return
     }
 
-    const category = orderedCategories.find(
-      (option) => option.id === categoryId,
-    )
+    const category = state.categories.find((option) => option.id === categoryId)
 
     if (!category) {
       return
@@ -167,7 +161,7 @@ export function EditBudgetDialog({
                 <SelectValue placeholder="Select a category" />
               </SelectTrigger>
               <SelectContent className="max-h-107.5">
-                {orderedCategories.map((category) => {
+                {state.categories.map((category) => {
                   const isAlreadyBudgeted = budgetedCategoryIds.has(category.id)
 
                   return (

@@ -52,14 +52,10 @@ export function AddBudgetDialog() {
 
   const availableCategories = useMemo(
     () =>
-      state.categories
-        .filter((category) => !budgetedCategoryIds.has(category.id))
-        .sort((a, b) => a.sortOrder - b.sortOrder),
+      state.categories.filter(
+        (category) => !budgetedCategoryIds.has(category.id),
+      ),
     [budgetedCategoryIds, state.categories],
-  )
-  const orderedCategories = useMemo(
-    () => [...state.categories].sort((a, b) => a.sortOrder - b.sortOrder),
-    [state.categories],
   )
 
   const firstCategoryId = availableCategories[0]?.id ?? ""
@@ -173,7 +169,7 @@ export function AddBudgetDialog() {
                 <SelectValue placeholder="Select a category" />
               </SelectTrigger>
               <SelectContent className="max-h-107.5">
-                {orderedCategories.map((category) => {
+                {state.categories.map((category) => {
                   const isAlreadyBudgeted = budgetedCategoryIds.has(category.id)
 
                   return (
@@ -196,7 +192,7 @@ export function AddBudgetDialog() {
                     </SelectItem>
                   )
                 })}
-                {orderedCategories.length === 0 && (
+                {state.categories.length === 0 && (
                   <SelectItem value="empty" disabled>
                     No categories available
                   </SelectItem>

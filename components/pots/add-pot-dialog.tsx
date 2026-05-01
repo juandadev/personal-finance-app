@@ -127,7 +127,6 @@ export function AddPotDialog() {
       balanceCents: 0,
       targetCents,
       themeColor,
-      sortOrder: Math.max(0, ...state.pots.map((pot) => pot.sortOrder)) + 1,
     })
     setOpen(false)
     resetForm()

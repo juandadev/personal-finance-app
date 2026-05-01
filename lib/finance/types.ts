@@ -34,7 +34,6 @@ export interface CategoryRecord {
   id: string
   name: TransactionCategory
   slug: string
-  sortOrder: number
 }
 
 export interface CounterpartyRecord {
@@ -73,7 +72,6 @@ export interface PotRecord {
   balanceCents: number
   targetCents: number
   themeColor: ThemeColor
-  sortOrder: number
 }
 
 export interface RecurringBillRecord {
