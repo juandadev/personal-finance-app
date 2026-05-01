@@ -279,7 +279,7 @@ function SidebarCollapseButton({
       className={cn(
         "text-sidebar-foreground hover:text-sidebar-primary-foreground flex h-12 items-center justify-start gap-4 rounded-r-xl px-2 text-sm font-bold hover:bg-transparent",
         "focus-visible:ring-sidebar-ring focus-visible:ring-2 focus-visible:ring-offset-0",
-        "group-data-[collapsible=icon]:size-12 group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:[&>span:last-child]:sr-only",
+        "group-data-[collapsible=icon]:size-12 group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:px-0 [&>span:last-child]:truncate group-data-[collapsible=icon]:[&>span:last-child]:sr-only",
         className,
       )}
       aria-label={collapsed ? "Expand menu" : "Minimize menu"}
