@@ -9,7 +9,7 @@ export function RecurringBillsCard() {
   const { recurringBillsSummary } = useFinance()
 
   return (
-    <Card asChild padding="overview">
+    <Card asChild padding="overview" className="flex-1">
       <section>
         <CardHeader
           title="Recurring Bills"
@@ -17,11 +17,9 @@ export function RecurringBillsCard() {
           href="/recurring-bills"
         />
 
-        <ul className="mt-6 flex flex-col gap-3">
+        <ul className="mt-8 flex flex-col gap-3">
           {recurringBillsSummary.map((bill) => (
-            <li key={bill.label}>
-              <BillRow bill={bill} />
-            </li>
+            <BillRow bill={bill} key={bill.label} />
           ))}
         </ul>
       </section>

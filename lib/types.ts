@@ -1,5 +1,6 @@
 import type { ComponentType } from "react"
 import type { LucideIcon } from "lucide-react"
+import type { ThemeColor } from "@/lib/theme-colors"
 import type { IconProps } from "@/types"
 
 export type NavIcon = LucideIcon | ComponentType<IconProps>
@@ -22,14 +23,14 @@ export interface Pot {
   name: string
   amount: number
   target: number
-  color: string
+  color: ThemeColor
 }
 
 export interface Budget {
   category: TransactionCategory
   maximum: number
   spent: number
-  color: string
+  color: ThemeColor
 }
 
 export type TransactionCategory =
@@ -64,7 +65,7 @@ export type SortOption =
 export interface RecurringBillSummary {
   label: string
   amount: number
-  color: string
+  color: ThemeColor
 }
 
 export type BillStatus = "paid" | "upcoming" | "due-soon"

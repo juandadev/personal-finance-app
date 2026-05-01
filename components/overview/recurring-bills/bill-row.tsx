@@ -1,5 +1,7 @@
 import { formatCurrency } from "@/lib/format"
+import { themeColorClasses } from "@/lib/theme-colors"
 import type { RecurringBillSummary } from "@/lib/types"
+import { cn } from "@/lib/utils"
 
 interface BillRowProps {
   bill: RecurringBillSummary
@@ -7,14 +9,16 @@ interface BillRowProps {
 
 export function BillRow({ bill }: BillRowProps) {
   return (
-    <div
-      className="bg-background flex items-center justify-between rounded-lg px-4 py-4"
-      style={{ boxShadow: `inset 4px 0 0 0 ${bill.color}` }}
+    <li
+      className={cn(
+        "bg-background flex items-center justify-between rounded-lg border-l-4 px-4 py-5",
+        themeColorClasses[bill.color].border,
+      )}
     >
       <p className="text-muted-foreground text-sm">{bill.label}</p>
       <p className="text-foreground text-sm font-bold">
         {formatCurrency(bill.amount, { forceDecimals: true })}
       </p>
-    </div>
+    </li>
   )
 }

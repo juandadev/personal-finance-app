@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import type { Pot } from "@/lib/types"
 import { formatCurrency } from "@/lib/format"
+import { themeColorClasses } from "@/lib/theme-colors"
+import { cn } from "@/lib/utils"
 import { DeletePotDialog } from "./delete-pot-dialog"
 import { EditPotDialog } from "./edit-pot-dialog"
 import { PotProgressBar } from "./pot-progress-bar"
@@ -35,8 +37,10 @@ export function PotCard({ pot }: PotCardProps) {
           <div className="flex items-center gap-3">
             <span
               aria-hidden
-              className="block size-4 rounded-full"
-              style={{ backgroundColor: pot.color }}
+              className={cn(
+                "block size-4 rounded-full",
+                themeColorClasses[pot.color].bg,
+              )}
             />
             <h3 className="text-card-foreground text-xl font-bold">
               {pot.name}
@@ -58,13 +62,13 @@ export function PotCard({ pot }: PotCardProps) {
               className="w-33.5 rounded-lg border-none bg-white p-3 shadow-[0_16px_32px_rgba(0,0,0,0.18)]"
             >
               <DropdownMenuItem
-                className="focus:bg-background h-10 cursor-pointer rounded-md px-2 text-sm text-[#201F24]"
+                className="focus:bg-background text-finance-navy h-10 cursor-pointer rounded-md px-2 text-sm"
                 onSelect={() => setIsEditOpen(true)}
               >
                 Edit Pot
               </DropdownMenuItem>
               <DropdownMenuItem
-                className="focus:bg-background h-10 cursor-pointer rounded-md px-2 text-sm text-[#C94736] focus:text-[#C94736]"
+                className="focus:bg-background text-destructive focus:text-destructive h-10 cursor-pointer rounded-md px-2 text-sm"
                 onSelect={() => setIsDeleteOpen(true)}
               >
                 Delete Pot

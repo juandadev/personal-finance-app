@@ -27,6 +27,7 @@ import {
   parseDollarAmount,
   themeOptions,
 } from "@/lib/finance/form-utils"
+import { themeColorClasses, type ThemeColor } from "@/lib/theme-colors"
 import { cn } from "@/lib/utils"
 
 export function AddBudgetDialog() {
@@ -34,7 +35,9 @@ export function AddBudgetDialog() {
   const [open, setOpen] = useState(false)
   const [categoryId, setCategoryId] = useState("")
   const [maximumSpend, setMaximumSpend] = useState("")
-  const [themeColor, setThemeColor] = useState<string>(themeOptions[0].value)
+  const [themeColor, setThemeColor] = useState<ThemeColor>(
+    themeOptions[0].value,
+  )
   const [amountError, setAmountError] = useState("")
 
   const budgetedCategoryIds = useMemo(
@@ -165,7 +168,7 @@ export function AddBudgetDialog() {
             >
               <SelectTrigger
                 id="budget-category"
-                className="h-11 w-full rounded-lg border-[#98908B] px-5 text-sm"
+                className="border-finance-input-border h-11 w-full rounded-lg px-5 text-sm"
               >
                 <SelectValue placeholder="Select a category" />
               </SelectTrigger>
@@ -234,7 +237,7 @@ export function AddBudgetDialog() {
                 aria-describedby={
                   amountError ? "maximum-spend-error" : undefined
                 }
-                className="h-11 rounded-lg border-[#98908B] pl-10 text-sm"
+                className="border-finance-input-border h-11 rounded-lg pl-10 text-sm"
               />
             </div>
             {amountError && (
@@ -251,17 +254,23 @@ export function AddBudgetDialog() {
             >
               Theme
             </Label>
-            <Select value={themeColor} onValueChange={setThemeColor}>
+            <Select
+              value={themeColor}
+              onValueChange={(value) => setThemeColor(value as ThemeColor)}
+            >
               <SelectTrigger
                 id="budget-theme"
-                className="h-11 w-full rounded-lg border-[#98908B] px-5 text-sm"
+                className="border-finance-input-border h-11 w-full rounded-lg px-5 text-sm"
               >
                 <SelectValue>
                   <span className="flex items-center gap-3">
                     <span
                       aria-hidden
-                      className="size-4 rounded-full"
-                      style={{ backgroundColor: selectedTheme?.value }}
+                      className={cn(
+                        "size-4 rounded-full",
+                        selectedTheme &&
+                          themeColorClasses[selectedTheme.value].bg,
+                      )}
                     />
                     {selectedTheme?.label}
                   </span>
@@ -284,8 +293,10 @@ export function AddBudgetDialog() {
                       >
                         <span
                           aria-hidden
-                          className="size-4 rounded-full"
-                          style={{ backgroundColor: theme.value }}
+                          className={cn(
+                            "size-4 rounded-full",
+                            themeColorClasses[theme.value].bg,
+                          )}
                         />
                         {theme.label}
                       </span>

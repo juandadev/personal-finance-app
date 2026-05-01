@@ -16,7 +16,9 @@ import { Label } from "@/components/ui/label"
 import { useFinance } from "@/hooks/use-finance"
 import { formatCurrency } from "@/lib/format"
 import { parseDollarAmount } from "@/lib/finance/form-utils"
+import { themeColorClasses } from "@/lib/theme-colors"
 import type { Pot } from "@/lib/types"
+import { cn } from "@/lib/utils"
 
 type PotTransferMode = "add" | "withdraw"
 
@@ -162,24 +164,31 @@ export function PotTransferDialog({
           <div className="mt-4">
             <div className="bg-background relative h-2 w-full overflow-hidden rounded-full">
               <div
-                className="absolute inset-y-0 left-0 rounded-full bg-[#201F24]"
+                className="bg-finance-navy absolute inset-y-0 left-0 rounded-full"
                 style={{
                   width: `${isWithdrawal ? clampedPreviewPercentage : clampedCurrentPercentage}%`,
                 }}
               />
               <div
-                className="absolute inset-y-0 rounded-full"
+                className={cn(
+                  "absolute inset-y-0 rounded-full",
+                  isWithdrawal
+                    ? "bg-destructive"
+                    : themeColorClasses[pot.color].bg,
+                )}
                 style={{
                   left: `${deltaStart}%`,
                   width: `${deltaWidth}%`,
-                  backgroundColor: isWithdrawal ? "#C94736" : pot.color,
                 }}
               />
             </div>
             <div className="mt-3 flex items-center justify-between text-xs">
               <span
-                className={isWithdrawal ? "text-[#C94736]" : "font-bold"}
-                style={{ color: isWithdrawal ? undefined : pot.color }}
+                className={cn(
+                  isWithdrawal
+                    ? "text-destructive"
+                    : ["font-bold", themeColorClasses[pot.color].text],
+                )}
               >
                 {previewPercentage.toFixed(previewPercentage < 10 ? 2 : 1)}%
               </span>
@@ -216,7 +225,7 @@ export function PotTransferDialog({
                 aria-describedby={
                   amountError ? `${mode}-pot-amount-error-${pot.id}` : undefined
                 }
-                className="h-11 rounded-lg border-[#98908B] pl-10 text-sm"
+                className="border-finance-input-border h-11 rounded-lg pl-10 text-sm"
               />
             </div>
             {amountError && (

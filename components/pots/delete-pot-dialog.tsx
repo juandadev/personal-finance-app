@@ -62,7 +62,7 @@ export function DeletePotDialog({
           <AlertDialogAction
             disabled={!currentPot}
             onClick={handleConfirmDelete}
-            className="h-13.25 rounded-lg bg-[#C94736] text-sm font-bold text-white shadow-none hover:bg-[#C94736]/90 focus-visible:ring-[#C94736]/30"
+            className="bg-destructive hover:bg-destructive/90 focus-visible:ring-destructive/30 h-13.25 rounded-lg text-sm font-bold text-white shadow-none"
           >
             Yes, Confirm Deletion
           </AlertDialogAction>

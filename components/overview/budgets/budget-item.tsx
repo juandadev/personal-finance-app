@@ -1,5 +1,7 @@
 import { formatCurrency } from "@/lib/format"
+import { themeColorClasses } from "@/lib/theme-colors"
 import type { Budget } from "@/lib/types"
+import { cn } from "@/lib/utils"
 
 interface BudgetItemProps {
   budget: Budget
@@ -10,8 +12,10 @@ export function BudgetItem({ budget }: BudgetItemProps) {
     <div className="flex items-center gap-3">
       <span
         aria-hidden
-        className="block h-10 w-1 rounded-full"
-        style={{ backgroundColor: budget.color }}
+        className={cn(
+          "block h-10 w-1 rounded-full",
+          themeColorClasses[budget.color].bg,
+        )}
       />
       <div className="min-w-0 flex-1">
         <p className="text-muted-foreground truncate text-xs">

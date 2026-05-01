@@ -81,7 +81,7 @@ export function AuthField({ className, id, label, ...props }: AuthFieldProps) {
       <input
         id={id}
         className={cn(
-          "bg-card text-card-foreground focus-visible:border-ring focus-visible:ring-ring/30 h-[2.8125rem] w-full rounded-lg border border-[#98908b] px-5 text-base transition-[border-color,box-shadow] outline-none focus-visible:ring-[3px]",
+          "bg-card text-card-foreground border-finance-input-border focus-visible:border-ring focus-visible:ring-ring/30 h-[2.8125rem] w-full rounded-lg border px-5 text-base transition-[border-color,box-shadow] outline-none focus-visible:ring-[3px]",
           className,
         )}
         {...props}
@@ -114,7 +114,7 @@ export function AuthPasswordField({
           id={id}
           type="password"
           className={cn(
-            "bg-card text-card-foreground focus-visible:border-ring focus-visible:ring-ring/30 h-[2.8125rem] w-full rounded-lg border border-[#98908b] px-5 pr-14 text-base transition-[border-color,box-shadow] outline-none focus-visible:ring-[3px]",
+            "bg-card text-card-foreground border-finance-input-border focus-visible:border-ring focus-visible:ring-ring/30 h-[2.8125rem] w-full rounded-lg border px-5 pr-14 text-base transition-[border-color,box-shadow] outline-none focus-visible:ring-[3px]",
             className,
           )}
           {...props}

@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select"
 import { useFinance } from "@/hooks/use-finance"
 import { parseDollarAmount, themeOptions } from "@/lib/finance/form-utils"
+import { themeColorClasses, type ThemeColor } from "@/lib/theme-colors"
 import { cn } from "@/lib/utils"
 
 const maxPotNameLength = 30
@@ -59,7 +60,9 @@ export function AddPotDialog() {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState("")
   const [target, setTarget] = useState("")
-  const [themeColor, setThemeColor] = useState<string>(themeOptions[0].value)
+  const [themeColor, setThemeColor] = useState<ThemeColor>(
+    themeOptions[0].value,
+  )
   const [nameError, setNameError] = useState("")
   const [targetError, setTargetError] = useState("")
 
@@ -185,7 +188,7 @@ export function AddPotDialog() {
               aria-describedby={
                 nameError ? "pot-name-error" : "pot-name-characters"
               }
-              className="h-11 rounded-lg border-[#98908B] px-5 text-sm"
+              className="border-finance-input-border h-11 rounded-lg px-5 text-sm"
             />
             <div className="flex justify-end">
               {nameError ? (
@@ -229,7 +232,7 @@ export function AddPotDialog() {
                 placeholder="e.g. 2000"
                 aria-invalid={targetError ? "true" : "false"}
                 aria-describedby={targetError ? "pot-target-error" : undefined}
-                className="h-11 rounded-lg border-[#98908B] pl-10 text-sm"
+                className="border-finance-input-border h-11 rounded-lg pl-10 text-sm"
               />
             </div>
             {targetError && (
@@ -246,17 +249,23 @@ export function AddPotDialog() {
             >
               Theme
             </Label>
-            <Select value={themeColor} onValueChange={setThemeColor}>
+            <Select
+              value={themeColor}
+              onValueChange={(value) => setThemeColor(value as ThemeColor)}
+            >
               <SelectTrigger
                 id="pot-theme"
-                className="h-11 w-full rounded-lg border-[#98908B] px-5 text-sm"
+                className="border-finance-input-border h-11 w-full rounded-lg px-5 text-sm"
               >
                 <SelectValue>
                   <span className="flex items-center gap-3">
                     <span
                       aria-hidden
-                      className="size-4 rounded-full"
-                      style={{ backgroundColor: selectedTheme?.value }}
+                      className={cn(
+                        "size-4 rounded-full",
+                        selectedTheme &&
+                          themeColorClasses[selectedTheme.value].bg,
+                      )}
                     />
                     {selectedTheme?.label}
                   </span>
@@ -279,8 +288,10 @@ export function AddPotDialog() {
                       >
                         <span
                           aria-hidden
-                          className="size-4 rounded-full"
-                          style={{ backgroundColor: theme.value }}
+                          className={cn(
+                            "size-4 rounded-full",
+                            themeColorClasses[theme.value].bg,
+                          )}
                         />
                         {theme.label}
                       </span>

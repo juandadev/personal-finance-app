@@ -2,6 +2,7 @@
 
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts"
 import { formatCurrency } from "@/lib/format"
+import { getThemeColorCssVariable } from "@/lib/theme-colors"
 import type { Budget } from "@/lib/types"
 
 interface BudgetsChartProps {
@@ -14,7 +15,7 @@ export function BudgetsChart({ budgets, spent, limit }: BudgetsChartProps) {
   const data = budgets.map((b) => ({
     name: b.category,
     value: b.maximum,
-    color: b.color,
+    color: getThemeColorCssVariable(b.color),
   }))
 
   return (

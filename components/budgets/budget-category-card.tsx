@@ -12,7 +12,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { formatCurrency } from "@/lib/format"
+import { themeColorClasses } from "@/lib/theme-colors"
 import type { Budget, Transaction } from "@/lib/types"
+import { cn } from "@/lib/utils"
 import { BudgetProgressBar } from "./budget-progress-bar"
 import { DeleteBudgetDialog } from "./delete-budget-dialog"
 import { EditBudgetDialog } from "./edit-budget-dialog"
@@ -40,8 +42,10 @@ export function BudgetCategoryCard({
           <div className="flex items-center gap-3">
             <span
               aria-hidden
-              className="size-4 rounded-full"
-              style={{ backgroundColor: budget.color }}
+              className={cn(
+                "size-4 rounded-full",
+                themeColorClasses[budget.color].bg,
+              )}
             />
             <h2 className="text-foreground text-xl font-bold">
               {budget.category}
@@ -63,13 +67,13 @@ export function BudgetCategoryCard({
               className="w-33.5 rounded-lg border-none bg-white p-3 shadow-[0_16px_32px_rgba(0,0,0,0.18)]"
             >
               <DropdownMenuItem
-                className="focus:bg-background h-10 cursor-pointer rounded-md px-2 text-sm text-[#201F24]"
+                className="focus:bg-background text-finance-navy h-10 cursor-pointer rounded-md px-2 text-sm"
                 onSelect={() => setIsEditOpen(true)}
               >
                 Edit Budget
               </DropdownMenuItem>
               <DropdownMenuItem
-                className="focus:bg-background h-10 cursor-pointer rounded-md px-2 text-sm text-[#C94736] focus:text-[#C94736]"
+                className="focus:bg-background text-destructive focus:text-destructive h-10 cursor-pointer rounded-md px-2 text-sm"
                 onSelect={() => setIsDeleteOpen(true)}
               >
                 Delete Budget
@@ -95,8 +99,10 @@ export function BudgetCategoryCard({
         {/* Spent / Remaining */}
         <div className="mt-4 flex">
           <div
-            className="flex-1 border-l-4 pl-3"
-            style={{ borderColor: budget.color }}
+            className={cn(
+              "flex-1 border-l-4 pl-3",
+              themeColorClasses[budget.color].border,
+            )}
           >
             <p className="text-muted-foreground text-xs">Spent</p>
             <p className="text-foreground mt-1 text-sm font-bold">

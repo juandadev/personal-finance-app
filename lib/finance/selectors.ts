@@ -133,13 +133,13 @@ function selectRecurringBillsSummary(
     .reduce((sum, bill) => sum + bill.amount, 0)
 
   return [
-    { label: "Paid Bills", amount: paidAmount, color: "var(--color-chart-1)" },
+    { label: "Paid Bills", amount: paidAmount, color: "chart-1" },
     {
       label: "Total Upcoming",
       amount: upcomingAmount,
-      color: "var(--color-chart-4)",
+      color: "chart-4",
     },
-    { label: "Due Soon", amount: dueSoonAmount, color: "var(--color-chart-2)" },
+    { label: "Due Soon", amount: dueSoonAmount, color: "chart-2" },
   ]
 }
 

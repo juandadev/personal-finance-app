@@ -17,11 +17,9 @@ export function TransactionsCard() {
           href="/transactions"
         />
 
-        <ul className="divide-border mt-2 divide-y">
+        <ul className="divide-border mt-8 divide-y">
           {transactions.slice(0, 5).map((transaction) => (
-            <li key={transaction.id}>
-              <TransactionItem transaction={transaction} />
-            </li>
+            <TransactionItem key={transaction.id} transaction={transaction} />
           ))}
         </ul>
       </section>
