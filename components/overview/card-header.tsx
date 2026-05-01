@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { ChevronRight } from "lucide-react"
+import CaretRightIcon from "@/components/icons/CaretRightIcon"
 
 interface CardHeaderProps {
   title: string
@@ -14,10 +14,10 @@ export function CardHeader({ title, actionLabel, href }: CardHeaderProps) {
       {actionLabel && href && (
         <Link
           href={href}
-          className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm transition-colors"
+          className="text-muted-foreground hover:text-foreground inline-flex items-center gap-3 text-sm transition-colors"
         >
           {actionLabel}
-          <ChevronRight className="size-4" aria-hidden />
+          <CaretRightIcon className="size-2" aria-hidden />
         </Link>
       )}
     </div>

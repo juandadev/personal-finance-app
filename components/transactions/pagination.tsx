@@ -1,6 +1,7 @@
 "use client"
 
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import CaretRightIcon from "@/components/icons/CaretRightIcon"
+import CaretLeftIcon from "@/components/icons/CaretLeftIcon"
 import { cn } from "@/lib/utils"
 
 interface PaginationProps {
@@ -23,7 +24,7 @@ export function Pagination({
         disabled={currentPage === 1}
         className="border-muted-foreground/20 text-card-foreground hover:bg-muted flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
       >
-        <ChevronLeft className="size-4" aria-hidden />
+        <CaretLeftIcon className="size-2" aria-hidden />
         Prev
       </button>
 
@@ -50,7 +51,7 @@ export function Pagination({
         className="border-muted-foreground/20 text-card-foreground hover:bg-muted flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
       >
         Next
-        <ChevronRight className="size-4" aria-hidden />
+        <CaretRightIcon className="size-2" aria-hidden />
       </button>
     </div>
   )

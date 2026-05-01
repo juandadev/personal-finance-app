@@ -2,7 +2,8 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { MoreHorizontal, ChevronRight } from "lucide-react"
+import CaretRightIcon from "@/components/icons/CaretRightIcon"
+import { MoreHorizontal } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import {
   DropdownMenu,
@@ -119,7 +120,7 @@ export function BudgetCategoryCard({
               className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-sm transition-colors"
             >
               See All
-              <ChevronRight className="size-4" aria-hidden />
+              <CaretRightIcon className="size-2" aria-hidden />
             </Link>
           </div>
           <ul className="divide-muted-foreground/10 mt-2 divide-y">
