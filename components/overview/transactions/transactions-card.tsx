@@ -9,7 +9,7 @@ export function TransactionsCard() {
   const { transactions } = useFinance()
 
   return (
-    <Card asChild padding="overview">
+    <Card asChild padding="overview" className="flex-1">
       <section>
         <CardHeader
           title="Transactions"

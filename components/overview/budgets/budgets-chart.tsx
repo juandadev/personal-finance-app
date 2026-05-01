@@ -20,8 +20,12 @@ export function BudgetsChart({ budgets, spent, limit }: BudgetsChartProps) {
 
   return (
     <div className="relative mx-auto aspect-square w-full max-w-61.75">
-      <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
+      <ResponsiveContainer
+        width="100%"
+        height="100%"
+        className="relative isolate before:absolute before:inset-0 before:z-1 before:m-auto before:size-[75%] before:rounded-full before:bg-white before:opacity-25"
+      >
+        <PieChart className="z-0">
           <Pie
             data={data}
             dataKey="value"

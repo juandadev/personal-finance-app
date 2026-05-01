@@ -33,7 +33,7 @@ export function SpendingSummary() {
         </div>
 
         {/* Tablet: side by side */}
-        <div className="hidden md:flex md:items-center md:gap-8 lg:hidden">
+        <div className="spending-summary-tablet hidden md:flex md:items-center md:gap-8">
           <div className="w-1/2">
             <BudgetsChart
               budgets={budgets}
@@ -56,7 +56,7 @@ export function SpendingSummary() {
         </div>
 
         {/* Desktop: chart on top, summary below */}
-        <div className="hidden lg:block">
+        <div className="spending-summary-desktop hidden">
           <div className="flex justify-center">
             <BudgetsChart
               budgets={budgets}

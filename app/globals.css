@@ -9,6 +9,66 @@
   }
 }
 
+@layer components {
+  .main-content-container {
+    container: main / inline-size;
+  }
+
+  @media (width >= 64rem) {
+    @container main (min-width: 829px) {
+      .overview-main-grid {
+        grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+      }
+
+      .pots-main-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .budgets-main-layout {
+        display: grid;
+        grid-template-columns: 380px minmax(0, 1fr);
+        gap: calc(var(--spacing) * 6);
+      }
+
+      .budgets-summary-panel {
+        position: sticky;
+        top: calc(var(--spacing) * 24);
+        align-self: flex-start;
+      }
+
+      .spending-summary-tablet {
+        display: none;
+      }
+
+      .spending-summary-desktop {
+        display: block;
+      }
+
+      .recurring-bills-main-layout {
+        flex-direction: row;
+      }
+
+      .recurring-bills-sidebar-layout {
+        width: 340px;
+        flex-shrink: 0;
+        grid-template-columns: minmax(0, 1fr);
+        gap: calc(var(--spacing) * 6);
+      }
+
+      .total-bills-main-card {
+        height: fit-content;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0;
+      }
+
+      .total-bills-main-copy {
+        margin-top: calc(var(--spacing) * 6);
+      }
+    }
+  }
+}
+
 @theme {
   --font-sans: var(--font-public-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-public-sans), ui-monospace, monospace;

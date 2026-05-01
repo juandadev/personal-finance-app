@@ -9,9 +9,9 @@ export function RecurringBillsPageContent() {
   const { recurringBills, totalBillsAmount } = useFinance()
 
   return (
-    <div className="mt-6 flex flex-col gap-6 lg:flex-row">
+    <div className="recurring-bills-main-layout mt-6 flex flex-col gap-6">
       {/* Left Column: Total Bills & Summary */}
-      <div className="grid gap-4 md:grid-cols-2 lg:w-[340px] lg:shrink-0 lg:grid-cols-1 lg:gap-6">
+      <div className="recurring-bills-sidebar-layout grid gap-4 md:grid-cols-2">
         <TotalBillsCard amount={totalBillsAmount} />
         <BillsSummaryCard bills={recurringBills} />
       </div>

@@ -16,9 +16,9 @@ export function BudgetsPageContent() {
   }
 
   return (
-    <div className="lg:ml-[404px]">
-      {/* Left Column: Spending Summary - Fixed on desktop */}
-      <div className="lg:fixed lg:left-[300px] lg:mb-0 lg:w-[380px]">
+    <div className="budgets-main-layout">
+      {/* Left Column: Spending Summary */}
+      <div className="budgets-summary-panel">
         <SpendingSummary />
       </div>
 
