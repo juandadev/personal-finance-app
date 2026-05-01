@@ -1,4 +1,5 @@
 import { ReceiptText } from "lucide-react"
+import { Card } from "@/components/ui/card"
 import { formatCurrency } from "@/lib/format"
 
 interface TotalBillsCardProps {
@@ -7,7 +8,11 @@ interface TotalBillsCardProps {
 
 export function TotalBillsCard({ amount }: TotalBillsCardProps) {
   return (
-    <div className="bg-sidebar text-sidebar-primary-foreground flex flex-col rounded-xl p-6 md:h-full md:flex-row md:items-center md:gap-5 lg:h-fit lg:flex-col lg:items-start lg:gap-0">
+    <Card
+      className="flex flex-col md:h-full md:flex-row md:items-center md:gap-5 lg:h-fit lg:flex-col lg:items-start lg:gap-0"
+      padding="fixed"
+      variant="sidebar"
+    >
       <div className="border-sidebar-primary-foreground/20 flex size-10 items-center justify-center rounded-lg border">
         <ReceiptText className="size-5" aria-hidden />
       </div>
@@ -19,6 +24,6 @@ export function TotalBillsCard({ amount }: TotalBillsCardProps) {
           {formatCurrency(amount, { forceDecimals: true })}
         </p>
       </div>
-    </div>
+    </Card>
   )
 }

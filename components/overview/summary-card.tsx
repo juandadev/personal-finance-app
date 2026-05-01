@@ -1,3 +1,4 @@
+import { Card } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { formatCurrency } from "@/lib/format"
 import type { SummaryStat } from "@/lib/types"
@@ -10,14 +11,7 @@ export function SummaryCard({ stat }: SummaryCardProps) {
   const isPrimary = stat.variant === "primary"
 
   return (
-    <div
-      className={cn(
-        "rounded-xl p-6 shadow-sm",
-        isPrimary
-          ? "bg-primary text-primary-foreground"
-          : "bg-card text-card-foreground",
-      )}
-    >
+    <Card padding="fixed" variant={isPrimary ? "primary" : "default"}>
       <p
         className={cn(
           "text-sm",
@@ -29,6 +23,6 @@ export function SummaryCard({ stat }: SummaryCardProps) {
       <p className="mt-3 text-3xl font-bold tracking-tight">
         {formatCurrency(stat.amount, { forceDecimals: true })}
       </p>
-    </div>
+    </Card>
   )
 }

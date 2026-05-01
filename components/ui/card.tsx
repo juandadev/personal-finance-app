@@ -1,13 +1,44 @@
 import * as React from "react"
+import { Slot } from "@radix-ui/react-slot"
 
 import { cn } from "@/lib/utils"
 
-function Card({ className, ...props }: React.ComponentProps<"div">) {
+const cardPaddingClasses = {
+  default: "p-5 md:p-8",
+  overview: "p-6 md:p-8",
+  compact: "p-5 md:p-6",
+  fixed: "p-6",
+  none: "p-0",
+} as const
+
+const cardVariantClasses = {
+  default: "bg-card text-card-foreground",
+  primary: "bg-primary text-primary-foreground",
+  sidebar: "bg-sidebar text-sidebar-primary-foreground",
+} as const
+
+interface CardProps extends React.ComponentProps<"div"> {
+  asChild?: boolean
+  padding?: keyof typeof cardPaddingClasses
+  variant?: keyof typeof cardVariantClasses
+}
+
+function Card({
+  asChild,
+  className,
+  padding = "default",
+  variant = "default",
+  ...props
+}: CardProps) {
+  const Comp = asChild ? Slot : "div"
+
   return (
-    <div
+    <Comp
       data-slot="card"
       className={cn(
-        "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm",
+        "rounded-xl shadow-none",
+        cardVariantClasses[variant],
+        cardPaddingClasses[padding],
         className,
       )}
       {...props}

@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react"
 import { ArrowUpDown } from "lucide-react"
+import { Card } from "@/components/ui/card"
 import type { RecurringBill, SortOption } from "@/lib/types"
 import { SearchInput } from "../transactions/search-input"
 import { FilterDropdown } from "../transactions/filter-dropdown"
@@ -61,7 +62,7 @@ export function BillsContent({ bills }: BillsContentProps) {
   }, [bills, search, sortBy])
 
   return (
-    <div className="bg-card rounded-xl p-5 md:p-8">
+    <Card>
       {/* Filters */}
       <div className="mb-6 flex items-center gap-3 md:gap-4">
         <SearchInput
@@ -81,6 +82,6 @@ export function BillsContent({ bills }: BillsContentProps) {
 
       {/* Bills Table */}
       <BillsTable bills={filteredAndSortedBills} />
-    </div>
+    </Card>
   )
 }

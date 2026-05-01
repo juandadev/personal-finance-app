@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { Card } from "@/components/ui/card"
 import { useFinance } from "@/hooks/use-finance"
 import type { SortOption, TransactionCategory } from "@/lib/types"
 import { ArrowUpDown, ListFilter } from "lucide-react"
@@ -103,7 +104,7 @@ export function TransactionsContent() {
   }
 
   return (
-    <div className="bg-card rounded-xl p-5 md:p-8">
+    <Card>
       {/* Filters */}
       <div className="mb-6 flex items-center gap-3 md:justify-between md:gap-4">
         <SearchInput
@@ -140,6 +141,6 @@ export function TransactionsContent() {
           onPageChange={setCurrentPage}
         />
       )}
-    </div>
+    </Card>
   )
 }

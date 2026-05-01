@@ -1,6 +1,7 @@
 import type { ComponentProps, ReactNode } from "react"
 import { Eye } from "lucide-react"
 
+import { Card } from "@/components/ui/card"
 import { Logo } from "@/components/sidebar/logo"
 import { cn } from "@/lib/utils"
 
@@ -49,19 +50,18 @@ interface AuthCardProps {
 
 export function AuthCard({ children, title, titleId }: AuthCardProps) {
   return (
-    <section
-      aria-labelledby={titleId}
-      className="bg-card w-full max-w-[35rem] rounded-xl p-6 shadow-none md:p-8"
-    >
-      <h2
-        id={titleId}
-        className="text-card-foreground mb-8 text-[2rem] leading-[1.2] font-bold tracking-tight"
-      >
-        {title}
-      </h2>
+    <Card asChild className="w-full max-w-[35rem]" padding="overview">
+      <section aria-labelledby={titleId}>
+        <h2
+          id={titleId}
+          className="text-card-foreground mb-8 text-[2rem] leading-[1.2] font-bold tracking-tight"
+        >
+          {title}
+        </h2>
 
-      {children}
-    </section>
+        {children}
+      </section>
+    </Card>
   )
 }
 
