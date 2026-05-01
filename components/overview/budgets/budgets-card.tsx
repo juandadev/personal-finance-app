@@ -14,18 +14,16 @@ export function BudgetsCard() {
       <section>
         <CardHeader title="Budgets" actionLabel="See Details" href="/budgets" />
 
-        <div className="mt-6 grid items-center gap-6 sm:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+        <div className="mt-7 flex items-center gap-4 self-stretch">
           <BudgetsChart
             budgets={budgets}
             spent={budgetSpent}
             limit={budgetLimit}
           />
 
-          <ul className="grid grid-cols-1 gap-4">
+          <ul className="flex flex-col items-start justify-center gap-4">
             {budgets.map((b) => (
-              <li key={b.category}>
-                <BudgetItem budget={b} />
-              </li>
+              <BudgetItem key={b.category} budget={b} />
             ))}
           </ul>
         </div>

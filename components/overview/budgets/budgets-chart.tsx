@@ -19,7 +19,7 @@ export function BudgetsChart({ budgets, spent, limit }: BudgetsChartProps) {
   }))
 
   return (
-    <div className="relative mx-auto aspect-square w-full max-w-[260px]">
+    <div className="relative mx-auto aspect-square w-full max-w-61.75">
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie

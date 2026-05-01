@@ -9,7 +9,7 @@ interface BudgetItemProps {
 
 export function BudgetItem({ budget }: BudgetItemProps) {
   return (
-    <div className="flex items-center gap-3">
+    <li className="flex items-center justify-center gap-4">
       <span
         aria-hidden
         className={cn(
@@ -17,14 +17,14 @@ export function BudgetItem({ budget }: BudgetItemProps) {
           themeColorClasses[budget.color].bg,
         )}
       />
-      <div className="min-w-0 flex-1">
+      <div className="flex flex-col items-start justify-center gap-1">
         <p className="text-muted-foreground truncate text-xs">
           {budget.category}
         </p>
-        <p className="text-foreground mt-1 text-sm font-bold">
+        <p className="text-foreground text-sm font-bold">
           {formatCurrency(budget.maximum, { forceDecimals: true })}
         </p>
       </div>
-    </div>
+    </li>
   )
 }
