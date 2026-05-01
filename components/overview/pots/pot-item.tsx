@@ -9,7 +9,7 @@ interface PotItemProps {
 
 export function PotItem({ pot }: PotItemProps) {
   return (
-    <div className="flex items-center gap-4">
+    <li className="flex items-center gap-4">
       <span
         aria-hidden
         className={cn(
@@ -23,6 +23,6 @@ export function PotItem({ pot }: PotItemProps) {
           {formatCurrency(pot.amount)}
         </p>
       </div>
-    </div>
+    </li>
   )
 }

@@ -8,19 +8,19 @@
     "sortOrder": 1
   },
   {
-    "id": "pot-concert-ticket",
-    "name": "Concert Ticket",
-    "balanceCents": 11000,
-    "targetCents": 15000,
-    "themeColor": "chart-3",
-    "sortOrder": 2
-  },
-  {
     "id": "pot-gift",
     "name": "Gift",
     "balanceCents": 4000,
     "targetCents": 6000,
     "themeColor": "chart-2",
+    "sortOrder": 2
+  },
+  {
+    "id": "pot-concert-ticket",
+    "name": "Concert Ticket",
+    "balanceCents": 11000,
+    "targetCents": 15000,
+    "themeColor": "chart-3",
     "sortOrder": 3
   },
   {
