@@ -1,9 +1,10 @@
 import { TransactionsContent } from "@/components/transactions/transactions-content"
+import { PageHeading } from "@/components/overview/page-heading"
 
 export default function TransactionsPage() {
   return (
     <div className="flex flex-col gap-8">
-      <h1 className="text-foreground text-3xl font-bold">Transactions</h1>
+      <PageHeading title="Transactions" />
       <TransactionsContent />
     </div>
   )

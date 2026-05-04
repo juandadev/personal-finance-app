@@ -48,7 +48,7 @@ export function FilterDropdown<T extends string>({
       className={cn("flex items-center gap-2", className)}
       ref={containerRef}
     >
-      <span className="text-muted-foreground hidden text-sm md:inline">
+      <span className="text-muted-foreground hidden text-sm @[806px]/transactions:inline">
         {label}
       </span>
       <div className="relative">
@@ -56,7 +56,7 @@ export function FilterDropdown<T extends string>({
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="border-muted-foreground/20 bg-card text-card-foreground hover:border-muted-foreground/40 focus:border-primary focus:ring-primary flex size-10 items-center justify-center rounded-lg border transition-colors focus:ring-1 focus:outline-none md:hidden"
+          className="border-muted-foreground/20 bg-card text-card-foreground hover:border-muted-foreground/40 focus:border-primary focus:ring-primary flex size-10 items-center justify-center rounded-lg border transition-colors focus:ring-1 focus:outline-none @[806px]/transactions:hidden"
           aria-expanded={isOpen}
           aria-haspopup="listbox"
           aria-label={label}
@@ -68,7 +68,7 @@ export function FilterDropdown<T extends string>({
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="border-muted-foreground/20 bg-card text-card-foreground hover:border-muted-foreground/40 focus:border-primary focus:ring-primary hidden h-10 items-center gap-2 rounded-lg border px-4 text-sm font-bold transition-colors focus:ring-1 focus:outline-none md:flex"
+          className="border-muted-foreground/20 bg-card text-card-foreground hover:border-muted-foreground/40 focus:border-primary focus:ring-primary hidden h-10 items-center gap-2 rounded-lg border px-4 text-sm font-bold transition-colors focus:ring-1 focus:outline-none @[806px]/transactions:flex"
           aria-expanded={isOpen}
           aria-haspopup="listbox"
         >

@@ -104,15 +104,15 @@ export function TransactionsContent() {
   }
 
   return (
-    <Card>
+    <Card className="@container/transactions">
       {/* Filters */}
-      <div className="mb-6 flex items-center gap-3 md:justify-between md:gap-4">
+      <div className="mb-6 flex items-center gap-3 @[806px]/transactions:justify-between @[806px]/transactions:gap-4">
         <SearchInput
           value={search}
           onChange={handleSearchChange}
-          className="flex-1 md:flex-initial"
+          className="flex-1 @[806px]/transactions:flex-initial"
         />
-        <div className="flex items-center gap-2 md:gap-4">
+        <div className="flex items-center gap-2 @[806px]/transactions:gap-4">
           <FilterDropdown
             label="Sort by"
             value={sortBy}
