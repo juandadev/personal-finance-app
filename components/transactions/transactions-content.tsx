@@ -9,6 +9,8 @@ import { SearchInput } from "./search-input"
 import { FilterDropdown } from "./filter-dropdown"
 import { TransactionsTable } from "./transactions-table"
 import { Pagination } from "./pagination"
+import FilterMobileIcon from "@/components/icons/FilterMobileIcon"
+import SortMobileIcon from "@/components/icons/SortMobileIcon"
 
 const ITEMS_PER_PAGE = 10
 
@@ -104,43 +106,36 @@ export function TransactionsContent() {
   }
 
   return (
-    <Card className="@container/transactions">
-      {/* Filters */}
-      <div className="mb-6 flex items-center gap-3 @[806px]/transactions:justify-between @[806px]/transactions:gap-4">
+    <Card className="@container/transactions flex flex-col gap-6">
+      <div className="flex items-center gap-6 self-stretch @[806px]/transactions:justify-between">
         <SearchInput
           value={search}
           onChange={handleSearchChange}
-          className="flex-1 @[806px]/transactions:flex-initial"
+          className="w-full @[806px]/transactions:max-w-80"
         />
-        <div className="flex items-center gap-2 @[806px]/transactions:gap-4">
+        <div className="flex items-center gap-6">
           <FilterDropdown
             label="Sort by"
             value={sortBy}
             options={sortOptions}
             onChange={handleSortChange}
-            icon={<ArrowUpDown className="size-5" aria-hidden />}
+            icon={<SortMobileIcon className="size-4" aria-hidden />}
           />
           <FilterDropdown
             label="Category"
             value={category}
             options={categoryOptions}
             onChange={handleCategoryChange}
-            icon={<ListFilter className="size-5" aria-hidden />}
+            icon={<FilterMobileIcon className="size-4" aria-hidden />}
           />
         </div>
       </div>
-
-      {/* Table */}
       <TransactionsTable transactions={paginatedTransactions} />
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-        />
-      )}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+      />
     </Card>
   )
 }

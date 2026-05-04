@@ -17,6 +17,8 @@ export function Pagination({
 }: PaginationProps) {
   const pages = Array.from({ length: totalPages }, (_, i) => i + 1)
 
+  if (totalPages < 1) return null
+
   return (
     <div className="flex items-center justify-between pt-6">
       <button

@@ -1,8 +1,9 @@
 "use client"
 
 import { useRef, useState, useEffect, type ReactNode } from "react"
-import { ChevronDown } from "lucide-react"
+import CaretDownIcon from "@/components/icons/CaretDownIcon"
 import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 
 interface FilterDropdownProps<T extends string> {
   label: string
@@ -53,16 +54,17 @@ export function FilterDropdown<T extends string>({
       </span>
       <div className="relative">
         {/* Mobile: Icon button */}
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="icon-sm"
           onClick={() => setIsOpen(!isOpen)}
-          className="border-muted-foreground/20 bg-card text-card-foreground hover:border-muted-foreground/40 focus:border-primary focus:ring-primary flex size-10 items-center justify-center rounded-lg border transition-colors focus:ring-1 focus:outline-none @[806px]/transactions:hidden"
+          className="@[806px]/transactions:hidden"
           aria-expanded={isOpen}
           aria-haspopup="listbox"
           aria-label={label}
         >
           {icon}
-        </button>
+        </Button>
 
         {/* Desktop: Full button with label */}
         <button
@@ -73,9 +75,9 @@ export function FilterDropdown<T extends string>({
           aria-haspopup="listbox"
         >
           {selectedLabel}
-          <ChevronDown
+          <CaretDownIcon
             className={cn(
-              "size-4 transition-transform",
+              "size-2 transition-transform",
               isOpen && "rotate-180",
             )}
             aria-hidden
@@ -85,7 +87,7 @@ export function FilterDropdown<T extends string>({
         {isOpen && (
           <ul
             role="listbox"
-            className="bg-card absolute top-full right-0 z-50 mt-2 min-w-[140px] overflow-hidden rounded-lg shadow-lg"
+            className="bg-card absolute top-full right-0 z-50 mt-2 min-w-35 overflow-hidden rounded-lg shadow-lg"
           >
             {options.map((option, index) => (
               <li key={option.value}>
