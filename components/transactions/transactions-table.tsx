@@ -2,6 +2,14 @@ import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { formatSignedAmount } from "@/lib/format"
 import type { Transaction } from "@/lib/types"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 
 interface TransactionsTableProps {
   transactions: Transaction[]
@@ -22,29 +30,21 @@ export function TransactionsTable({ transactions }: TransactionsTableProps) {
 
       {/* Desktop table view */}
       <div className="hidden md:block">
-        <table className="w-full">
-          <thead>
-            <tr className="border-muted-foreground/10 border-b">
-              <th className="text-muted-foreground pb-3 text-left text-xs font-normal">
-                Recipient / Sender
-              </th>
-              <th className="text-muted-foreground pb-3 text-left text-xs font-normal">
-                Category
-              </th>
-              <th className="text-muted-foreground pb-3 text-left text-xs font-normal">
-                Transaction Date
-              </th>
-              <th className="text-muted-foreground pb-3 text-right text-xs font-normal">
-                Amount
-              </th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Recipient / Sender</TableHead>
+              <TableHead>Category</TableHead>
+              <TableHead>Transaction Date</TableHead>
+              <TableHead className="text-right">Amount</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {transactions.map((transaction) => (
               <TransactionRow key={transaction.id} transaction={transaction} />
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </>
   )
@@ -97,8 +97,8 @@ function TransactionRow({ transaction }: TransactionItemProps) {
   const isPositive = transaction.amount >= 0
 
   return (
-    <tr className="border-muted-foreground/10 border-b last:border-b-0">
-      <td className="py-4">
+    <TableRow>
+      <TableCell>
         <div className="flex items-center gap-3">
           <Image
             src={transaction.avatarUrl}
@@ -111,19 +111,21 @@ function TransactionRow({ transaction }: TransactionItemProps) {
             {transaction.name}
           </span>
         </div>
-      </td>
-      <td className="text-muted-foreground py-4 text-sm">
+      </TableCell>
+      <TableCell className="text-muted-foreground">
         {transaction.category}
-      </td>
-      <td className="text-muted-foreground py-4 text-sm">{transaction.date}</td>
-      <td
+      </TableCell>
+      <TableCell className="text-muted-foreground">
+        {transaction.date}
+      </TableCell>
+      <TableCell
         className={cn(
-          "py-4 text-right text-sm font-bold",
+          "text-right font-bold",
           isPositive ? "text-accent" : "text-card-foreground",
         )}
       >
         {formatSignedAmount(transaction.amount)}
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   )
 }

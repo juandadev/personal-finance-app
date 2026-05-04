@@ -1,4 +1,11 @@
 import type { RecurringBill } from "@/lib/types"
+import {
+  Table,
+  TableBody,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { BillTableRow, MobileBillRow } from "./bill-table-row"
 
 interface BillsTableProps {
@@ -17,26 +24,20 @@ export function BillsTable({ bills }: BillsTableProps) {
 
       {/* Desktop/Tablet table view */}
       <div className="hidden md:block">
-        <table className="w-full">
-          <thead>
-            <tr className="border-muted-foreground/10 border-b">
-              <th className="text-muted-foreground pb-3 text-left text-xs font-normal">
-                Bill Title
-              </th>
-              <th className="text-muted-foreground pb-3 text-left text-xs font-normal">
-                Due Date
-              </th>
-              <th className="text-muted-foreground pb-3 text-right text-xs font-normal">
-                Amount
-              </th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Bill Title</TableHead>
+              <TableHead>Due Date</TableHead>
+              <TableHead className="text-right">Amount</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {bills.map((bill) => (
               <BillTableRow key={bill.id} bill={bill} />
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </>
   )
