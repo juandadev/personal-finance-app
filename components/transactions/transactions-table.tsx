@@ -11,7 +11,7 @@ export function TransactionsTable({ transactions }: TransactionsTableProps) {
   return (
     <>
       {/* Mobile list view */}
-      <ul className="divide-muted-foreground/10 divide-y @[806px]/transactions:hidden">
+      <ul className="divide-muted-foreground/10 divide-y md:hidden">
         {transactions.map((transaction) => (
           <MobileTransactionItem
             key={transaction.id}
@@ -21,7 +21,7 @@ export function TransactionsTable({ transactions }: TransactionsTableProps) {
       </ul>
 
       {/* Desktop table view */}
-      <div className="hidden @[806px]/transactions:block">
+      <div className="hidden md:block">
         <table className="w-full">
           <thead>
             <tr className="border-muted-foreground/10 border-b">
