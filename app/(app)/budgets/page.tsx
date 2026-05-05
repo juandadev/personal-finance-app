@@ -5,7 +5,7 @@ import { BudgetsPageContent } from "@/components/budgets/budgets-page-content"
 export default function BudgetsPage() {
   return (
     <>
-      <PageHeading title="Budgets" className="fixed w-full sm:relative">
+      <PageHeading title="Budgets" fixed>
         <AddBudgetDialog />
       </PageHeading>
       <BudgetsPageContent />
