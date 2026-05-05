@@ -12,7 +12,7 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
         "hover:border-finance-grey-500",
         "focus-visible:border-finance-grey-500 focus-visible:ring-ring/50 focus-visible:ring-[3px]",
         "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
-        "[&+svg]:text-foreground [&+svg]:pointer-events-none [&+svg]:absolute [&+svg]:top-1/2 [&+svg]:right-3 [&+svg]:size-4 [&+svg]:shrink-0 [&+svg]:-translate-y-1/2 [&:has(+svg)]:pr-8",
+        "[&+svg]:text-foreground [&+svg]:pointer-events-none [&+svg]:absolute [&+svg]:top-1/2 [&+svg]:right-5 [&+svg]:size-4 [&+svg]:shrink-0 [&+svg]:-translate-y-1/2 [&:has(+svg)]:pr-13",
         className,
       )}
       {...props}

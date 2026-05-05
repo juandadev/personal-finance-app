@@ -30,6 +30,7 @@ export function AppSidebar({ activeKey }: AppSidebarProps) {
             <SidebarGroupContent>
               <nav aria-label="Main navigation">
                 <SidebarMenu>
+                  {/* TODO: Improve toggle animation for spans */}
                   {navItems.map((item) => (
                     <NavItem
                       key={item.key}

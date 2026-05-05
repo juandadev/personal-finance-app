@@ -99,12 +99,12 @@
   --color-chart-4: #f2cdac;
   --color-chart-5: #b3a8c9;
   --color-sidebar: #201f24;
-  --color-sidebar-foreground: #b3b1b8;
+  --color-sidebar-foreground: #b3b3b3;
   --color-sidebar-primary: #277c78;
   --color-sidebar-primary-foreground: #ffffff;
   --color-sidebar-accent: #f8f4f0;
   --color-sidebar-accent-foreground: #201f24;
-  --color-sidebar-border: #2a2930;
+  --color-sidebar-border: #201f24;
   --color-sidebar-ring: #277c78;
 
   /* Other Colors */

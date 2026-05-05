@@ -23,11 +23,12 @@ export function Pagination({
   return (
     <div className="flex items-center justify-between pt-6">
       <Button
+        size="sm"
         variant="outline"
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
       >
-        <CaretLeftIcon className="size-2" aria-hidden />
+        <CaretLeftIcon aria-hidden />
         Prev
       </Button>
 
@@ -35,12 +36,13 @@ export function Pagination({
         {pages.map((page) => (
           <Button
             variant="outline"
+            size="sm"
             key={page}
             onClick={() => onPageChange(page)}
             className={cn(
               page === currentPage
                 ? "bg-sidebar text-sidebar-primary-foreground"
-                : "border-muted-foreground/20 text-card-foreground hover:bg-muted border",
+                : "text-card-foreground",
             )}
           >
             {page}
@@ -50,11 +52,12 @@ export function Pagination({
 
       <Button
         variant="outline"
+        size="sm"
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
       >
         Next
-        <CaretRightIcon className="size-2" aria-hidden />
+        <CaretRightIcon aria-hidden />
       </Button>
     </div>
   )
