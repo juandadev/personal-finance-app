@@ -15,7 +15,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <AppSidebar activeKey={pathname} />
       <BottomNav activeKey={pathname} />
       <SidebarInset className="@container/main px-4 py-6 pb-24 md:px-10 md:py-8 lg:pb-10">
-        <main className="flex flex-col gap-8">{children}</main>
+        <div className="flex flex-col gap-8 md:pb-18.5 lg:pb-0">{children}</div>
       </SidebarInset>
     </FinanceProvider>
   )

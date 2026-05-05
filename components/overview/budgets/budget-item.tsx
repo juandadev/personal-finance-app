@@ -9,11 +9,11 @@ interface BudgetItemProps {
 
 export function BudgetItem({ budget }: BudgetItemProps) {
   return (
-    <li className="flex items-center justify-center gap-4">
+    <li className="flex w-full items-center justify-start gap-4 truncate md:max-w-24.5">
       <span
         aria-hidden
         className={cn(
-          "block h-10 w-1 rounded-full",
+          "block h-10 w-1 shrink-0 rounded-full",
           themeColorClasses[budget.color].bg,
         )}
       />

@@ -45,9 +45,7 @@ export function SpendingSummary() {
             </h2>
             <ul className="divide-muted-foreground/10 mt-4 divide-y">
               {budgets.map((budget) => (
-                <li key={budget.category}>
-                  <SpendingSummaryItem budget={budget} />
-                </li>
+                <SpendingSummaryItem key={budget.category} budget={budget} />
               ))}
             </ul>
           </div>
