@@ -16,9 +16,9 @@ export function BudgetsPageContent() {
   }
 
   return (
-    <div className="budgets-main-layout">
+    <div className="lg:@[829px]/main:grid lg:@[829px]/main:grid-cols-[380px_minmax(0,1fr)] lg:@[829px]/main:gap-6">
       {/* Left Column: Spending Summary */}
-      <div className="budgets-summary-panel">
+      <div className="lg:@[829px]/main:sticky lg:@[829px]/main:top-24 lg:@[829px]/main:self-start">
         <SpendingSummary />
       </div>
 

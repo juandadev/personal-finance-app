@@ -12,7 +12,7 @@ export default function OverviewPage() {
 
       <SummaryCards />
 
-      <div className="overview-main-grid grid gap-6">
+      <div className="grid gap-6 lg:@[829px]/main:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <div className="flex flex-col gap-6">
           <PotsCard />
           <TransactionsCard />
