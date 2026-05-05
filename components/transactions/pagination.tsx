@@ -3,6 +3,7 @@
 import CaretRightIcon from "@/components/icons/CaretRightIcon"
 import CaretLeftIcon from "@/components/icons/CaretLeftIcon"
 import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 
 interface PaginationProps {
   currentPage: number
@@ -21,40 +22,40 @@ export function Pagination({
 
   return (
     <div className="flex items-center justify-between pt-6">
-      <button
+      <Button
+        variant="outline"
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
-        className="border-muted-foreground/20 text-card-foreground hover:bg-muted flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
       >
         <CaretLeftIcon className="size-2" aria-hidden />
         Prev
-      </button>
+      </Button>
 
       <div className="flex items-center gap-2">
         {pages.map((page) => (
-          <button
+          <Button
+            variant="outline"
             key={page}
             onClick={() => onPageChange(page)}
             className={cn(
-              "flex size-10 items-center justify-center rounded-lg text-sm font-medium transition-colors",
               page === currentPage
                 ? "bg-sidebar text-sidebar-primary-foreground"
                 : "border-muted-foreground/20 text-card-foreground hover:bg-muted border",
             )}
           >
             {page}
-          </button>
+          </Button>
         ))}
       </div>
 
-      <button
+      <Button
+        variant="outline"
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
-        className="border-muted-foreground/20 text-card-foreground hover:bg-muted flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
       >
         Next
         <CaretRightIcon className="size-2" aria-hidden />
-      </button>
+      </Button>
     </div>
   )
 }

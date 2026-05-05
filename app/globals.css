@@ -73,6 +73,7 @@
   --font-sans: var(--font-public-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-public-sans), ui-monospace, monospace;
 
+  /* Shadcn Colors */
   --color-background: #f8f4f0;
   --color-foreground: #201f24;
   --color-card: #ffffff;
@@ -81,34 +82,22 @@
   --color-popover-foreground: #201f24;
   --color-primary: #201f24;
   --color-primary-foreground: #ffffff;
-  --color-secondary: #f2f3f7;
+  --color-secondary: #f8f4f0;
   --color-secondary-foreground: #201f24;
-  --color-muted: #f2f3f7;
+  --color-muted: #f8f4f0;
   --color-muted-foreground: #696868;
   --color-accent: #277c78;
   --color-accent-foreground: #ffffff;
   --color-destructive: #c94736;
   --color-destructive-foreground: #ffffff;
-  --color-border: #ebe9e6;
-  --color-input: #ebe9e6;
+  --color-border: #98908b;
+  --color-input: #98908b;
   --color-ring: #277c78;
   --color-chart-1: #277c78;
   --color-chart-2: #82c9d7;
   --color-chart-3: #626070;
   --color-chart-4: #f2cdac;
   --color-chart-5: #b3a8c9;
-  --color-finance-navy: #201f24;
-  --color-finance-input-border: #98908b;
-  --color-finance-purple: #826cb0;
-  --color-finance-turquoise: #597c7c;
-  --color-finance-brown: #93674f;
-  --color-finance-magenta: #934f6f;
-  --color-finance-blue: #3f82b2;
-  --color-finance-grey: #97a0ac;
-  --color-finance-army: #7f9161;
-  --color-finance-pink: #af81ba;
-  --color-finance-yellow: #cab361;
-  --color-finance-orange: #be6c49;
   --color-sidebar: #201f24;
   --color-sidebar-foreground: #b3b1b8;
   --color-sidebar-primary: #277c78;
@@ -118,10 +107,29 @@
   --color-sidebar-border: #2a2930;
   --color-sidebar-ring: #277c78;
 
-  --radius-sm: calc(0.75rem - 4px);
-  --radius-md: calc(0.75rem - 2px);
-  --radius-lg: 0.75rem;
-  --radius-xl: calc(0.75rem + 4px);
+  /* Other Colors */
+  --color-finance-beige-100: #f8f4f0;
+  --color-finance-beige-500: #98908b;
+
+  --color-finance-grey-100: #f2f2f2;
+  --color-finance-grey-300: #b3b3b3;
+  --color-finance-grey-500: #696868;
+  --color-finance-grey-900: #201f24;
+
+  --color-finance-yellow: #f2cdac;
+  --color-finance-cyan: #82c9d7;
+  --color-finance-navy: #626070;
+  --color-finance-red: #c94736;
+  --color-finance-purple-100: #af81ba;
+  --color-finance-purple-200: #826cb0;
+  --color-finance-turquoise: #597c7c;
+  --color-finance-brown: #93674f;
+  --color-finance-magenta: #934f6f;
+  --color-finance-blue: #3f82b2;
+  --color-finance-navy-grey: #97a0ac;
+  --color-finance-army-green: #7f9161;
+  --color-finance-gold: #cab361;
+  --color-finance-orange: #be6c49;
 }
 
 .dark {
