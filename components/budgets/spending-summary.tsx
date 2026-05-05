@@ -12,21 +12,19 @@ export function SpendingSummary() {
     <Card asChild>
       <section>
         {/* Mobile: stack vertically */}
-        <div className="flex flex-col items-center gap-6 md:hidden">
+        <div className="flex flex-col items-center gap-8 md:hidden">
           <BudgetsChart
             budgets={budgets}
             spent={budgetSpent}
             limit={budgetLimit}
           />
           <div className="w-full">
-            <h2 className="text-foreground text-lg font-bold">
+            <h2 className="text-foreground text-xl font-bold">
               Spending Summary
             </h2>
-            <ul className="divide-muted-foreground/10 mt-4 divide-y">
+            <ul className="divide-muted-foreground/10 mt-6 divide-y">
               {budgets.map((budget) => (
-                <li key={budget.category}>
-                  <SpendingSummaryItem budget={budget} />
-                </li>
+                <SpendingSummaryItem key={budget.category} budget={budget} />
               ))}
             </ul>
           </div>

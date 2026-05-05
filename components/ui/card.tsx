@@ -4,9 +4,9 @@ import { Slot } from "@radix-ui/react-slot"
 import { cn } from "@/lib/utils"
 
 const cardPaddingClasses = {
-  default: "p-5 md:p-8",
-  overview: "p-6 md:p-8",
-  compact: "p-5 md:p-6",
+  default: "py-6 px-5 sm:p-8",
+  overview: "p-5 sm:p-6",
+  compact: "p-5 sm:p-6",
   fixed: "p-6",
   none: "p-0",
 } as const

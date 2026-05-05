@@ -1,12 +1,5 @@
 [
   {
-    "id": "budget-entertainment-2024-08",
-    "categoryId": "cat-entertainment",
-    "period": "2024-08",
-    "limitCents": 5000,
-    "themeColor": "chart-1"
-  },
-  {
     "id": "budget-bills-2024-08",
     "categoryId": "cat-bills",
     "period": "2024-08",
@@ -26,5 +19,12 @@
     "period": "2024-08",
     "limitCents": 10000,
     "themeColor": "chart-3"
+  },
+  {
+    "id": "budget-entertainment-2024-08",
+    "categoryId": "cat-entertainment",
+    "period": "2024-08",
+    "limitCents": 5000,
+    "themeColor": "chart-1"
   }
 ]

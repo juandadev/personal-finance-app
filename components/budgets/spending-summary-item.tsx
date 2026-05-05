@@ -11,7 +11,7 @@ interface SpendingSummaryItemProps {
 
 export function SpendingSummaryItem({ budget }: SpendingSummaryItemProps) {
   return (
-    <div className="flex items-center justify-between gap-4 py-3">
+    <li className="flex items-center justify-between gap-4 py-4 first:pt-0 last:pb-0">
       <div className="flex items-center gap-3">
         <span
           aria-hidden
@@ -30,6 +30,6 @@ export function SpendingSummaryItem({ budget }: SpendingSummaryItemProps) {
           of {formatCurrency(budget.maximum, { forceDecimals: true })}
         </span>
       </div>
-    </div>
+    </li>
   )
 }

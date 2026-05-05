@@ -37,7 +37,6 @@ export function BudgetCategoryCard({
   return (
     <Card asChild>
       <section>
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span
@@ -82,12 +81,10 @@ export function BudgetCategoryCard({
           </DropdownMenu>
         </div>
 
-        {/* Maximum */}
         <p className="text-muted-foreground mt-4 text-sm">
           Maximum of {formatCurrency(budget.maximum, { forceDecimals: true })}
         </p>
 
-        {/* Progress Bar */}
         <div className="mt-4">
           <BudgetProgressBar
             spent={budget.spent}
@@ -96,7 +93,6 @@ export function BudgetCategoryCard({
           />
         </div>
 
-        {/* Spent / Remaining */}
         <div className="mt-4 flex">
           <div
             className={cn(
@@ -117,7 +113,6 @@ export function BudgetCategoryCard({
           </div>
         </div>
 
-        {/* Latest Spending */}
         <div className="bg-background mt-6 rounded-lg p-4 md:p-5">
           <div className="flex items-center justify-between">
             <h3 className="text-foreground font-bold">Latest Spending</h3>

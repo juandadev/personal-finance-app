@@ -16,13 +16,10 @@ export function BudgetsPageContent() {
   }
 
   return (
-    <div className="lg:@[829px]/main:grid lg:@[829px]/main:grid-cols-[380px_minmax(0,1fr)] lg:@[829px]/main:gap-6">
-      {/* Left Column: Spending Summary */}
+    <div className="space-y-6 lg:@[829px]/main:grid lg:@[829px]/main:grid-cols-[380px_minmax(0,1fr)] lg:@[829px]/main:gap-6">
       <div className="lg:@[829px]/main:sticky lg:@[829px]/main:top-24 lg:@[829px]/main:self-start">
         <SpendingSummary />
       </div>
-
-      {/* Right Column: Budget Cards */}
       <div className="flex flex-col gap-6">
         {budgets.map((budget) => (
           <BudgetCategoryCard

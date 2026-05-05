@@ -11,7 +11,7 @@ export function SummaryCard({ stat }: SummaryCardProps) {
   const isPrimary = stat.variant === "primary"
 
   return (
-    <Card padding="fixed" variant={isPrimary ? "primary" : "default"}>
+    <Card padding="overview" variant={isPrimary ? "primary" : "default"}>
       <p
         className={cn(
           "text-sm",
