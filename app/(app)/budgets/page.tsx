@@ -5,13 +5,9 @@ import { BudgetsPageContent } from "@/components/budgets/budgets-page-content"
 export default function BudgetsPage() {
   return (
     <>
-      {/* Sticky Header */}
-      <div className="bg-background sticky top-0 z-10 -mx-4 -mt-6 flex items-center justify-between px-4 py-4 md:-mx-10 md:-mt-8 md:px-10 md:py-6">
-        <PageHeading title="Budgets" />
+      <PageHeading title="Budgets" className="fixed w-full sm:relative">
         <AddBudgetDialog />
-      </div>
-
-      {/* Main Content */}
+      </PageHeading>
       <BudgetsPageContent />
     </>
   )

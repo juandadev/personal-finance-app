@@ -118,12 +118,7 @@ export function AddBudgetDialog() {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <button
-          type="button"
-          className="bg-sidebar text-sidebar-primary-foreground hover:bg-sidebar/90 focus-visible:ring-ring rounded-lg px-4 py-3 text-sm font-bold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-        >
-          + Add New Budget
-        </button>
+        <Button>+ Add New Budget</Button>
       </DialogTrigger>
       <DialogContent
         className="bg-card max-w-140 gap-0 rounded-xl border-none p-8 shadow-xl sm:max-w-140"
