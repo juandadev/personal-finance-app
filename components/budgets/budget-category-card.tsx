@@ -63,7 +63,7 @@ export function BudgetCategoryCard({
             <DropdownMenuContent
               align="end"
               sideOffset={8}
-              className="w-33.5 rounded-lg border-none bg-white p-3 shadow-[0_16px_32px_rgba(0,0,0,0.18)]"
+              className="w-33.5 divide-y divide-gray-200 rounded-lg border-none bg-white p-3 shadow-[0_16px_32px_rgba(0,0,0,0.18)]"
             >
               <DropdownMenuItem
                 className="focus:bg-background text-finance-navy h-10 cursor-pointer rounded-md px-2 text-sm"
@@ -94,22 +94,32 @@ export function BudgetCategoryCard({
         </div>
 
         <div className="mt-4 flex">
-          <div
-            className={cn(
-              "flex-1 border-l-4 pl-3",
-              themeColorClasses[budget.color].border,
-            )}
-          >
-            <p className="text-muted-foreground text-xs">Spent</p>
-            <p className="text-foreground mt-1 text-sm font-bold">
-              {formatCurrency(budget.spent, { forceDecimals: true })}
-            </p>
+          <div className="relative flex flex-1 gap-4">
+            <div
+              aria-hidden="true"
+              className={cn(
+                "h-full w-1 rounded-full",
+                themeColorClasses[budget.color].bg,
+              )}
+            />
+            <div>
+              <p className="text-muted-foreground text-xs">Spent</p>
+              <p className="text-foreground mt-1 text-sm font-bold">
+                {formatCurrency(budget.spent, { forceDecimals: true })}
+              </p>
+            </div>
           </div>
-          <div className="border-background flex-1 border-l-4 pl-3">
-            <p className="text-muted-foreground text-xs">Remaining</p>
-            <p className="text-foreground mt-1 text-sm font-bold">
-              {formatCurrency(remaining, { forceDecimals: true })}
-            </p>
+          <div className="relative flex flex-1 gap-4">
+            <div
+              aria-hidden="true"
+              className="bg-background h-full w-1 rounded-full"
+            />
+            <div>
+              <p className="text-muted-foreground text-xs">Free</p>
+              <p className="text-foreground mt-1 text-sm font-bold">
+                {formatCurrency(remaining, { forceDecimals: true })}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -118,7 +128,7 @@ export function BudgetCategoryCard({
             <h3 className="text-foreground font-bold">Latest Spending</h3>
             <Link
               href={`/transactions?category=${encodeURIComponent(budget.category)}`}
-              className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-sm transition-colors"
+              className="text-muted-foreground hover:text-foreground flex items-center gap-3 text-sm transition-colors"
             >
               See All
               <CaretRightIcon className="size-2" aria-hidden />
@@ -126,9 +136,10 @@ export function BudgetCategoryCard({
           </div>
           <ul className="divide-muted-foreground/10 mt-2 divide-y">
             {latestTransactions.map((transaction) => (
-              <li key={transaction.id}>
-                <LatestSpendingItem transaction={transaction} />
-              </li>
+              <LatestSpendingItem
+                key={transaction.id}
+                transaction={transaction}
+              />
             ))}
           </ul>
         </div>
