@@ -17,7 +17,7 @@ export function BottomNavItem({ item, active = false }: BottomNavItemProps) {
       {active && (
         <motion.div
           layoutId="bottom-navbar-pill"
-          className="bg-sidebar-accent absolute inset-0 -z-1 rounded-lg"
+          className="bg-sidebar-accent border-accent absolute inset-0 -z-1 rounded-t-lg border-b-4"
           transition={
             shouldReduceMotion
               ? { duration: 0 }
