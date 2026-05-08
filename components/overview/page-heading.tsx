@@ -19,7 +19,7 @@ export function PageHeading({
       className={cn(
         "bg-background z-1 flex items-center justify-between py-1",
         fixed &&
-          "fixed inset-x-0 top-0 w-full px-4 py-7 sm:relative [&+div]:mt-22 [&+div]:sm:mt-0",
+          "fixed inset-x-0 top-0 w-full px-4 py-7 md:px-10 md:py-8 lg:relative lg:p-0 [&+div]:mt-22 [&+div]:lg:mt-0",
         className,
       )}
     >

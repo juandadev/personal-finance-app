@@ -16,11 +16,11 @@ export function BudgetsPageContent() {
   }
 
   return (
-    <div className="space-y-6 lg:@[829px]/main:grid lg:@[829px]/main:grid-cols-[380px_minmax(0,1fr)] lg:@[829px]/main:gap-6">
-      <div className="lg:@[829px]/main:sticky lg:@[829px]/main:top-24 lg:@[829px]/main:self-start">
+    <div className="space-y-6 lg:@[829px]/main:grid lg:@[829px]/main:grid-cols-[380px_minmax(0,1fr)] lg:@[829px]/main:gap-6 lg:@[829px]/main:space-y-0">
+      <div className="lg:@[829px]/main:top-24 lg:@[829px]/main:self-start">
         <SpendingSummary />
       </div>
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-6 lg:@[829px]/main:h-[calc(100dvh-160px)] lg:@[829px]/main:overflow-y-auto lg:@[829px]/main:rounded-xl lg:@[829px]/main:pr-3">
         {budgets.map((budget) => (
           <BudgetCategoryCard
             key={budget.category}

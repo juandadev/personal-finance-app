@@ -15,7 +15,7 @@ export function BudgetProgressBar({
   const percentage = Math.min((spent / maximum) * 100, 100)
 
   return (
-    <div className="bg-background h-6 w-full overflow-hidden rounded-sm">
+    <div className="bg-background h-8 w-full overflow-hidden rounded-sm p-1">
       <div
         className={cn(
           "h-full rounded-sm transition-all duration-300",
