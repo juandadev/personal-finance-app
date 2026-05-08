@@ -1,8 +1,15 @@
 "use client"
 
-import { Card } from "@/components/ui/card"
+import Link from "next/link"
+import CaretRightIcon from "@/components/icons/CaretRightIcon"
+import {
+  Card,
+  CardAction,
+  CardHeader,
+  CardTitle,
+  cardActionLinkClasses,
+} from "@/components/ui/card"
 import { useFinance } from "@/hooks/use-finance"
-import { CardHeader } from "../card-header"
 import { BudgetItem } from "./budget-item"
 import { BudgetsChart } from "./budgets-chart"
 
@@ -12,7 +19,17 @@ export function BudgetsCard() {
   return (
     <Card asChild>
       <section>
-        <CardHeader title="Budgets" actionLabel="See Details" href="/budgets" />
+        <CardHeader>
+          <CardTitle>
+            <h2>Budgets</h2>
+          </CardTitle>
+          <CardAction>
+            <Link href="/budgets" className={cardActionLinkClasses}>
+              See Details
+              <CaretRightIcon className="size-2" aria-hidden />
+            </Link>
+          </CardAction>
+        </CardHeader>
         <div className="mt-7 flex flex-col items-center gap-4 self-stretch py-2 md:flex-row">
           <BudgetsChart
             budgets={budgets}

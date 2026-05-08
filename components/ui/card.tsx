@@ -23,6 +23,18 @@ interface CardProps extends React.ComponentProps<"div"> {
   variant?: keyof typeof cardVariantClasses
 }
 
+const cardTitleSizeClasses = {
+  default: "text-xl tracking-tight",
+  sm: "text-base",
+} as const
+
+const cardActionLinkClasses =
+  "text-muted-foreground hover:text-foreground inline-flex items-center gap-3 text-sm transition-colors"
+
+interface CardTitleProps extends React.ComponentProps<"div"> {
+  size?: keyof typeof cardTitleSizeClasses
+}
+
 function Card({
   asChild,
   className,
@@ -50,20 +62,21 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-header"
-      className={cn(
-        "@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-2 px-6 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6",
-        className,
-      )}
+      className={cn("flex items-center justify-between gap-4", className)}
       {...props}
     />
   )
 }
 
-function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
+function CardTitle({ className, size = "default", ...props }: CardTitleProps) {
   return (
     <div
       data-slot="card-title"
-      className={cn("leading-none font-semibold", className)}
+      className={cn(
+        "text-card-foreground flex items-center gap-3 font-bold",
+        cardTitleSizeClasses[size],
+        className,
+      )}
       {...props}
     />
   )
@@ -83,10 +96,7 @@ function CardAction({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-action"
-      className={cn(
-        "col-start-2 row-span-2 row-start-1 self-start justify-self-end",
-        className,
-      )}
+      className={cn("flex items-center", className)}
       {...props}
     />
   )
@@ -120,4 +130,5 @@ export {
   CardAction,
   CardDescription,
   CardContent,
+  cardActionLinkClasses,
 }

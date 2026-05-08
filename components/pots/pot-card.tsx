@@ -1,8 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { MoreHorizontal } from "lucide-react"
-import { Card } from "@/components/ui/card"
+import { Card, CardAction, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +16,8 @@ import { DeletePotDialog } from "./delete-pot-dialog"
 import { EditPotDialog } from "./edit-pot-dialog"
 import { PotProgressBar } from "./pot-progress-bar"
 import { PotTransferDialog } from "./pot-transfer-dialog"
+import { Button } from "@/components/ui/button"
+import EllipsisIcon from "@/components/icons/EllipsisIcon"
 
 interface PotCardProps {
   pot: Pot
@@ -32,9 +33,8 @@ export function PotCard({ pot }: PotCardProps) {
   return (
     <Card asChild padding="compact">
       <article>
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <CardHeader>
+          <CardTitle>
             <span
               aria-hidden
               className={cn(
@@ -42,42 +42,40 @@ export function PotCard({ pot }: PotCardProps) {
                 themeColorClasses[pot.color].bg,
               )}
             />
-            <h3 className="text-card-foreground text-xl font-bold">
-              {pot.name}
-            </h3>
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className="text-muted-foreground hover:text-card-foreground focus-visible:ring-ring flex size-11 items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:outline-none"
-                aria-label={`More options for ${pot.name}`}
+            <h3>{pot.name}</h3>
+          </CardTitle>
+          <CardAction>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  aria-label={`More options for ${pot.name}`}
+                >
+                  <EllipsisIcon className="size-4" aria-hidden />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                sideOffset={8}
+                className="w-33.5 rounded-lg border-none bg-white p-3 shadow-[0_16px_32px_rgba(0,0,0,0.18)]"
               >
-                <MoreHorizontal className="size-5" aria-hidden />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              sideOffset={8}
-              className="w-33.5 rounded-lg border-none bg-white p-3 shadow-[0_16px_32px_rgba(0,0,0,0.18)]"
-            >
-              <DropdownMenuItem
-                className="focus:bg-background text-finance-navy h-10 cursor-pointer rounded-md px-2 text-sm"
-                onSelect={() => setIsEditOpen(true)}
-              >
-                Edit Pot
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="focus:bg-background text-destructive focus:text-destructive h-10 cursor-pointer rounded-md px-2 text-sm"
-                onSelect={() => setIsDeleteOpen(true)}
-              >
-                Delete Pot
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+                <DropdownMenuItem
+                  className="focus:bg-background text-finance-navy h-10 cursor-pointer rounded-md px-2 text-sm"
+                  onSelect={() => setIsEditOpen(true)}
+                >
+                  Edit Pot
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="focus:bg-background text-destructive focus:text-destructive h-10 cursor-pointer rounded-md px-2 text-sm"
+                  onSelect={() => setIsDeleteOpen(true)}
+                >
+                  Delete Pot
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </CardAction>
+        </CardHeader>
 
-        {/* Amount */}
         <div className="mt-6 flex items-center justify-between">
           <span className="text-muted-foreground text-sm">Total Saved</span>
           <span className="text-card-foreground text-3xl font-bold">
@@ -85,18 +83,15 @@ export function PotCard({ pot }: PotCardProps) {
           </span>
         </div>
 
-        {/* Progress Bar */}
         <div className="mt-4">
           <PotProgressBar percentage={percentage} color={pot.color} />
         </div>
 
-        {/* Progress Info */}
         <div className="text-muted-foreground mt-3 flex items-center justify-between text-xs">
           <span>{percentage.toFixed(percentage < 10 ? 2 : 1)}%</span>
           <span>Target of {formatCurrency(pot.target)}</span>
         </div>
 
-        {/* Action Buttons */}
         <div className="mt-6 grid grid-cols-2 gap-3">
           <button
             type="button"

@@ -1,4 +1,4 @@
-import { Card } from "@/components/ui/card"
+import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatCurrency } from "@/lib/format"
 import type { RecurringBill } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -55,7 +55,11 @@ export function BillsSummaryCard({ bills }: BillsSummaryCardProps) {
 
   return (
     <Card className="h-fit" padding="fixed">
-      <h3 className="text-card-foreground text-base font-bold">Summary</h3>
+      <CardHeader>
+        <CardTitle size="sm">
+          <h3>Summary</h3>
+        </CardTitle>
+      </CardHeader>
       <div className="mt-2">
         <SummaryRow
           label="Paid Bills"

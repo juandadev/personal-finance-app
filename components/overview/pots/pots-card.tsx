@@ -1,9 +1,16 @@
 "use client"
 
-import { Card } from "@/components/ui/card"
+import Link from "next/link"
+import CaretRightIcon from "@/components/icons/CaretRightIcon"
+import {
+  Card,
+  CardAction,
+  CardHeader,
+  CardTitle,
+  cardActionLinkClasses,
+} from "@/components/ui/card"
 import { useFinance } from "@/hooks/use-finance"
 import { formatCurrency } from "@/lib/format"
-import { CardHeader } from "../card-header"
 import { PotItem } from "./pot-item"
 import PotIcon from "@/components/icons/PotIcon"
 
@@ -13,7 +20,17 @@ export function PotsCard() {
   return (
     <Card asChild>
       <section>
-        <CardHeader title="Pots" actionLabel="See Details" href="/pots" />
+        <CardHeader>
+          <CardTitle>
+            <h2>Pots</h2>
+          </CardTitle>
+          <CardAction>
+            <Link href="/pots" className={cardActionLinkClasses}>
+              See Details
+              <CaretRightIcon className="size-2" aria-hidden />
+            </Link>
+          </CardAction>
+        </CardHeader>
         <div className="mt-5 flex flex-col items-center gap-5 self-stretch md:flex-row">
           <div className="bg-background flex w-full items-center gap-4 rounded-lg p-4 md:max-w-61.75">
             <PotIcon className="text-accent size-8" aria-hidden />

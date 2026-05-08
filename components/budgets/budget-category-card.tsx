@@ -3,8 +3,13 @@
 import { useState } from "react"
 import Link from "next/link"
 import CaretRightIcon from "@/components/icons/CaretRightIcon"
-import { MoreHorizontal } from "lucide-react"
-import { Card } from "@/components/ui/card"
+import {
+  Card,
+  CardAction,
+  CardHeader,
+  CardTitle,
+  cardActionLinkClasses,
+} from "@/components/ui/card"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,21 +42,19 @@ export function BudgetCategoryCard({
   const latestTransactions = transactions.slice(0, 3)
 
   return (
-    <Card asChild>
-      <section>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span
-              aria-hidden
-              className={cn(
-                "size-4 rounded-full",
-                themeColorClasses[budget.color].bg,
-              )}
-            />
-            <h2 className="text-foreground text-xl font-bold">
-              {budget.category}
-            </h2>
-          </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          <span
+            aria-hidden
+            className={cn(
+              "size-4 rounded-full",
+              themeColorClasses[budget.color].bg,
+            )}
+          />
+          <h2>{budget.category}</h2>
+        </CardTitle>
+        <CardAction>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -61,100 +64,97 @@ export function BudgetCategoryCard({
                 <EllipsisIcon className="size-4" aria-hidden />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              sideOffset={8}
-              className="w-33.5 divide-y divide-gray-200 rounded-lg border-none bg-white p-3 shadow-[0_16px_32px_rgba(0,0,0,0.18)]"
-            >
-              <DropdownMenuItem
-                className="focus:bg-background text-finance-navy h-10 cursor-pointer rounded-md px-2 text-sm"
-                onSelect={() => setIsEditOpen(true)}
-              >
+            <DropdownMenuContent align="end" sideOffset={8}>
+              <DropdownMenuItem onSelect={() => setIsEditOpen(true)}>
                 Edit Budget
               </DropdownMenuItem>
               <DropdownMenuItem
-                className="focus:bg-background text-destructive focus:text-destructive h-10 cursor-pointer rounded-md px-2 text-sm"
+                variant="destructive"
                 onSelect={() => setIsDeleteOpen(true)}
               >
                 Delete Budget
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
+        </CardAction>
+      </CardHeader>
 
-        <p className="text-muted-foreground mt-4 text-sm">
-          Maximum of {formatCurrency(budget.maximum, { forceDecimals: true })}
-        </p>
+      <p className="text-muted-foreground mt-4 text-sm">
+        Maximum of {formatCurrency(budget.maximum, { forceDecimals: true })}
+      </p>
 
-        <div className="mt-4">
-          <BudgetProgressBar
-            spent={budget.spent}
-            maximum={budget.maximum}
-            color={budget.color}
+      <div className="mt-4">
+        <BudgetProgressBar
+          spent={budget.spent}
+          maximum={budget.maximum}
+          color={budget.color}
+        />
+      </div>
+
+      <div className="mt-4 flex">
+        <div className="relative flex flex-1 gap-4">
+          <div
+            aria-hidden="true"
+            className={cn(
+              "h-full w-1 rounded-full",
+              themeColorClasses[budget.color].bg,
+            )}
           />
-        </div>
-
-        <div className="mt-4 flex">
-          <div className="relative flex flex-1 gap-4">
-            <div
-              aria-hidden="true"
-              className={cn(
-                "h-full w-1 rounded-full",
-                themeColorClasses[budget.color].bg,
-              )}
-            />
-            <div>
-              <p className="text-muted-foreground text-xs">Spent</p>
-              <p className="text-foreground mt-1 text-sm font-bold">
-                {formatCurrency(budget.spent, { forceDecimals: true })}
-              </p>
-            </div>
-          </div>
-          <div className="relative flex flex-1 gap-4">
-            <div
-              aria-hidden="true"
-              className="bg-background h-full w-1 rounded-full"
-            />
-            <div>
-              <p className="text-muted-foreground text-xs">Free</p>
-              <p className="text-foreground mt-1 text-sm font-bold">
-                {formatCurrency(remaining, { forceDecimals: true })}
-              </p>
-            </div>
+          <div>
+            <p className="text-muted-foreground text-xs">Spent</p>
+            <p className="text-foreground mt-1 text-sm font-bold">
+              {formatCurrency(budget.spent, { forceDecimals: true })}
+            </p>
           </div>
         </div>
+        <div className="relative flex flex-1 gap-4">
+          <div
+            aria-hidden="true"
+            className="bg-background h-full w-1 rounded-full"
+          />
+          <div>
+            <p className="text-muted-foreground text-xs">Free</p>
+            <p className="text-foreground mt-1 text-sm font-bold">
+              {formatCurrency(remaining, { forceDecimals: true })}
+            </p>
+          </div>
+        </div>
+      </div>
 
-        <div className="bg-background mt-6 rounded-lg p-4 md:p-5">
-          <div className="flex items-center justify-between">
-            <h3 className="text-foreground font-bold">Latest Spending</h3>
+      <div className="bg-background mt-6 rounded-lg p-4 md:p-5">
+        <CardHeader>
+          <CardTitle size="sm">
+            <h3>Latest Spending</h3>
+          </CardTitle>
+          <CardAction>
             <Link
               href={`/transactions?category=${encodeURIComponent(budget.category)}`}
-              className="text-muted-foreground hover:text-foreground flex items-center gap-3 text-sm transition-colors"
+              className={cardActionLinkClasses}
             >
               See All
               <CaretRightIcon className="size-2" aria-hidden />
             </Link>
-          </div>
-          <ul className="divide-muted-foreground/10 mt-2 divide-y">
-            {latestTransactions.map((transaction) => (
-              <LatestSpendingItem
-                key={transaction.id}
-                transaction={transaction}
-              />
-            ))}
-          </ul>
-        </div>
-        <EditBudgetDialog
-          budget={budget}
-          open={isEditOpen}
-          onOpenChange={setIsEditOpen}
-        />
-        <DeleteBudgetDialog
-          budget={budget}
-          open={isDeleteOpen}
-          onOpenChange={setIsDeleteOpen}
-        />
-      </section>
+          </CardAction>
+        </CardHeader>
+        <ul className="divide-muted-foreground/10 mt-2 divide-y">
+          {latestTransactions.map((transaction) => (
+            <LatestSpendingItem
+              key={transaction.id}
+              transaction={transaction}
+            />
+          ))}
+        </ul>
+      </div>
+      <EditBudgetDialog
+        budget={budget}
+        open={isEditOpen}
+        onOpenChange={setIsEditOpen}
+      />
+      <DeleteBudgetDialog
+        budget={budget}
+        open={isDeleteOpen}
+        onOpenChange={setIsDeleteOpen}
+      />
     </Card>
   )
 }
