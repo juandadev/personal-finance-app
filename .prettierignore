@@ -4,4 +4,4 @@ node_modules
 out
 next-env.d.ts
 next.config.mjs
-pnpm-lock.yaml
+bun.lock
