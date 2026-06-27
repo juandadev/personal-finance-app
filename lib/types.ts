@@ -1,11 +1,7 @@
 import type { LucideIcon } from "lucide-react"
 
 export type NavKey =
-  | "overview"
-  | "transactions"
-  | "budgets"
-  | "pots"
-  | "recurring-bills"
+  "overview" | "transactions" | "budgets" | "pots" | "recurring-bills"
 
 export interface NavItem {
   key: NavKey
@@ -57,12 +53,7 @@ export interface Transaction {
 }
 
 export type SortOption =
-  | "latest"
-  | "oldest"
-  | "a-z"
-  | "z-a"
-  | "highest"
-  | "lowest"
+  "latest" | "oldest" | "a-z" | "z-a" | "highest" | "lowest"
 
 export interface RecurringBillSummary {
   label: string
