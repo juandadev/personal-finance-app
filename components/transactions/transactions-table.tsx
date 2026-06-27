@@ -55,7 +55,7 @@ interface TransactionItemProps {
 }
 
 function MobileTransactionItem({ transaction }: TransactionItemProps) {
-  const isPositive = transaction.amount >= 0
+  const isPositive = transaction.amount > 0
 
   return (
     <li className="flex items-center justify-between py-3">
@@ -68,7 +68,7 @@ function MobileTransactionItem({ transaction }: TransactionItemProps) {
           className="size-10 rounded-full object-cover"
         />
         <div className="flex flex-col">
-          <span className="text-card-foreground text-sm font-bold">
+          <span className="text-foreground text-sm font-bold">
             {transaction.name}
           </span>
           <span className="text-muted-foreground text-xs">
@@ -80,7 +80,7 @@ function MobileTransactionItem({ transaction }: TransactionItemProps) {
         <span
           className={cn(
             "text-sm font-bold",
-            isPositive ? "text-accent" : "text-card-foreground",
+            isPositive ? "text-accent" : "text-foreground",
           )}
         >
           {formatSignedAmount(transaction.amount)}
@@ -94,7 +94,7 @@ function MobileTransactionItem({ transaction }: TransactionItemProps) {
 }
 
 function TransactionRow({ transaction }: TransactionItemProps) {
-  const isPositive = transaction.amount >= 0
+  const isPositive = transaction.amount > 0
 
   return (
     <TableRow>
@@ -107,9 +107,7 @@ function TransactionRow({ transaction }: TransactionItemProps) {
             height={40}
             className="size-10 rounded-full object-cover"
           />
-          <span className="text-card-foreground font-bold">
-            {transaction.name}
-          </span>
+          <span className="text-foreground font-bold">{transaction.name}</span>
         </div>
       </TableCell>
       <TableCell className="text-muted-foreground">
@@ -121,7 +119,7 @@ function TransactionRow({ transaction }: TransactionItemProps) {
       <TableCell
         className={cn(
           "text-right font-bold",
-          isPositive ? "text-accent" : "text-card-foreground",
+          isPositive ? "text-accent" : "text-foreground",
         )}
       >
         {formatSignedAmount(transaction.amount)}

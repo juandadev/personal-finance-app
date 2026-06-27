@@ -17,8 +17,11 @@ const buttonVariants = cva(
           "border bg-transparent hover:bg-muted-foreground hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-transparent hover:border-border",
+        surface: "bg-background text-foreground hover:bg-muted",
         ghost: "hover:opacity-80",
         link: "text-primary underline-offset-4 hover:underline",
+        "muted-link":
+          "text-muted-foreground hover:text-foreground hover:bg-transparent",
       },
       size: {
         default: "h-13 p-4 has-[>svg]:px-3",
@@ -26,7 +29,10 @@ const buttonVariants = cva(
         lg: "h-14 rounded-lg px-6 has-[>svg]:px-4",
         icon: "size-8",
         "icon-sm": "size-5 rounded-none",
-        "icon-lg": "size-10",
+        "icon-lg": "size-10 rounded-full",
+        "card-action": "h-auto rounded-lg px-4 py-3 text-sm font-bold",
+        "finance-submit": "h-13.25 w-full rounded-lg text-sm font-bold",
+        "text-link": "h-auto p-0 text-sm font-normal",
       },
     },
     defaultVariants: {

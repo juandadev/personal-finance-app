@@ -42,7 +42,7 @@ export function BillTableRow({ bill }: BillTableRowProps) {
             height={40}
             className="size-10 rounded-full object-cover"
           />
-          <span className="text-card-foreground font-bold">{bill.name}</span>
+          <span className="text-foreground font-bold">{bill.name}</span>
         </div>
       </TableCell>
       <TableCell>
@@ -69,7 +69,7 @@ export function BillTableRow({ bill }: BillTableRowProps) {
       <TableCell
         className={cn(
           "text-right font-bold",
-          isDueSoon ? "text-destructive" : "text-card-foreground",
+          isDueSoon ? "text-destructive" : "text-foreground",
         )}
       >
         {formatCurrency(bill.amount, { forceDecimals: true })}
@@ -93,9 +93,7 @@ export function MobileBillRow({ bill }: BillTableRowProps) {
           className="size-10 rounded-full object-cover"
         />
         <div className="flex flex-col">
-          <span className="text-card-foreground text-sm font-bold">
-            {bill.name}
-          </span>
+          <span className="text-foreground text-sm font-bold">{bill.name}</span>
           <div className="mt-0.5 flex items-center gap-1">
             <span
               className={cn(
@@ -120,7 +118,7 @@ export function MobileBillRow({ bill }: BillTableRowProps) {
       <span
         className={cn(
           "text-sm font-bold",
-          isDueSoon ? "text-destructive" : "text-card-foreground",
+          isDueSoon ? "text-destructive" : "text-foreground",
         )}
       >
         {formatCurrency(bill.amount, { forceDecimals: true })}

@@ -55,12 +55,7 @@ export interface Transaction {
 }
 
 export type SortOption =
-  | "latest"
-  | "oldest"
-  | "a-z"
-  | "z-a"
-  | "highest"
-  | "lowest"
+  "latest" | "oldest" | "a-z" | "z-a" | "highest" | "lowest"
 
 export interface RecurringBillSummary {
   label: string

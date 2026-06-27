@@ -2,9 +2,11 @@
 
 import * as React from "react"
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog"
+import type { VariantProps } from "class-variance-authority"
+import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { buttonVariants } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 
 function AlertDialog({
   ...props
@@ -46,8 +48,11 @@ function AlertDialogOverlay({
 
 function AlertDialogContent({
   className,
+  variant = "default",
   ...props
-}: React.ComponentProps<typeof AlertDialogPrimitive.Content>) {
+}: React.ComponentProps<typeof AlertDialogPrimitive.Content> & {
+  variant?: "default" | "finance"
+}) {
   return (
     <AlertDialogPortal>
       <AlertDialogOverlay />
@@ -55,11 +60,39 @@ function AlertDialogContent({
         data-slot="alert-dialog-content"
         className={cn(
           "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg",
+          variant === "finance" &&
+            "bg-card max-w-140 gap-0 rounded-xl border-none p-8 shadow-xl sm:max-w-140",
           className,
         )}
         {...props}
       />
     </AlertDialogPortal>
+  )
+}
+
+function AlertDialogCloseButton({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<typeof Button>) {
+  return (
+    <AlertDialogCancel
+      asChild
+      className="border-none bg-transparent p-0 shadow-none hover:bg-transparent"
+    >
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-lg"
+        className={cn(
+          "text-muted-foreground hover:text-foreground absolute top-8 right-7 border border-current",
+          className,
+        )}
+        {...props}
+      >
+        {children ?? <X className="size-4" aria-hidden />}
+      </Button>
+    </AlertDialogCancel>
   )
 }
 
@@ -94,12 +127,20 @@ function AlertDialogFooter({
 
 function AlertDialogTitle({
   className,
+  variant = "default",
   ...props
-}: React.ComponentProps<typeof AlertDialogPrimitive.Title>) {
+}: React.ComponentProps<typeof AlertDialogPrimitive.Title> & {
+  variant?: "default" | "finance"
+}) {
   return (
     <AlertDialogPrimitive.Title
       data-slot="alert-dialog-title"
-      className={cn("text-lg font-semibold", className)}
+      className={cn(
+        "text-lg font-semibold",
+        variant === "finance" &&
+          "text-3xl leading-tight font-bold tracking-tight md:text-4xl",
+        className,
+      )}
       {...props}
     />
   )
@@ -107,12 +148,19 @@ function AlertDialogTitle({
 
 function AlertDialogDescription({
   className,
+  variant = "default",
   ...props
-}: React.ComponentProps<typeof AlertDialogPrimitive.Description>) {
+}: React.ComponentProps<typeof AlertDialogPrimitive.Description> & {
+  variant?: "default" | "finance"
+}) {
   return (
     <AlertDialogPrimitive.Description
       data-slot="alert-dialog-description"
-      className={cn("text-muted-foreground text-sm", className)}
+      className={cn(
+        "text-muted-foreground text-sm",
+        variant === "finance" && "mt-5 leading-6",
+        className,
+      )}
       {...props}
     />
   )
@@ -120,11 +168,14 @@ function AlertDialogDescription({
 
 function AlertDialogAction({
   className,
+  variant,
+  size,
   ...props
-}: React.ComponentProps<typeof AlertDialogPrimitive.Action>) {
+}: React.ComponentProps<typeof AlertDialogPrimitive.Action> &
+  VariantProps<typeof buttonVariants>) {
   return (
     <AlertDialogPrimitive.Action
-      className={cn(buttonVariants(), className)}
+      className={cn(buttonVariants({ variant, size }), className)}
       {...props}
     />
   )
@@ -132,11 +183,14 @@ function AlertDialogAction({
 
 function AlertDialogCancel({
   className,
+  variant = "outline",
+  size,
   ...props
-}: React.ComponentProps<typeof AlertDialogPrimitive.Cancel>) {
+}: React.ComponentProps<typeof AlertDialogPrimitive.Cancel> &
+  VariantProps<typeof buttonVariants>) {
   return (
     <AlertDialogPrimitive.Cancel
-      className={cn(buttonVariants({ variant: "outline" }), className)}
+      className={cn(buttonVariants({ variant, size }), className)}
       {...props}
     />
   )
@@ -144,6 +198,7 @@ function AlertDialogCancel({
 
 export {
   AlertDialog,
+  AlertDialogCloseButton,
   AlertDialogPortal,
   AlertDialogOverlay,
   AlertDialogTrigger,

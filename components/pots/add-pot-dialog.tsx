@@ -1,17 +1,17 @@
 "use client"
 
 import { useMemo, useState, type FormEvent } from "react"
-import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
-  DialogClose,
+  DialogCloseButton,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { CurrencyInput } from "@/components/ui/currency-input"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -135,36 +135,18 @@ export function AddPotDialog() {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <button
-          type="button"
-          className="bg-sidebar text-sidebar-primary-foreground hover:bg-sidebar/90 focus-visible:ring-ring rounded-lg px-4 py-3 text-sm font-bold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-        >
-          + Add New Pot
-        </button>
+        <Button>Add Pot</Button>
       </DialogTrigger>
-      <DialogContent
-        className="bg-card max-w-140 gap-0 rounded-xl border-none p-8 shadow-xl sm:max-w-140"
-        showCloseButton={false}
-      >
+      <DialogContent variant="finance" showCloseButton={false}>
         <DialogHeader className="pr-12 text-left">
-          <DialogTitle className="text-[2rem] leading-tight font-bold tracking-[-0.02em]">
-            Add New Pot
-          </DialogTitle>
-          <DialogDescription className="mt-5 text-sm leading-6">
+          <DialogTitle variant="finance">Add New Pot</DialogTitle>
+          <DialogDescription variant="finance">
             Create a pot to set savings targets. These can help keep you on
             track as you save for special purchases.
           </DialogDescription>
         </DialogHeader>
 
-        <DialogClose asChild>
-          <button
-            type="button"
-            aria-label="Close add pot dialog"
-            className="text-muted-foreground hover:text-foreground focus-visible:ring-ring absolute top-9 right-8 flex size-7 items-center justify-center rounded-full border border-current transition-colors focus-visible:ring-2 focus-visible:outline-none"
-          >
-            <X className="size-4" aria-hidden />
-          </button>
-        </DialogClose>
+        <DialogCloseButton aria-label="Close add pot dialog" />
 
         <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
           <div className="space-y-2">
@@ -187,7 +169,6 @@ export function AddPotDialog() {
               aria-describedby={
                 nameError ? "pot-name-error" : "pot-name-characters"
               }
-              className="border-finance-input-border h-11 rounded-lg px-5 text-sm"
             />
             <div className="flex justify-end">
               {nameError ? (
@@ -213,27 +194,18 @@ export function AddPotDialog() {
             >
               Target
             </Label>
-            <div className="relative">
-              <span
-                aria-hidden
-                className="text-muted-foreground absolute top-1/2 left-5 -translate-y-1/2 text-sm"
-              >
-                $
-              </span>
-              <Input
-                id="pot-target"
-                inputMode="decimal"
-                value={target}
-                onChange={(event) => {
-                  setTarget(event.target.value)
-                  setTargetError("")
-                }}
-                placeholder="e.g. 2000"
-                aria-invalid={targetError ? "true" : "false"}
-                aria-describedby={targetError ? "pot-target-error" : undefined}
-                className="border-finance-input-border h-11 rounded-lg pl-10 text-sm"
-              />
-            </div>
+            <CurrencyInput
+              id="pot-target"
+              inputMode="decimal"
+              value={target}
+              onChange={(event) => {
+                setTarget(event.target.value)
+                setTargetError("")
+              }}
+              placeholder="e.g. 2000"
+              aria-invalid={targetError ? "true" : "false"}
+              aria-describedby={targetError ? "pot-target-error" : undefined}
+            />
             {targetError && (
               <p id="pot-target-error" className="text-destructive text-xs">
                 {targetError}
@@ -252,10 +224,7 @@ export function AddPotDialog() {
               value={themeColor}
               onValueChange={(value) => setThemeColor(value as ThemeColor)}
             >
-              <SelectTrigger
-                id="pot-theme"
-                className="border-finance-input-border h-11 w-full rounded-lg px-5 text-sm"
-              >
+              <SelectTrigger id="pot-theme" variant="form">
                 <SelectValue>
                   <span className="flex items-center gap-3">
                     <span
@@ -275,7 +244,7 @@ export function AddPotDialog() {
                   <SelectItem
                     key={theme.value}
                     value={theme.value}
-                    className="border-border min-h-11 border-b py-3 pr-8 pl-4 last:border-b-0"
+                    variant="form"
                   >
                     <span className="flex w-full items-center justify-between gap-6">
                       <span
@@ -306,10 +275,7 @@ export function AddPotDialog() {
             </Select>
           </div>
 
-          <Button
-            type="submit"
-            className="h-13.25 w-full rounded-lg text-sm font-bold"
-          >
+          <Button type="submit" size="finance-submit">
             Add Pot
           </Button>
         </form>

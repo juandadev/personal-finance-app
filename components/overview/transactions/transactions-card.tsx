@@ -30,7 +30,7 @@ export function TransactionsCard() {
           </CardAction>
         </CardHeader>
 
-        <ul className="divide-finance-grey-100 mt-8 divide-y">
+        <ul className="divide-muted-foreground/10 mt-8 divide-y">
           {transactions.slice(0, 5).map((transaction) => (
             <TransactionItem key={transaction.id} transaction={transaction} />
           ))}

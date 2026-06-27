@@ -59,6 +59,7 @@ export function BudgetCategoryCard({
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
+                size="icon-lg"
                 aria-label={`More options for ${budget.category}`}
               >
                 <EllipsisIcon className="size-4" aria-hidden />

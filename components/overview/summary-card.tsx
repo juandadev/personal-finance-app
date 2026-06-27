@@ -15,7 +15,7 @@ export function SummaryCard({ stat }: SummaryCardProps) {
       <p
         className={cn(
           "text-sm",
-          isPrimary ? "text-white" : "text-muted-foreground",
+          isPrimary ? "text-primary-foreground" : "text-muted-foreground",
         )}
       >
         {stat.label}

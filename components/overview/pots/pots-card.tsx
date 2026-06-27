@@ -36,7 +36,7 @@ export function PotsCard() {
             <PotIcon className="text-accent size-8" aria-hidden />
             <div>
               <p className="text-muted-foreground text-sm">Total Saved</p>
-              <p className="mt-1 text-[32px] font-bold tracking-tight">
+              <p className="mt-1 text-3xl font-bold tracking-tight">
                 {formatCurrency(totalSaved)}
               </p>
             </div>

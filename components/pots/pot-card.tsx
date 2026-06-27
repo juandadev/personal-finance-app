@@ -49,24 +49,18 @@ export function PotCard({ pot }: PotCardProps) {
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
+                  size="icon-lg"
                   aria-label={`More options for ${pot.name}`}
                 >
                   <EllipsisIcon className="size-4" aria-hidden />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                sideOffset={8}
-                className="w-33.5 rounded-lg border-none bg-white p-3 shadow-[0_16px_32px_rgba(0,0,0,0.18)]"
-              >
-                <DropdownMenuItem
-                  className="focus:bg-background text-finance-navy h-10 cursor-pointer rounded-md px-2 text-sm"
-                  onSelect={() => setIsEditOpen(true)}
-                >
+              <DropdownMenuContent align="end" sideOffset={8}>
+                <DropdownMenuItem onSelect={() => setIsEditOpen(true)}>
                   Edit Pot
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  className="focus:bg-background text-destructive focus:text-destructive h-10 cursor-pointer rounded-md px-2 text-sm"
+                  variant="destructive"
                   onSelect={() => setIsDeleteOpen(true)}
                 >
                   Delete Pot
@@ -78,7 +72,7 @@ export function PotCard({ pot }: PotCardProps) {
 
         <div className="mt-6 flex items-center justify-between">
           <span className="text-muted-foreground text-sm">Total Saved</span>
-          <span className="text-card-foreground text-3xl font-bold">
+          <span className="text-foreground text-3xl font-bold">
             {formatCurrency(pot.amount, { forceDecimals: true })}
           </span>
         </div>
@@ -93,20 +87,22 @@ export function PotCard({ pot }: PotCardProps) {
         </div>
 
         <div className="mt-6 grid grid-cols-2 gap-3">
-          <button
+          <Button
             type="button"
-            className="bg-background text-card-foreground hover:bg-muted rounded-lg px-4 py-3 text-sm font-bold transition-colors"
+            variant="surface"
+            size="card-action"
             onClick={() => setIsAddMoneyOpen(true)}
           >
-            + Add Money
-          </button>
-          <button
+            Add Money
+          </Button>
+          <Button
             type="button"
-            className="bg-background text-card-foreground hover:bg-muted rounded-lg px-4 py-3 text-sm font-bold transition-colors"
+            variant="surface"
+            size="card-action"
             onClick={() => setIsWithdrawOpen(true)}
           >
             Withdraw
-          </button>
+          </Button>
         </div>
         <PotTransferDialog
           pot={pot}

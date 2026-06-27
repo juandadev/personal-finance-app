@@ -68,6 +68,7 @@ export function BillsContent({ bills }: BillsContentProps) {
         <SearchInput
           value={search}
           onChange={setSearch}
+          label="Search Bills"
           placeholder="Search bills"
           className="flex-1 md:flex-initial"
         />

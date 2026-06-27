@@ -20,7 +20,9 @@ export function SpendingSummaryItem({ budget }: SpendingSummaryItemProps) {
             themeColorClasses[budget.color].bg,
           )}
         />
-        <span className="text-muted-foreground text-sm">{budget.category}</span>
+        <span className="text-foreground text-sm font-bold">
+          {budget.category}
+        </span>
       </div>
       <div className="flex items-baseline gap-2">
         <span className="text-foreground text-sm font-bold">

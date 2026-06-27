@@ -4,6 +4,7 @@ import Link from "next/link"
 import {
   AuthCard,
   AuthField,
+  authInlineLinkClasses,
   AuthPageShell,
   AuthPasswordField,
   AuthSubmitButton,
@@ -45,10 +46,7 @@ export default function SignUpPage() {
 
         <p className="text-muted-foreground mt-8 text-center text-sm leading-normal">
           Already have an account?{" "}
-          <Link
-            href="/login"
-            className="text-foreground hover:text-foreground/75 focus-visible:ring-ring/30 font-bold underline underline-offset-2 transition-colors outline-none focus-visible:rounded-sm focus-visible:ring-[3px]"
-          >
+          <Link href="/login" className={authInlineLinkClasses}>
             Login
           </Link>
         </p>

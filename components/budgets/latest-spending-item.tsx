@@ -17,12 +17,12 @@ export function LatestSpendingItem({ transaction }: LatestSpendingItemProps) {
           height={32}
           className="size-8 rounded-full object-cover"
         />
-        <span className="text-card-foreground truncate text-sm font-bold">
+        <span className="text-foreground truncate text-sm font-bold">
           {transaction.name}
         </span>
       </div>
       <div className="flex flex-col items-end">
-        <span className="text-card-foreground text-sm font-bold">
+        <span className="text-foreground text-sm font-bold">
           {formatCurrency(transaction.amount, { forceDecimals: true })}
         </span>
         <span className="text-muted-foreground text-xs">

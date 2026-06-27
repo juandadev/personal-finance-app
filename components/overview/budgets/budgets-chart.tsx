@@ -23,7 +23,7 @@ export function BudgetsChart({ budgets, spent, limit }: BudgetsChartProps) {
       <ResponsiveContainer
         width="100%"
         height="100%"
-        className="relative isolate before:absolute before:inset-0 before:z-1 before:m-auto before:size-[75%] before:rounded-full before:bg-white before:opacity-25"
+        className="before:bg-card relative isolate before:absolute before:inset-0 before:z-1 before:m-auto before:size-[75%] before:rounded-full before:opacity-25"
       >
         <PieChart className="z-0">
           <Pie

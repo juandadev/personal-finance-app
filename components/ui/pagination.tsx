@@ -62,7 +62,7 @@ function PaginationLink({
         "aria-disabled:pointer-events-none aria-disabled:opacity-50",
         isActive
           ? "bg-sidebar text-sidebar-primary-foreground"
-          : "text-card-foreground",
+          : "text-foreground",
         "min-w-10 tabular-nums",
         className,
       )}
@@ -114,7 +114,7 @@ function PaginationEllipsis({
       aria-hidden
       data-slot="pagination-ellipsis"
       className={cn(
-        "text-card-foreground flex size-10 items-center justify-center",
+        "text-foreground flex size-10 items-center justify-center",
         className,
       )}
       {...props}

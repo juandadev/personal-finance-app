@@ -9,6 +9,7 @@
   }
 }
 
+/*noinspection CssUnresolvedCustomProperty*/
 @theme {
   --font-sans: var(--font-public-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-public-sans), ui-monospace, monospace;
@@ -22,16 +23,16 @@
   --color-popover-foreground: #201f24;
   --color-primary: #201f24;
   --color-primary-foreground: #ffffff;
-  --color-secondary: #f8f4f0;
+  --color-secondary: #f2f3f7;
   --color-secondary-foreground: #201f24;
-  --color-muted: #f8f4f0;
+  --color-muted: #f2f3f7;
   --color-muted-foreground: #696868;
   --color-accent: #277c78;
   --color-accent-foreground: #ffffff;
   --color-destructive: #c94736;
   --color-destructive-foreground: #ffffff;
-  --color-border: #98908b;
-  --color-input: #98908b;
+  --color-border: #ebe9e6;
+  --color-input: #ebe9e6;
   --color-ring: #277c78;
   --color-chart-1: #277c78;
   --color-chart-2: #82c9d7;
@@ -114,7 +115,7 @@
     @apply w-1.5;
   }
   ::-webkit-scrollbar-track {
-    @apply bg-slate-100;
+    @apply bg-muted;
   }
   ::-webkit-scrollbar-thumb {
     @apply bg-accent hover:bg-accent/80 rounded-full;

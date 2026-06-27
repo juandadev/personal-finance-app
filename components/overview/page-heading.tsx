@@ -17,13 +17,13 @@ export function PageHeading({
   return (
     <header
       className={cn(
-        "bg-background z-1 flex items-center justify-between py-1",
+        "bg-background z-10 flex items-center justify-between py-1",
         fixed &&
-          "fixed inset-x-0 top-0 w-full px-4 py-7 md:px-10 md:py-8 lg:relative lg:p-0 [&+div]:mt-22 [&+div]:lg:mt-0",
+          "fixed inset-x-0 top-0 w-full px-4 py-6 md:px-10 md:py-8 lg:relative lg:p-0 [&+div]:mt-20 md:[&+div]:mt-22 lg:[&+div]:mt-0",
         className,
       )}
     >
-      <h1 className="text-foreground text-[32px] font-bold tracking-tight">
+      <h1 className="text-foreground text-3xl font-bold tracking-tight md:text-4xl">
         {title}
       </h1>
       {children}

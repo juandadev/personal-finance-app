@@ -28,10 +28,12 @@ function SelectValue({
 function SelectTrigger({
   className,
   size = "default",
+  variant = "default",
   children,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Trigger> & {
   size?: "sm" | "default"
+  variant?: "default" | "form" | "filter"
 }) {
   return (
     <SelectPrimitive.Trigger
@@ -39,6 +41,9 @@ function SelectTrigger({
       data-size={size}
       className={cn(
         "border-input data-placeholder:text-muted-foreground [&_svg:not([class*='text-'])]:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 dark:hover:bg-input/50 data-[state=open]:border-finance-grey-500 data-[state=open]:ring-ring/50 flex w-fit cursor-pointer items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm whitespace-nowrap transition-colors outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 data-[size=default]:h-11.5 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 data-[state=open]:ring-[3px] [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-2",
+        variant === "form" && "h-11 w-full rounded-lg px-5",
+        variant === "filter" &&
+          "@[806px]/transactions:border-input border-transparent @[806px]/transactions:w-fit @[806px]/transactions:px-5 @[806px]/transactions:py-3 [&>svg:last-child]:hidden @[806px]/transactions:[&>svg:last-child]:block",
         className,
       )}
       {...props}
@@ -102,13 +107,17 @@ function SelectLabel({
 function SelectItem({
   className,
   children,
+  variant = "default",
   ...props
-}: React.ComponentProps<typeof SelectPrimitive.Item>) {
+}: React.ComponentProps<typeof SelectPrimitive.Item> & {
+  variant?: "default" | "form"
+}) {
   return (
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
         "focus:bg-accent focus:text-accent-foreground [&_svg:not([class*='text-'])]:text-accent focus:[&_svg:not([class*='text-'])]:text-accent-foreground border-finance-grey-100 relative flex w-full cursor-default items-center gap-2 rounded-sm border-b py-3 pr-8 pl-2.5 text-sm outline-hidden select-none last:border-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
+        variant === "form" && "border-border min-h-11 pl-4 last:border-b-0",
         className,
       )}
       {...props}

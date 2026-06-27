@@ -2,7 +2,14 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-function Input({ className, type, ...props }: React.ComponentProps<"input">) {
+function Input({
+  className,
+  type,
+  variant = "default",
+  ...props
+}: React.ComponentProps<"input"> & {
+  variant?: "default" | "auth"
+}) {
   return (
     <input
       type={type}
@@ -13,6 +20,8 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
         "focus-visible:border-finance-grey-500 focus-visible:ring-ring/50 focus-visible:ring-[3px]",
         "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
         "[&+svg]:text-foreground [&+svg]:pointer-events-none [&+svg]:absolute [&+svg]:top-1/2 [&+svg]:right-5 [&+svg]:size-4 [&+svg]:shrink-0 [&+svg]:-translate-y-1/2 [&:has(+svg)]:pr-13",
+        variant === "auth" &&
+          "bg-card text-foreground focus-visible:border-ring focus-visible:ring-ring/30 h-[2.8125rem]",
         className,
       )}
       {...props}

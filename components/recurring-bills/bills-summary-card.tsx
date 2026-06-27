@@ -33,7 +33,7 @@ function SummaryRow({
       <span
         className={cn(
           "text-sm font-bold",
-          variant === "danger" ? "text-destructive" : "text-card-foreground",
+          variant === "danger" ? "text-destructive" : "text-foreground",
         )}
       >
         {count} ({formatCurrency(amount, { forceDecimals: true })})

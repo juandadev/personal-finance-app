@@ -1,7 +1,8 @@
 "use client"
 
-import { type ReactNode } from "react"
+import { useId, type ReactNode } from "react"
 import { cn } from "@/lib/utils"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -27,21 +28,26 @@ export function FilterDropdown<T extends string>({
   icon,
   className,
 }: FilterDropdownProps<T>) {
+  const triggerId = useId()
+  const selectedOption = options.find((option) => option.value === value)
+  const selectedLabel = selectedOption?.label ?? value
+
   return (
     <div className={cn("flex items-center gap-2", className)}>
-      <span className="text-muted-foreground hidden text-sm @[806px]/transactions:inline">
+      <Label
+        htmlFor={triggerId}
+        className="text-muted-foreground hidden text-sm font-normal @[806px]/transactions:inline"
+      >
         {label}
-      </span>
+      </Label>
       <Select
         value={value}
         onValueChange={(nextValue) => onChange(nextValue as T)}
       >
         <SelectTrigger
-          aria-label={label}
-          className={cn(
-            "[&>svg:last-child]:hidden @[806px]/transactions:[&>svg:last-child]:block",
-            "@[806px]/transactions:border-input border-transparent @[806px]/transactions:w-fit @[806px]/transactions:px-5 @[806px]/transactions:py-3",
-          )}
+          id={triggerId}
+          aria-label={`${label}: ${selectedLabel}`}
+          variant="filter"
         >
           {icon && (
             <span

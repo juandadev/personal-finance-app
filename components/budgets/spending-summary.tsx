@@ -19,7 +19,7 @@ export function SpendingSummary() {
           />
         </div>
         <div className="w-full md:w-1/2 lg:@[829px]/main:mt-8 lg:@[829px]/main:w-full">
-          <h2 className="text-foreground text-xl font-bold md:text-lg">
+          <h2 className="text-foreground text-xl font-bold tracking-tight">
             Spending Summary
           </h2>
           <ul className="divide-muted-foreground/10 mt-6 divide-y md:mt-4">
