@@ -121,6 +121,14 @@ Motion should clarify a state change, not decorate the page.
 - Use `transition-colors` for hover and active states.
 - Keep overlays, dialogs, and popovers on the shadcn/Radix animation defaults.
 - Prefer short transitions around 150-200ms.
+- Use ease-out variants for enter animations, especially progress enter
+  patterns such as charts or indicators filling from zero into a current value.
+  The circular budget charts use `cubic-bezier(0.42, 1, 0.22, 1)`.
+- Use ease-in-out variants for reversible state changes such as opening,
+  closing, collapsing, or expanding navigation. The sidebar width transition
+  uses the `ease-in-out-expo` token.
+- Set animation duration per component so each surface can match its scale and
+  context.
 - Avoid looping, bouncing, or attention-grabbing animation.
 - Honor `prefers-reduced-motion` when adding custom motion.
 

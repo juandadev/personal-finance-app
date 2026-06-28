@@ -1,5 +1,6 @@
 "use client"
 
+import { PROGRESS_ENTER_EASE } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 import { motion, useReducedMotion } from "motion/react"
 import type { Transition } from "motion/react"
@@ -11,7 +12,7 @@ interface LogoProps {
 
 const logoTransition: Transition = {
   duration: 0.3,
-  ease: [1, 0, 0, 1],
+  ease: PROGRESS_ENTER_EASE,
 }
 
 export function Logo({ className, collapsed = false }: LogoProps) {

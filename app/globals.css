@@ -3,16 +3,11 @@
 
 @custom-variant dark (&:is(.dark *));
 
-@layer utilities {
-  .ease-in-out-expo {
-    transition-timing-function: cubic-bezier(1, 0, 0, 1);
-  }
-}
-
 /*noinspection CssUnresolvedCustomProperty*/
 @theme {
   --font-sans: var(--font-public-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-public-sans), ui-monospace, monospace;
+  --ease-in-out-expo: cubic-bezier(1, 0, 0, 1);
 
   /* Shadcn Colors */
   --color-background: #f8f4f0;
