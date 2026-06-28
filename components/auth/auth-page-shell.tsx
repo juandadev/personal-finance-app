@@ -1,8 +1,17 @@
-import type { ComponentProps, ReactNode } from "react"
-import { Eye } from "lucide-react"
+"use client"
 
+import { useState, type ComponentProps, type ReactNode } from "react"
+import { Eye, EyeOff } from "lucide-react"
+
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Logo } from "@/components/sidebar/logo"
 import { cn } from "@/lib/utils"
+
+export const authInlineLinkClasses =
+  "text-foreground hover:text-foreground/75 focus-visible:ring-ring/30 font-bold underline underline-offset-2 transition-colors outline-none focus-visible:rounded-sm focus-visible:ring-[3px]"
 
 interface AuthPageShellProps {
   children: ReactNode
@@ -24,8 +33,8 @@ export function AuthPageShell({ children }: AuthPageShellProps) {
         <Logo className="relative z-10" />
 
         <div className="relative z-10 max-w-[28rem] space-y-6">
-          <h1 className="text-[2rem] leading-[1.2] font-bold tracking-tight">
-            Keep track of your money and save for your future
+          <h1 className="text-3xl leading-[1.2] font-bold tracking-tight md:text-4xl">
+            Keep Track of Your Money and Save for Your Future
           </h1>
           <p className="text-primary-foreground/80 text-sm leading-normal">
             Personal finance app puts you in control of your spending. Track
@@ -49,19 +58,18 @@ interface AuthCardProps {
 
 export function AuthCard({ children, title, titleId }: AuthCardProps) {
   return (
-    <section
-      aria-labelledby={titleId}
-      className="bg-card w-full max-w-[35rem] rounded-xl p-6 shadow-none md:p-8"
-    >
-      <h2
-        id={titleId}
-        className="text-card-foreground mb-8 text-[2rem] leading-[1.2] font-bold tracking-tight"
-      >
-        {title}
-      </h2>
+    <Card asChild className="w-full max-w-[35rem]" padding="overview">
+      <section aria-labelledby={titleId}>
+        <h2
+          id={titleId}
+          className="text-foreground mb-8 text-3xl leading-[1.2] font-bold tracking-tight md:text-4xl"
+        >
+          {title}
+        </h2>
 
-      {children}
-    </section>
+        {children}
+      </section>
+    </Card>
   )
 }
 
@@ -72,20 +80,13 @@ interface AuthFieldProps extends ComponentProps<"input"> {
 export function AuthField({ className, id, label, ...props }: AuthFieldProps) {
   return (
     <div className="space-y-1">
-      <label
+      <Label
         htmlFor={id}
         className="text-muted-foreground text-xs leading-normal font-bold"
       >
         {label}
-      </label>
-      <input
-        id={id}
-        className={cn(
-          "bg-card text-card-foreground focus-visible:border-ring focus-visible:ring-ring/30 h-[2.8125rem] w-full rounded-lg border border-[#98908b] px-5 text-base transition-[border-color,box-shadow] outline-none focus-visible:ring-[3px]",
-          className,
-        )}
-        {...props}
-      />
+      </Label>
+      <Input id={id} variant="auth" className={className} {...props} />
     </div>
   )
 }
@@ -101,31 +102,36 @@ export function AuthPasswordField({
   label,
   ...props
 }: AuthPasswordFieldProps) {
+  const [showPassword, setShowPassword] = useState(false)
+  const Icon = showPassword ? EyeOff : Eye
+
   return (
     <div className="space-y-1">
-      <label
+      <Label
         htmlFor={id}
         className="text-muted-foreground text-xs leading-normal font-bold"
       >
         {label}
-      </label>
+      </Label>
       <div className="relative">
-        <input
-          id={id}
-          type="password"
-          className={cn(
-            "bg-card text-card-foreground focus-visible:border-ring focus-visible:ring-ring/30 h-[2.8125rem] w-full rounded-lg border border-[#98908b] px-5 pr-14 text-base transition-[border-color,box-shadow] outline-none focus-visible:ring-[3px]",
-            className,
-          )}
+        <Input
           {...props}
+          id={id}
+          variant="auth"
+          type={showPassword ? "text" : "password"}
+          className={cn("pr-14", className)}
         />
-        <button
+        <Button
           type="button"
-          aria-label="Show password"
-          className="text-foreground hover:text-foreground/75 focus-visible:ring-ring/30 absolute top-1/2 right-1 flex size-11 -translate-y-1/2 items-center justify-center rounded-md transition-colors outline-none focus-visible:ring-[3px]"
+          variant="ghost"
+          size="icon-lg"
+          aria-label={showPassword ? "Hide password" : "Show password"}
+          aria-pressed={showPassword}
+          className="absolute top-1/2 right-1 -translate-y-1/2 rounded-full"
+          onClick={() => setShowPassword((visible) => !visible)}
         >
-          <Eye className="size-5" aria-hidden="true" strokeWidth={3} />
-        </button>
+          <Icon className="size-5" aria-hidden="true" strokeWidth={3} />
+        </Button>
       </div>
       {helperText ? (
         <p className="text-muted-foreground text-right text-xs leading-normal">
@@ -143,19 +149,17 @@ interface AuthSubmitButtonProps extends ComponentProps<"button"> {
 export function AuthSubmitButton({
   children,
   className,
-  type = "button",
+  type = "submit",
   ...props
 }: AuthSubmitButtonProps) {
   return (
-    <button
+    <Button
       type={type}
-      className={cn(
-        "bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-ring/40 mt-8 flex h-[3.3125rem] w-full items-center justify-center rounded-lg px-4 text-sm font-bold transition-colors outline-none focus-visible:ring-[3px]",
-        className,
-      )}
+      size="finance-submit"
+      className={cn("mt-8", className)}
       {...props}
     >
       {children}
-    </button>
+    </Button>
   )
 }

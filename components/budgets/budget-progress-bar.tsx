@@ -1,7 +1,10 @@
+import { themeColorClasses, type ThemeColor } from "@/lib/theme-colors"
+import { cn } from "@/lib/utils"
+
 interface BudgetProgressBarProps {
   spent: number
   maximum: number
-  color: string
+  color: ThemeColor
 }
 
 export function BudgetProgressBar({
@@ -12,10 +15,20 @@ export function BudgetProgressBar({
   const percentage = Math.min((spent / maximum) * 100, 100)
 
   return (
-    <div className="bg-background h-6 w-full overflow-hidden rounded-sm">
+    <div
+      className="bg-background h-8 w-full overflow-hidden rounded-sm p-1"
+      role="progressbar"
+      aria-label="Budget spent"
+      aria-valuemin={0}
+      aria-valuemax={maximum}
+      aria-valuenow={Math.min(spent, maximum)}
+    >
       <div
-        className="h-full rounded-sm transition-all duration-300"
-        style={{ width: `${percentage}%`, backgroundColor: color }}
+        className={cn(
+          "h-full rounded-sm transition-all duration-300",
+          themeColorClasses[color].bg,
+        )}
+        style={{ width: `${percentage}%` }}
       />
     </div>
   )

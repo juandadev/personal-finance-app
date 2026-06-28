@@ -1,8 +1,15 @@
 "use client"
 
-import { useRef, useState, useEffect, type ReactNode } from "react"
-import { ChevronDown } from "lucide-react"
+import { useId, type ReactNode } from "react"
 import { cn } from "@/lib/utils"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface FilterDropdownProps<T extends string> {
   label: string
@@ -21,96 +28,51 @@ export function FilterDropdown<T extends string>({
   icon,
   className,
 }: FilterDropdownProps<T>) {
-  const [isOpen, setIsOpen] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const selectedLabel = options.find((opt) => opt.value === value)?.label
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
-      ) {
-        setIsOpen(false)
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
-
-  const handleSelect = (optionValue: T) => {
-    onChange(optionValue)
-    setIsOpen(false)
-  }
+  const triggerId = useId()
+  const selectedOption = options.find((option) => option.value === value)
+  const selectedLabel = selectedOption?.label ?? value
 
   return (
-    <div
-      className={cn("flex items-center gap-2", className)}
-      ref={containerRef}
-    >
-      <span className="text-muted-foreground hidden text-sm md:inline">
+    <div className={cn("flex items-center gap-2", className)}>
+      <Label
+        htmlFor={triggerId}
+        className="text-muted-foreground hidden text-sm font-normal @[806px]/transactions:inline"
+      >
         {label}
-      </span>
-      <div className="relative">
-        {/* Mobile: Icon button */}
-        <button
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          className="border-muted-foreground/20 bg-card text-card-foreground hover:border-muted-foreground/40 focus:border-primary focus:ring-primary flex size-10 items-center justify-center rounded-lg border transition-colors focus:ring-1 focus:outline-none md:hidden"
-          aria-expanded={isOpen}
-          aria-haspopup="listbox"
-          aria-label={label}
+      </Label>
+      <Select
+        value={value}
+        onValueChange={(nextValue) => onChange(nextValue as T)}
+      >
+        <SelectTrigger
+          id={triggerId}
+          aria-label={`${label}: ${selectedLabel}`}
+          variant="filter"
         >
-          {icon}
-        </button>
-
-        {/* Desktop: Full button with label */}
-        <button
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          className="border-muted-foreground/20 bg-card text-card-foreground hover:border-muted-foreground/40 focus:border-primary focus:ring-primary hidden h-10 items-center gap-2 rounded-lg border px-4 text-sm font-bold transition-colors focus:ring-1 focus:outline-none md:flex"
-          aria-expanded={isOpen}
-          aria-haspopup="listbox"
-        >
-          {selectedLabel}
-          <ChevronDown
-            className={cn(
-              "size-4 transition-transform",
-              isOpen && "rotate-180",
-            )}
-            aria-hidden
-          />
-        </button>
-
-        {isOpen && (
-          <ul
-            role="listbox"
-            className="bg-card absolute top-full right-0 z-50 mt-2 min-w-[140px] overflow-hidden rounded-lg shadow-lg"
-          >
-            {options.map((option, index) => (
-              <li key={option.value}>
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={option.value === value}
-                  onClick={() => handleSelect(option.value)}
-                  className={cn(
-                    "hover:bg-muted/50 w-full px-5 py-3 text-left text-sm transition-colors",
-                    option.value === value
-                      ? "text-card-foreground font-bold"
-                      : "text-muted-foreground",
-                  )}
-                >
-                  {option.label}
-                </button>
-                {index < options.length - 1 && (
-                  <div className="border-border mx-4 border-b" />
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+          {icon && (
+            <span
+              aria-hidden
+              className="flex items-center justify-center @[806px]/transactions:hidden"
+            >
+              {icon}
+            </span>
+          )}
+          <span className="hidden @[806px]/transactions:inline-flex">
+            <SelectValue />
+          </span>
+        </SelectTrigger>
+        <SelectContent align="end">
+          {options.map((option) => (
+            <SelectItem
+              key={option.value}
+              value={option.value}
+              className={cn(option.value === value && "font-bold")}
+            >
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   )
 }

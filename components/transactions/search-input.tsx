@@ -1,11 +1,14 @@
 "use client"
 
-import { Search } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import SearchIcon from "@/components/icons/SearchIcon"
 
 interface SearchInputProps {
   value: string
   onChange: (value: string) => void
+  label?: string
   placeholder?: string
   className?: string
 }
@@ -13,22 +16,29 @@ interface SearchInputProps {
 export function SearchInput({
   value,
   onChange,
+  label = "Search Transactions",
   placeholder = "Search transaction",
   className,
 }: SearchInputProps) {
   return (
-    <div className={cn("relative", className)}>
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="border-muted-foreground/20 bg-card text-card-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary h-10 w-full rounded-lg border pr-10 pl-4 text-sm focus:ring-1 focus:outline-none md:w-80"
-      />
-      <Search
-        className="text-muted-foreground absolute top-1/2 right-3 size-4 -translate-y-1/2"
-        aria-hidden
-      />
+    <div className={cn("space-y-2", className)}>
+      <Label
+        htmlFor="search-txn"
+        className="text-muted-foreground text-xs font-bold"
+      >
+        {label}
+      </Label>
+      <div className="relative">
+        <Input
+          id="search-txn"
+          name="search-txn"
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+        />
+        <SearchIcon aria-hidden />
+      </div>
     </div>
   )
 }

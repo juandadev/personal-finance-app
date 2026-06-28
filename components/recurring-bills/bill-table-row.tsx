@@ -3,6 +3,7 @@ import { CircleCheck, CircleAlert } from "lucide-react"
 import { formatCurrency } from "@/lib/format"
 import type { RecurringBill } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { TableCell, TableRow } from "@/components/ui/table"
 
 interface BillTableRowProps {
   bill: RecurringBill
@@ -31,8 +32,8 @@ export function BillTableRow({ bill }: BillTableRowProps) {
   const isDueSoon = bill.status === "due-soon"
 
   return (
-    <tr className="border-muted-foreground/10 border-b last:border-b-0">
-      <td className="py-4">
+    <TableRow>
+      <TableCell>
         <div className="flex items-center gap-3">
           <Image
             src={bill.avatarUrl}
@@ -41,10 +42,10 @@ export function BillTableRow({ bill }: BillTableRowProps) {
             height={40}
             className="size-10 rounded-full object-cover"
           />
-          <span className="text-card-foreground font-bold">{bill.name}</span>
+          <span className="text-foreground font-bold">{bill.name}</span>
         </div>
-      </td>
-      <td className="py-4">
+      </TableCell>
+      <TableCell>
         <div className="flex items-center gap-2">
           <span
             className={cn(
@@ -64,16 +65,16 @@ export function BillTableRow({ bill }: BillTableRowProps) {
             />
           )}
         </div>
-      </td>
-      <td
+      </TableCell>
+      <TableCell
         className={cn(
-          "py-4 text-right text-sm font-bold",
-          isDueSoon ? "text-destructive" : "text-card-foreground",
+          "text-right font-bold",
+          isDueSoon ? "text-destructive" : "text-foreground",
         )}
       >
         {formatCurrency(bill.amount, { forceDecimals: true })}
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   )
 }
 
@@ -92,9 +93,7 @@ export function MobileBillRow({ bill }: BillTableRowProps) {
           className="size-10 rounded-full object-cover"
         />
         <div className="flex flex-col">
-          <span className="text-card-foreground text-sm font-bold">
-            {bill.name}
-          </span>
+          <span className="text-foreground text-sm font-bold">{bill.name}</span>
           <div className="mt-0.5 flex items-center gap-1">
             <span
               className={cn(
@@ -119,7 +118,7 @@ export function MobileBillRow({ bill }: BillTableRowProps) {
       <span
         className={cn(
           "text-sm font-bold",
-          isDueSoon ? "text-destructive" : "text-card-foreground",
+          isDueSoon ? "text-destructive" : "text-foreground",
         )}
       >
         {formatCurrency(bill.amount, { forceDecimals: true })}

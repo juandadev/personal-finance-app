@@ -7,6 +7,7 @@ import type {
   Transaction,
   TransactionCategory,
 } from "@/lib/types"
+import type { ThemeColor } from "@/lib/theme-colors"
 
 export type CurrencyCode = "USD"
 export type AccountType = "checking" | "savings" | "credit"
@@ -33,7 +34,6 @@ export interface CategoryRecord {
   id: string
   name: TransactionCategory
   slug: string
-  sortOrder: number
 }
 
 export interface CounterpartyRecord {
@@ -58,7 +58,7 @@ export interface BudgetRecord {
   categoryId: string
   period: string
   limitCents: number
-  themeColor: string
+  themeColor: ThemeColor
 }
 
 export interface BudgetSummaryRecord {
@@ -71,8 +71,7 @@ export interface PotRecord {
   name: string
   balanceCents: number
   targetCents: number
-  themeColor: string
-  sortOrder: number
+  themeColor: ThemeColor
 }
 
 export interface RecurringBillRecord {

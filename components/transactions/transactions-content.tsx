@@ -1,13 +1,15 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { Card } from "@/components/ui/card"
 import { useFinance } from "@/hooks/use-finance"
 import type { SortOption, TransactionCategory } from "@/lib/types"
-import { ArrowUpDown, ListFilter } from "lucide-react"
 import { SearchInput } from "./search-input"
 import { FilterDropdown } from "./filter-dropdown"
 import { TransactionsTable } from "./transactions-table"
 import { Pagination } from "./pagination"
+import FilterMobileIcon from "@/components/icons/FilterMobileIcon"
+import SortMobileIcon from "@/components/icons/SortMobileIcon"
 
 const ITEMS_PER_PAGE = 10
 
@@ -37,18 +39,15 @@ export function TransactionsContent() {
   const filteredAndSorted = useMemo(() => {
     let result = [...transactions]
 
-    // Filter by search
     if (search) {
       const searchLower = search.toLowerCase()
       result = result.filter((t) => t.name.toLowerCase().includes(searchLower))
     }
 
-    // Filter by category
     if (category !== "all") {
       result = result.filter((t) => t.category === category)
     }
 
-    // Sort
     switch (sortBy) {
       case "latest":
         result.sort(
@@ -86,7 +85,6 @@ export function TransactionsContent() {
     currentPage * ITEMS_PER_PAGE,
   )
 
-  // Reset to page 1 when filters change
   const handleSearchChange = (value: string) => {
     setSearch(value)
     setCurrentPage(1)
@@ -103,43 +101,36 @@ export function TransactionsContent() {
   }
 
   return (
-    <div className="bg-card rounded-xl p-5 md:p-8">
-      {/* Filters */}
-      <div className="mb-6 flex items-center gap-3 md:justify-between md:gap-4">
+    <Card className="@container/transactions flex flex-col gap-6">
+      <div className="flex items-center gap-6 self-stretch @[806px]/transactions:justify-between">
         <SearchInput
           value={search}
           onChange={handleSearchChange}
-          className="flex-1 md:flex-initial"
+          className="w-full @[806px]/transactions:max-w-80"
         />
-        <div className="flex items-center gap-2 md:gap-4">
+        <div className="flex items-center gap-6">
           <FilterDropdown
             label="Sort by"
             value={sortBy}
             options={sortOptions}
             onChange={handleSortChange}
-            icon={<ArrowUpDown className="size-5" aria-hidden />}
+            icon={<SortMobileIcon className="size-4" aria-hidden />}
           />
           <FilterDropdown
             label="Category"
             value={category}
             options={categoryOptions}
             onChange={handleCategoryChange}
-            icon={<ListFilter className="size-5" aria-hidden />}
+            icon={<FilterMobileIcon className="size-4" aria-hidden />}
           />
         </div>
       </div>
-
-      {/* Table */}
       <TransactionsTable transactions={paginatedTransactions} />
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-        />
-      )}
-    </div>
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+      />
+    </Card>
   )
 }

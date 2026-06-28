@@ -1,16 +1,21 @@
+import { themeColorClasses, type ThemeColor } from "@/lib/theme-colors"
+import { cn } from "@/lib/utils"
+
 interface PotProgressBarProps {
   percentage: number
-  color: string
+  color: ThemeColor
 }
 
 export function PotProgressBar({ percentage, color }: PotProgressBarProps) {
   return (
     <div className="bg-background h-2 w-full overflow-hidden rounded-full">
       <div
-        className="h-full rounded-full transition-all duration-300"
+        className={cn(
+          "h-full rounded-full transition-all duration-300",
+          themeColorClasses[color].bg,
+        )}
         style={{
           width: `${Math.min(percentage, 100)}%`,
-          backgroundColor: color,
         }}
       />
     </div>

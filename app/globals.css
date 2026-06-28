@@ -3,127 +3,103 @@
 
 @custom-variant dark (&:is(.dark *));
 
-:root {
-  /* Brand surfaces */
-  --background: #f8f4f0; /* cream page background */
-  --foreground: #201f24; /* primary text */
+/*noinspection CssUnresolvedCustomProperty*/
+@theme {
+  --font-sans: var(--font-public-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-public-sans), ui-monospace, monospace;
+  --ease-in-out-expo: cubic-bezier(1, 0, 0, 1);
 
-  --card: #ffffff;
-  --card-foreground: #201f24;
+  /* Shadcn Colors */
+  --color-background: #f8f4f0;
+  --color-foreground: #201f24;
+  --color-card: #ffffff;
+  --color-card-foreground: #201f24;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #201f24;
+  --color-primary: #201f24;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f2f3f7;
+  --color-secondary-foreground: #201f24;
+  --color-muted: #f2f3f7;
+  --color-muted-foreground: #696868;
+  --color-accent: #277c78;
+  --color-accent-foreground: #ffffff;
+  --color-destructive: #c94736;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #ebe9e6;
+  --color-input: #98908b;
+  --color-ring: #277c78;
+  --color-chart-1: #277c78;
+  --color-chart-2: #82c9d7;
+  --color-chart-3: #626070;
+  --color-chart-4: #f2cdac;
+  --color-chart-5: #b3a8c9;
+  --color-sidebar: #201f24;
+  --color-sidebar-foreground: #b3b3b3;
+  --color-sidebar-primary: #277c78;
+  --color-sidebar-primary-foreground: #ffffff;
+  --color-sidebar-accent: #f8f4f0;
+  --color-sidebar-accent-foreground: #201f24;
+  --color-sidebar-border: #201f24;
+  --color-sidebar-ring: #277c78;
 
-  --popover: #ffffff;
-  --popover-foreground: #201f24;
+  /* Other Colors */
+  --color-finance-beige-100: #f8f4f0;
+  --color-finance-beige-500: #98908b;
 
-  /* Primary = dark navy used for current balance card and sidebar accents */
-  --primary: #201f24;
-  --primary-foreground: #ffffff;
+  --color-finance-grey-100: #f2f2f2;
+  --color-finance-grey-300: #b3b3b3;
+  --color-finance-grey-500: #696868;
+  --color-finance-grey-900: #201f24;
 
-  --secondary: #f2f3f7;
-  --secondary-foreground: #201f24;
-
-  --muted: #f2f3f7;
-  --muted-foreground: #696868;
-
-  --accent: #277c78; /* teal/green accent (income, positive amounts) */
-  --accent-foreground: #ffffff;
-
-  --destructive: #c94736;
-  --destructive-foreground: #ffffff;
-
-  --border: #ebe9e6;
-  --input: #ebe9e6;
-  --ring: #277c78;
-
-  /* Chart palette tuned to the screenshot */
-  --chart-1: #277c78; /* teal */
-  --chart-2: #82c9d7; /* light cyan */
-  --chart-3: #626070; /* slate */
-  --chart-4: #f2cdac; /* peach */
-  --chart-5: #b3a8c9; /* lavender */
-
-  --radius: 0.75rem;
-
-  /* Sidebar */
-  --sidebar: #201f24;
-  --sidebar-foreground: #b3b1b8;
-  --sidebar-primary: #277c78;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f8f4f0;
-  --sidebar-accent-foreground: #201f24;
-  --sidebar-border: #2a2930;
-  --sidebar-ring: #277c78;
+  --color-finance-yellow: #f2cdac;
+  --color-finance-cyan: #82c9d7;
+  --color-finance-navy: #626070;
+  --color-finance-red: #c94736;
+  --color-finance-purple: #826cb0;
+  --color-finance-purple-100: #af81ba;
+  --color-finance-purple-200: #826cb0;
+  --color-finance-turquoise: #597c7c;
+  --color-finance-brown: #93674f;
+  --color-finance-magenta: #934f6f;
+  --color-finance-blue: #3f82b2;
+  --color-finance-grey: #97a0ac;
+  --color-finance-navy-grey: #97a0ac;
+  --color-finance-army: #7f9161;
+  --color-finance-army-green: #7f9161;
+  --color-finance-pink: #af81ba;
+  --color-finance-gold: #cab361;
+  --color-finance-orange: #be6c49;
 }
 
 .dark {
-  --background: #201f24;
-  --foreground: #f8f4f0;
-  --card: #2a2930;
-  --card-foreground: #f8f4f0;
-  --popover: #2a2930;
-  --popover-foreground: #f8f4f0;
-  --primary: #f8f4f0;
-  --primary-foreground: #201f24;
-  --secondary: #2a2930;
-  --secondary-foreground: #f8f4f0;
-  --muted: #2a2930;
-  --muted-foreground: #b3b1b8;
-  --accent: #277c78;
-  --accent-foreground: #ffffff;
-  --destructive: #c94736;
-  --destructive-foreground: #ffffff;
-  --border: #2a2930;
-  --input: #2a2930;
-  --ring: #277c78;
-  --sidebar: #15141a;
-  --sidebar-foreground: #b3b1b8;
-  --sidebar-primary: #277c78;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #2a2930;
-  --sidebar-accent-foreground: #f8f4f0;
-  --sidebar-border: #2a2930;
-  --sidebar-ring: #277c78;
-}
-
-@theme inline {
-  --font-sans: var(--font-public-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-public-sans), ui-monospace, monospace;
-
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+  --color-background: #201f24;
+  --color-foreground: #f8f4f0;
+  --color-card: #2a2930;
+  --color-card-foreground: #f8f4f0;
+  --color-popover: #2a2930;
+  --color-popover-foreground: #f8f4f0;
+  --color-primary: #f8f4f0;
+  --color-primary-foreground: #201f24;
+  --color-secondary: #2a2930;
+  --color-secondary-foreground: #f8f4f0;
+  --color-muted: #2a2930;
+  --color-muted-foreground: #b3b1b8;
+  --color-accent: #277c78;
+  --color-accent-foreground: #ffffff;
+  --color-destructive: #c94736;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #2a2930;
+  --color-input: #2a2930;
+  --color-ring: #277c78;
+  --color-sidebar: #15141a;
+  --color-sidebar-foreground: #b3b1b8;
+  --color-sidebar-primary: #277c78;
+  --color-sidebar-primary-foreground: #ffffff;
+  --color-sidebar-accent: #2a2930;
+  --color-sidebar-accent-foreground: #f8f4f0;
+  --color-sidebar-border: #2a2930;
+  --color-sidebar-ring: #277c78;
 }
 
 @layer base {
@@ -132,5 +108,15 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+  ::-webkit-scrollbar {
+    @apply w-1.5;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-muted;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-accent hover:bg-accent/80 rounded-full;
   }
 }

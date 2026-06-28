@@ -1,3 +1,4 @@
+import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatCurrency } from "@/lib/format"
 import type { RecurringBill } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -32,7 +33,7 @@ function SummaryRow({
       <span
         className={cn(
           "text-sm font-bold",
-          variant === "danger" ? "text-destructive" : "text-card-foreground",
+          variant === "danger" ? "text-destructive" : "text-foreground",
         )}
       >
         {count} ({formatCurrency(amount, { forceDecimals: true })})
@@ -53,8 +54,12 @@ export function BillsSummaryCard({ bills }: BillsSummaryCardProps) {
   const dueSoonAmount = dueSoonBills.reduce((sum, b) => sum + b.amount, 0)
 
   return (
-    <div className="bg-card h-fit rounded-xl p-6">
-      <h3 className="text-card-foreground text-base font-bold">Summary</h3>
+    <Card className="h-fit" padding="fixed">
+      <CardHeader>
+        <CardTitle size="sm">
+          <h3>Summary</h3>
+        </CardTitle>
+      </CardHeader>
       <div className="mt-2">
         <SummaryRow
           label="Paid Bills"
@@ -73,6 +78,6 @@ export function BillsSummaryCard({ bills }: BillsSummaryCardProps) {
           variant="danger"
         />
       </div>
-    </div>
+    </Card>
   )
 }

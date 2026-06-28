@@ -1,8 +1,16 @@
 "use client"
 
+import type { ComponentProps } from "react"
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts"
 import { formatCurrency } from "@/lib/format"
+import { getThemeColorCssVariable } from "@/lib/theme-colors"
 import type { Budget } from "@/lib/types"
+import { useReducedMotion } from "motion/react"
+
+type PieAnimationEasing = ComponentProps<typeof Pie>["animationEasing"]
+
+const pieAnimationEasing = "cubic-bezier(0.42,1,0.22,1)" as PieAnimationEasing
+const BUDGETS_CHART_ENTER_DURATION_MS = 1300
 
 interface BudgetsChartProps {
   budgets: Budget[]
@@ -11,16 +19,21 @@ interface BudgetsChartProps {
 }
 
 export function BudgetsChart({ budgets, spent, limit }: BudgetsChartProps) {
+  const shouldReduceMotion = useReducedMotion()
   const data = budgets.map((b) => ({
     name: b.category,
     value: b.maximum,
-    color: b.color,
+    color: getThemeColorCssVariable(b.color),
   }))
 
   return (
-    <div className="relative mx-auto aspect-square w-full max-w-[260px]">
-      <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
+    <div className="relative mx-auto aspect-square w-full max-w-61.75">
+      <ResponsiveContainer
+        width="100%"
+        height="100%"
+        className="before:bg-card relative isolate before:absolute before:inset-0 before:z-1 before:m-auto before:size-[75%] before:rounded-full before:opacity-25"
+      >
+        <PieChart className="z-0">
           <Pie
             data={data}
             dataKey="value"
@@ -31,6 +44,9 @@ export function BudgetsChart({ budgets, spent, limit }: BudgetsChartProps) {
             stroke="none"
             startAngle={90}
             endAngle={-270}
+            isAnimationActive={!shouldReduceMotion}
+            animationDuration={BUDGETS_CHART_ENTER_DURATION_MS}
+            animationEasing={pieAnimationEasing}
           >
             {data.map((entry) => (
               <Cell key={entry.name} fill={entry.color} />

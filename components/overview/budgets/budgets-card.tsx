@@ -1,7 +1,15 @@
 "use client"
 
+import Link from "next/link"
+import CaretRightIcon from "@/components/icons/CaretRightIcon"
+import {
+  Card,
+  CardAction,
+  CardHeader,
+  CardTitle,
+  cardActionLinkClasses,
+} from "@/components/ui/card"
 import { useFinance } from "@/hooks/use-finance"
-import { CardHeader } from "../card-header"
 import { BudgetItem } from "./budget-item"
 import { BudgetsChart } from "./budgets-chart"
 
@@ -9,24 +17,32 @@ export function BudgetsCard() {
   const { budgets, budgetSpent, budgetLimit } = useFinance()
 
   return (
-    <section className="bg-card rounded-xl p-6 shadow-sm md:p-8">
-      <CardHeader title="Budgets" actionLabel="See Details" href="/budgets" />
-
-      <div className="mt-6 grid items-center gap-6 sm:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
-        <BudgetsChart
-          budgets={budgets}
-          spent={budgetSpent}
-          limit={budgetLimit}
-        />
-
-        <ul className="grid grid-cols-1 gap-4">
-          {budgets.map((b) => (
-            <li key={b.category}>
-              <BudgetItem budget={b} />
-            </li>
-          ))}
-        </ul>
-      </div>
-    </section>
+    <Card asChild>
+      <section>
+        <CardHeader>
+          <CardTitle>
+            <h2>Budgets</h2>
+          </CardTitle>
+          <CardAction>
+            <Link href="/budgets" className={cardActionLinkClasses}>
+              See Details
+              <CaretRightIcon className="size-2" aria-hidden />
+            </Link>
+          </CardAction>
+        </CardHeader>
+        <div className="mt-7 flex flex-col items-center gap-4 self-stretch py-2 md:flex-row">
+          <BudgetsChart
+            budgets={budgets}
+            spent={budgetSpent}
+            limit={budgetLimit}
+          />
+          <ul className="grid w-full grid-cols-2 justify-items-start gap-4 md:h-full md:max-h-75.5 md:w-fit md:max-w-31 md:grid-cols-1 md:overflow-y-auto md:pr-2">
+            {budgets.map((b) => (
+              <BudgetItem key={b.category} budget={b} />
+            ))}
+          </ul>
+        </div>
+      </section>
+    </Card>
   )
 }

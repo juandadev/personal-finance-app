@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react"
 import { ArrowUpDown } from "lucide-react"
+import { Card } from "@/components/ui/card"
 import type { RecurringBill, SortOption } from "@/lib/types"
 import { SearchInput } from "../transactions/search-input"
 import { FilterDropdown } from "../transactions/filter-dropdown"
@@ -27,7 +28,6 @@ export function BillsContent({ bills }: BillsContentProps) {
   const filteredAndSortedBills = useMemo(() => {
     let result = [...bills]
 
-    // Filter by search
     if (search) {
       const searchLower = search.toLowerCase()
       result = result.filter((bill) =>
@@ -35,7 +35,6 @@ export function BillsContent({ bills }: BillsContentProps) {
       )
     }
 
-    // Sort
     switch (sortBy) {
       case "latest":
         result.sort((a, b) => a.dueDay - b.dueDay)
@@ -61,12 +60,12 @@ export function BillsContent({ bills }: BillsContentProps) {
   }, [bills, search, sortBy])
 
   return (
-    <div className="bg-card rounded-xl p-5 md:p-8">
-      {/* Filters */}
-      <div className="mb-6 flex items-center gap-3 md:gap-4">
+    <Card>
+      <div className="mb-6 flex items-end gap-3 md:gap-4">
         <SearchInput
           value={search}
           onChange={setSearch}
+          label="Search Bills"
           placeholder="Search bills"
           className="flex-1 md:flex-initial"
         />
@@ -79,8 +78,7 @@ export function BillsContent({ bills }: BillsContentProps) {
         />
       </div>
 
-      {/* Bills Table */}
       <BillsTable bills={filteredAndSortedBills} />
-    </div>
+    </Card>
   )
 }

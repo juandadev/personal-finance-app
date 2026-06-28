@@ -2,7 +2,8 @@
 
 import * as React from "react"
 import * as MenubarPrimitive from "@radix-ui/react-menubar"
-import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react"
+import CaretRightIcon from "@/components/icons/CaretRightIcon"
+import { CheckIcon, CircleIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
@@ -235,7 +236,7 @@ function MenubarSubTrigger({
       {...props}
     >
       {children}
-      <ChevronRightIcon className="ml-auto h-4 w-4" />
+      <CaretRightIcon className="ml-auto size-2" />
     </MenubarPrimitive.SubTrigger>
   )
 }

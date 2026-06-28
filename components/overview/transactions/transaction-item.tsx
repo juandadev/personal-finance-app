@@ -11,7 +11,7 @@ export function TransactionItem({ transaction }: TransactionItemProps) {
   const isPositive = transaction.amount > 0
 
   return (
-    <div className="flex items-center gap-4 py-4">
+    <li className="flex items-center gap-4 py-5 first:pt-0 last:pb-0">
       <div className="bg-muted relative size-10 shrink-0 overflow-hidden rounded-full">
         <Image
           src={transaction.avatarUrl || "/placeholder.svg"}
@@ -35,6 +35,6 @@ export function TransactionItem({ transaction }: TransactionItemProps) {
         </p>
         <p className="text-muted-foreground mt-1 text-xs">{transaction.date}</p>
       </div>
-    </div>
+    </li>
   )
 }

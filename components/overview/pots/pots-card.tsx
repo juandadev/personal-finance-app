@@ -1,39 +1,53 @@
 "use client"
 
-import { PiggyBank } from "lucide-react"
+import Link from "next/link"
+import CaretRightIcon from "@/components/icons/CaretRightIcon"
+import {
+  Card,
+  CardAction,
+  CardHeader,
+  CardTitle,
+  cardActionLinkClasses,
+} from "@/components/ui/card"
 import { useFinance } from "@/hooks/use-finance"
 import { formatCurrency } from "@/lib/format"
-import { CardHeader } from "../card-header"
 import { PotItem } from "./pot-item"
+import PotIcon from "@/components/icons/PotIcon"
 
 export function PotsCard() {
   const { pots, totalSaved } = useFinance()
 
   return (
-    <section className="bg-card rounded-xl p-6 shadow-sm md:p-8">
-      <CardHeader title="Pots" actionLabel="See Details" href="/pots" />
-
-      <div className="mt-6 grid gap-5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
-        <div className="bg-background flex items-center gap-4 rounded-xl p-5">
-          <span className="bg-card text-accent grid size-10 place-items-center rounded-full">
-            <PiggyBank className="size-5" aria-hidden />
-          </span>
-          <div>
-            <p className="text-muted-foreground text-xs">Total Saved</p>
-            <p className="mt-1 text-3xl font-bold tracking-tight">
-              {formatCurrency(totalSaved)}
-            </p>
+    <Card asChild>
+      <section>
+        <CardHeader>
+          <CardTitle>
+            <h2>Pots</h2>
+          </CardTitle>
+          <CardAction>
+            <Link href="/pots" className={cardActionLinkClasses}>
+              See Details
+              <CaretRightIcon className="size-2" aria-hidden />
+            </Link>
+          </CardAction>
+        </CardHeader>
+        <div className="mt-5 flex flex-col items-center gap-5 self-stretch md:flex-row">
+          <div className="bg-background flex w-full items-center gap-4 rounded-lg p-4 md:max-w-61.75">
+            <PotIcon className="text-accent size-8" aria-hidden />
+            <div>
+              <p className="text-muted-foreground text-sm">Total Saved</p>
+              <p className="mt-1 text-3xl font-bold tracking-tight">
+                {formatCurrency(totalSaved)}
+              </p>
+            </div>
           </div>
+          <ul className="grid w-full flex-1 grid-cols-2 gap-4">
+            {pots.slice(0, 4).map((pot) => (
+              <PotItem key={pot.id} pot={pot} />
+            ))}
+          </ul>
         </div>
-
-        <ul className="grid grid-cols-2 gap-4">
-          {pots.slice(0, 4).map((pot) => (
-            <li key={pot.id}>
-              <PotItem pot={pot} />
-            </li>
-          ))}
-        </ul>
-      </div>
-    </section>
+      </section>
+    </Card>
   )
 }

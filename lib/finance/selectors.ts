@@ -42,14 +42,10 @@ function formatDisplayDate(isoDate: string): string {
   }).format(localDate)
 }
 
-function getOrderedCategories(categories: CategoryRecord[]): CategoryRecord[] {
-  return [...categories].sort((a, b) => a.sortOrder - b.sortOrder)
-}
-
 function selectTransactionCategories(
   categories: CategoryRecord[],
 ): TransactionCategory[] {
-  return getOrderedCategories(categories).map((category) => category.name)
+  return categories.map((category) => category.name)
 }
 
 function selectTransactions(
@@ -133,13 +129,13 @@ function selectRecurringBillsSummary(
     .reduce((sum, bill) => sum + bill.amount, 0)
 
   return [
-    { label: "Paid Bills", amount: paidAmount, color: "var(--color-chart-1)" },
+    { label: "Paid Bills", amount: paidAmount, color: "chart-1" },
     {
       label: "Total Upcoming",
       amount: upcomingAmount,
-      color: "var(--color-chart-4)",
+      color: "chart-4",
     },
-    { label: "Due Soon", amount: dueSoonAmount, color: "var(--color-chart-2)" },
+    { label: "Due Soon", amount: dueSoonAmount, color: "chart-2" },
   ]
 }
 
@@ -148,15 +144,13 @@ export function selectFinanceViewModel(state: FinanceState): FinanceViewModel {
   const counterparties = byId(state.counterparties)
   const primaryAccount = state.accounts[0]
   const accountSummary = state.accountSummaries[0]
-  const pots = [...state.pots]
-    .sort((a, b) => a.sortOrder - b.sortOrder)
-    .map((pot) => ({
-      id: pot.id,
-      name: pot.name,
-      amount: centsToDollars(pot.balanceCents),
-      target: centsToDollars(pot.targetCents),
-      color: pot.themeColor,
-    }))
+  const pots = state.pots.map((pot) => ({
+    id: pot.id,
+    name: pot.name,
+    amount: centsToDollars(pot.balanceCents),
+    target: centsToDollars(pot.targetCents),
+    color: pot.themeColor,
+  }))
   const budgets = selectBudgets(
     state.budgets,
     state.budgetSummaries,

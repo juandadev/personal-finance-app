@@ -1,16 +1,14 @@
+import type { ComponentType } from "react"
 import type { LucideIcon } from "lucide-react"
+import type { ThemeColor } from "@/lib/theme-colors"
+import type { IconProps } from "@/types"
 
-export type NavKey =
-  | "overview"
-  | "transactions"
-  | "budgets"
-  | "pots"
-  | "recurring-bills"
+export type NavIcon = LucideIcon | ComponentType<IconProps>
 
 export interface NavItem {
-  key: NavKey
+  key: string
   label: string
-  icon: LucideIcon
+  icon: NavIcon
   href: string
 }
 
@@ -25,14 +23,14 @@ export interface Pot {
   name: string
   amount: number
   target: number
-  color: string
+  color: ThemeColor
 }
 
 export interface Budget {
   category: TransactionCategory
   maximum: number
   spent: number
-  color: string
+  color: ThemeColor
 }
 
 export type TransactionCategory =
@@ -57,17 +55,12 @@ export interface Transaction {
 }
 
 export type SortOption =
-  | "latest"
-  | "oldest"
-  | "a-z"
-  | "z-a"
-  | "highest"
-  | "lowest"
+  "latest" | "oldest" | "a-z" | "z-a" | "highest" | "lowest"
 
 export interface RecurringBillSummary {
   label: string
   amount: number
-  color: string
+  color: ThemeColor
 }
 
 export type BillStatus = "paid" | "upcoming" | "due-soon"
