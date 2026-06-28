@@ -28,7 +28,6 @@ export function BillsContent({ bills }: BillsContentProps) {
   const filteredAndSortedBills = useMemo(() => {
     let result = [...bills]
 
-    // Filter by search
     if (search) {
       const searchLower = search.toLowerCase()
       result = result.filter((bill) =>
@@ -36,7 +35,6 @@ export function BillsContent({ bills }: BillsContentProps) {
       )
     }
 
-    // Sort
     switch (sortBy) {
       case "latest":
         result.sort((a, b) => a.dueDay - b.dueDay)
@@ -63,7 +61,6 @@ export function BillsContent({ bills }: BillsContentProps) {
 
   return (
     <Card>
-      {/* Filters */}
       <div className="mb-6 flex items-end gap-3 md:gap-4">
         <SearchInput
           value={search}
@@ -81,7 +78,6 @@ export function BillsContent({ bills }: BillsContentProps) {
         />
       </div>
 
-      {/* Bills Table */}
       <BillsTable bills={filteredAndSortedBills} />
     </Card>
   )

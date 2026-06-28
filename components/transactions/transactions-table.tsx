@@ -18,7 +18,6 @@ interface TransactionsTableProps {
 export function TransactionsTable({ transactions }: TransactionsTableProps) {
   return (
     <>
-      {/* Mobile list view */}
       <ul className="divide-muted-foreground/10 divide-y md:hidden">
         {transactions.map((transaction) => (
           <MobileTransactionItem
@@ -28,7 +27,6 @@ export function TransactionsTable({ transactions }: TransactionsTableProps) {
         ))}
       </ul>
 
-      {/* Desktop table view */}
       <div className="hidden md:block">
         <Table>
           <TableHeader>

@@ -39,18 +39,15 @@ export function TransactionsContent() {
   const filteredAndSorted = useMemo(() => {
     let result = [...transactions]
 
-    // Filter by search
     if (search) {
       const searchLower = search.toLowerCase()
       result = result.filter((t) => t.name.toLowerCase().includes(searchLower))
     }
 
-    // Filter by category
     if (category !== "all") {
       result = result.filter((t) => t.category === category)
     }
 
-    // Sort
     switch (sortBy) {
       case "latest":
         result.sort(
@@ -88,7 +85,6 @@ export function TransactionsContent() {
     currentPage * ITEMS_PER_PAGE,
   )
 
-  // Reset to page 1 when filters change
   const handleSearchChange = (value: string) => {
     setSearch(value)
     setCurrentPage(1)

@@ -15,14 +15,12 @@ interface BillsTableProps {
 export function BillsTable({ bills }: BillsTableProps) {
   return (
     <>
-      {/* Mobile list view */}
       <ul className="divide-muted-foreground/10 divide-y md:hidden">
         {bills.map((bill) => (
           <MobileBillRow key={bill.id} bill={bill} />
         ))}
       </ul>
 
-      {/* Desktop/Tablet table view */}
       <div className="hidden md:block">
         <Table>
           <TableHeader>
