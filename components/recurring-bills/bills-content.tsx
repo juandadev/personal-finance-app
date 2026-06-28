@@ -64,7 +64,7 @@ export function BillsContent({ bills }: BillsContentProps) {
   return (
     <Card>
       {/* Filters */}
-      <div className="mb-6 flex items-center gap-3 md:gap-4">
+      <div className="mb-6 flex items-end gap-3 md:gap-4">
         <SearchInput
           value={search}
           onChange={setSearch}
