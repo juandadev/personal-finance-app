@@ -52,7 +52,7 @@ export function ThemeSelect({
             </span>
           </SelectValue>
         </SelectTrigger>
-        <SelectContent className="max-h-107.5">
+        <SelectContent className="max-h-107.5" matchTriggerWidth>
           {themeOptions.map((theme) => {
             const isAlreadyUsed = usedThemeColors.has(theme.value.toLowerCase())
 
@@ -61,17 +61,17 @@ export function ThemeSelect({
                 key={theme.value}
                 value={theme.value}
                 variant="form"
-                className="focus:[&_span#badge]:border-card focus:[&_span#used]:text-white"
+                className="focus:**:data-theme-color-dot:border-card focus:**:data-theme-used:text-white"
               >
-                <span className="flex w-full items-center justify-between gap-6">
+                <span className="flex w-full min-w-0 items-center justify-between gap-3">
                   <span
                     className={cn(
-                      "relative isolate flex items-center gap-3",
+                      "relative isolate flex min-w-0 items-center gap-3",
                       isAlreadyUsed && "opacity-35",
                     )}
                   >
                     <span
-                      id="badge"
+                      data-theme-color-dot
                       aria-hidden
                       className={cn(
                         "size-4 rounded-full border-2",
@@ -82,7 +82,10 @@ export function ThemeSelect({
                     {theme.label}
                   </span>
                   {isAlreadyUsed && (
-                    <span id="used" className="text-muted-foreground text-xs">
+                    <span
+                      data-theme-used
+                      className="text-muted-foreground shrink-0 text-xs"
+                    >
                       Already used
                     </span>
                   )}

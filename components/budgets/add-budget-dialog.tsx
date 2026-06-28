@@ -146,7 +146,7 @@ export function AddBudgetDialog() {
               <SelectTrigger id="budget-category" variant="form">
                 <SelectValue placeholder="Select a category" />
               </SelectTrigger>
-              <SelectContent className="max-h-107.5">
+              <SelectContent className="max-h-107.5" matchTriggerWidth>
                 {state.categories.map((category) => {
                   const isAlreadyBudgeted = budgetedCategoryIds.has(category.id)
 
@@ -157,12 +157,17 @@ export function AddBudgetDialog() {
                       disabled={isAlreadyBudgeted}
                       variant="form"
                     >
-                      <span className="flex w-full items-center justify-between gap-6">
-                        <span className={cn(isAlreadyBudgeted && "opacity-35")}>
+                      <span className="flex w-full min-w-0 items-center justify-between gap-3">
+                        <span
+                          className={cn(
+                            "min-w-0",
+                            isAlreadyBudgeted && "opacity-35",
+                          )}
+                        >
                           {category.name}
                         </span>
                         {isAlreadyBudgeted && (
-                          <span className="text-muted-foreground text-xs">
+                          <span className="text-muted-foreground shrink-0 text-xs">
                             Already used
                           </span>
                         )}
