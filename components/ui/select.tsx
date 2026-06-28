@@ -116,8 +116,8 @@ function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "focus:bg-accent focus:text-accent-foreground [&_svg:not([class*='text-'])]:text-accent focus:[&_svg:not([class*='text-'])]:text-accent-foreground border-finance-grey-100 relative flex w-full cursor-default items-center gap-2 rounded-sm border-b py-3 pr-8 pl-2.5 text-sm outline-hidden select-none last:border-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
-        variant === "form" && "border-border min-h-11 pl-4 last:border-b-0",
+        "focus:bg-accent focus:text-accent-foreground [&_svg:not([class*='text-'])]:text-accent focus:[&_svg:not([class*='text-'])]:text-accent-foreground after:bg-finance-grey-100 relative flex w-full cursor-default items-center gap-2 rounded-sm py-3 pr-8 pl-2.5 text-sm outline-hidden select-none after:pointer-events-none after:absolute after:right-0 after:bottom-0 after:left-0 after:h-px after:content-[''] last:after:hidden data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
+        variant === "form" && "after:bg-border min-h-11 pl-4",
         className,
       )}
       {...props}

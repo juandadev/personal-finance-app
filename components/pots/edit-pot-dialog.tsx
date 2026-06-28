@@ -13,22 +13,11 @@ import {
 import { CurrencyInput } from "@/components/ui/currency-input"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { ThemeSelect } from "@/components/theme-select"
 import { useFinance } from "@/hooks/use-finance"
-import {
-  formatDollarInput,
-  parseDollarAmount,
-  themeOptions,
-} from "@/lib/finance/form-utils"
-import { themeColorClasses, type ThemeColor } from "@/lib/theme-colors"
+import { formatDollarInput, parseDollarAmount } from "@/lib/finance/form-utils"
+import type { ThemeColor } from "@/lib/theme-colors"
 import type { Pot } from "@/lib/types"
-import { cn } from "@/lib/utils"
 
 const maxPotNameLength = 30
 
@@ -65,7 +54,6 @@ export function EditPotDialog({ pot, open, onOpenChange }: EditPotDialogProps) {
       ),
     [currentPot?.id, state.pots],
   )
-  const selectedTheme = themeOptions.find((theme) => theme.value === themeColor)
   const charactersLeft = maxPotNameLength - name.length
 
   const resetForm = () => {
@@ -203,67 +191,12 @@ export function EditPotDialog({ pot, open, onOpenChange }: EditPotDialogProps) {
             )}
           </div>
 
-          <div className="space-y-2">
-            <Label
-              htmlFor="edit-pot-theme"
-              className="text-muted-foreground text-xs font-bold"
-            >
-              Theme
-            </Label>
-            <Select
-              value={themeColor}
-              onValueChange={(value) => setThemeColor(value as ThemeColor)}
-            >
-              <SelectTrigger id="edit-pot-theme" variant="form">
-                <SelectValue>
-                  <span className="flex items-center gap-3">
-                    <span
-                      aria-hidden
-                      className={cn(
-                        "size-4 rounded-full",
-                        selectedTheme &&
-                          themeColorClasses[selectedTheme.value].bg,
-                      )}
-                    />
-                    {selectedTheme?.label}
-                  </span>
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent className="max-h-107.5">
-                {themeOptions.map((theme) => (
-                  <SelectItem
-                    key={theme.value}
-                    value={theme.value}
-                    variant="form"
-                  >
-                    <span className="flex w-full items-center justify-between gap-6">
-                      <span
-                        className={cn(
-                          "flex items-center gap-3",
-                          usedThemeColors.has(theme.value.toLowerCase()) &&
-                            "opacity-35",
-                        )}
-                      >
-                        <span
-                          aria-hidden
-                          className={cn(
-                            "size-4 rounded-full",
-                            themeColorClasses[theme.value].bg,
-                          )}
-                        />
-                        {theme.label}
-                      </span>
-                      {usedThemeColors.has(theme.value.toLowerCase()) && (
-                        <span className="text-muted-foreground text-xs">
-                          Already used
-                        </span>
-                      )}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <ThemeSelect
+            id="edit-pot-theme"
+            value={themeColor}
+            onValueChange={setThemeColor}
+            usedThemeColors={usedThemeColors}
+          />
 
           <Button type="submit" size="finance-submit" disabled={!currentPot}>
             Save Changes

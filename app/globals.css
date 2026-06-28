@@ -56,14 +56,18 @@
   --color-finance-cyan: #82c9d7;
   --color-finance-navy: #626070;
   --color-finance-red: #c94736;
+  --color-finance-purple: #826cb0;
   --color-finance-purple-100: #af81ba;
   --color-finance-purple-200: #826cb0;
   --color-finance-turquoise: #597c7c;
   --color-finance-brown: #93674f;
   --color-finance-magenta: #934f6f;
   --color-finance-blue: #3f82b2;
+  --color-finance-grey: #97a0ac;
   --color-finance-navy-grey: #97a0ac;
+  --color-finance-army: #7f9161;
   --color-finance-army-green: #7f9161;
+  --color-finance-pink: #af81ba;
   --color-finance-gold: #cab361;
   --color-finance-orange: #be6c49;
 }
