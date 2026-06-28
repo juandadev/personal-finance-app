@@ -230,8 +230,8 @@ function Sidebar({
         className={cn(
           "ease-in-out-expo fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-300 md:flex",
           side === "left"
-            ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
-            : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
+            ? "left-0 group-data-[collapsible=offcanvas]:-left-(--sidebar-width)"
+            : "right-0 group-data-[collapsible=offcanvas]:-right-(--sidebar-width)",
           variant === "floating" || variant === "inset"
             ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
             : "group-data-[collapsible=icon]:w-(--sidebar-width-icon)",
@@ -386,7 +386,7 @@ function SidebarContent({ className, ...props }: React.ComponentProps<"div">) {
       data-slot="sidebar-content"
       data-sidebar="content"
       className={cn(
-        "flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-0 group-data-[collapsible=icon]:overflow-hidden overflow-y-auto scrollbar-track-sidebar scrollbar-thumb-accent",
+        "scrollbar-track-sidebar scrollbar-thumb-accent flex min-h-0 flex-1 flex-col gap-2 overflow-hidden overflow-y-auto p-0 group-data-[collapsible=icon]:overflow-hidden",
         className,
       )}
       {...props}
