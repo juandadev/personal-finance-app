@@ -18,7 +18,7 @@ export function PotItem({ pot }: PotItemProps) {
         )}
       />
       <div className="min-w-0 flex-1">
-        <p className="text-foreground truncate text-sm font-bold">{pot.name}</p>
+        <p className="text-muted-foreground truncate text-sm">{pot.name}</p>
         <p className="text-foreground mt-1 text-sm font-bold">
           {formatCurrency(pot.amount)}
         </p>
