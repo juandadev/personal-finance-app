@@ -11,7 +11,7 @@ export function BillRow({ bill }: BillRowProps) {
   return (
     <li
       className={cn(
-        "bg-background flex items-center justify-between rounded-lg border-l-4 px-4 py-5",
+        "bg-background flex items-center justify-between rounded-r-lg border-l-5 px-4 py-5",
         themeColorClasses[bill.color].border,
       )}
     >
