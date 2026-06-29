@@ -16,6 +16,7 @@ import PotIcon from "@/components/icons/PotIcon"
 
 export function PotsCard() {
   const { pots, totalSaved } = useFinance()
+  const hasPots = pots.length > 0
 
   return (
     <Card asChild>
@@ -42,12 +43,31 @@ export function PotsCard() {
             </div>
           </div>
           <ul className="grid w-full flex-1 grid-cols-2 gap-4">
-            {pots.slice(0, 4).map((pot) => (
-              <PotItem key={pot.id} pot={pot} />
-            ))}
+            {hasPots ? (
+              pots.slice(0, 4).map((pot) => <PotItem key={pot.id} pot={pot} />)
+            ) : (
+              <GhostPotItem />
+            )}
           </ul>
         </div>
       </section>
     </Card>
+  )
+}
+
+function GhostPotItem() {
+  return (
+    <li className="border-border/80 bg-background/70 col-span-2 flex items-center gap-4 rounded-lg border border-dashed p-4">
+      <span
+        aria-hidden
+        className="bg-muted-foreground/25 block h-10 w-1 rounded-full"
+      />
+      <div className="min-w-0 flex-1">
+        <p className="text-muted-foreground text-sm">Create your first pot</p>
+        <p className="text-foreground mt-1 text-sm font-bold">
+          {formatCurrency(0)}
+        </p>
+      </div>
+    </li>
   )
 }

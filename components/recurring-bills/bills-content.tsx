@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { ArrowUpDown } from "lucide-react"
+import { ArrowUpDown, CalendarClock } from "lucide-react"
+import { EmptyDataCard } from "@/components/empty-data-card"
 import { Card } from "@/components/ui/card"
 import type { RecurringBill, SortOption } from "@/lib/types"
 import { SearchInput } from "../transactions/search-input"
@@ -58,6 +59,8 @@ export function BillsContent({ bills }: BillsContentProps) {
 
     return result
   }, [bills, search, sortBy])
+  const hasBills = bills.length > 0
+  const hasVisibleBills = filteredAndSortedBills.length > 0
 
   return (
     <Card>
@@ -78,7 +81,20 @@ export function BillsContent({ bills }: BillsContentProps) {
         />
       </div>
 
-      <BillsTable bills={filteredAndSortedBills} />
+      {hasVisibleBills ? (
+        <BillsTable bills={filteredAndSortedBills} />
+      ) : (
+        <EmptyDataCard
+          className="min-h-90"
+          icon={<CalendarClock className="size-5" aria-hidden />}
+          title={hasBills ? "No Matching Bills" : "No Recurring Bills Yet"}
+          description={
+            hasBills
+              ? "Try a different search term to find another scheduled bill."
+              : "Recurring payments will appear here once they are added, with due dates and payment status grouped for quick review."
+          }
+        />
+      )}
     </Card>
   )
 }

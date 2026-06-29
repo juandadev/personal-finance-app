@@ -1,6 +1,8 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { ReceiptText } from "lucide-react"
+import { EmptyDataCard } from "@/components/empty-data-card"
 import { Card } from "@/components/ui/card"
 import { useFinance } from "@/hooks/use-finance"
 import type { SortOption, TransactionCategory } from "@/lib/types"
@@ -76,14 +78,13 @@ export function TransactionsContent() {
     return result
   }, [transactions, search, sortBy, category])
 
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredAndSorted.length / ITEMS_PER_PAGE),
-  )
+  const totalPages = Math.ceil(filteredAndSorted.length / ITEMS_PER_PAGE)
   const paginatedTransactions = filteredAndSorted.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE,
   )
+  const hasTransactions = transactions.length > 0
+  const hasVisibleTransactions = filteredAndSorted.length > 0
 
   const handleSearchChange = (value: string) => {
     setSearch(value)
@@ -125,12 +126,29 @@ export function TransactionsContent() {
           />
         </div>
       </div>
-      <TransactionsTable transactions={paginatedTransactions} />
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-      />
+      {hasVisibleTransactions ? (
+        <>
+          <TransactionsTable transactions={paginatedTransactions} />
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+        </>
+      ) : (
+        <EmptyDataCard
+          className="min-h-90"
+          icon={<ReceiptText className="size-5" aria-hidden />}
+          title={
+            hasTransactions ? "No Matching Transactions" : "No Transactions Yet"
+          }
+          description={
+            hasTransactions
+              ? "Try a different search term or category to find more activity."
+              : "There is no transaction data available to show yet. New activity will appear here once it has been added."
+          }
+        />
+      )}
     </Card>
   )
 }

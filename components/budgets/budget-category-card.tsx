@@ -138,12 +138,25 @@ export function BudgetCategoryCard({
           </CardAction>
         </CardHeader>
         <ul className="divide-muted-foreground/10 mt-2 divide-y">
-          {latestTransactions.map((transaction) => (
-            <LatestSpendingItem
-              key={transaction.id}
-              transaction={transaction}
-            />
-          ))}
+          {latestTransactions.length > 0 ? (
+            latestTransactions.map((transaction) => (
+              <LatestSpendingItem
+                key={transaction.id}
+                transaction={transaction}
+              />
+            ))
+          ) : (
+            <li className="py-3 first:pt-0 last:pb-0">
+              <div className="border-border/80 bg-card/70 rounded-lg border border-dashed p-4">
+                <p className="text-foreground text-sm font-bold">
+                  No spending yet
+                </p>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  Transactions in this category will appear here.
+                </p>
+              </div>
+            </li>
+          )}
         </ul>
       </div>
       <EditBudgetDialog

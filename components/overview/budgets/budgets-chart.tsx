@@ -20,11 +20,20 @@ interface BudgetsChartProps {
 
 export function BudgetsChart({ budgets, spent, limit }: BudgetsChartProps) {
   const shouldReduceMotion = useReducedMotion()
-  const data = budgets.map((b) => ({
-    name: b.category,
-    value: b.maximum,
-    color: getThemeColorCssVariable(b.color),
-  }))
+  const hasBudgets = budgets.length > 0
+  const data = hasBudgets
+    ? budgets.map((b) => ({
+        name: b.category,
+        value: b.maximum,
+        color: getThemeColorCssVariable(b.color),
+      }))
+    : [
+        {
+          name: "Empty",
+          value: 1,
+          color: "var(--color-muted)",
+        },
+      ]
 
   return (
     <div className="relative mx-auto aspect-square w-full max-w-61.75">
@@ -60,7 +69,7 @@ export function BudgetsChart({ budgets, spent, limit }: BudgetsChartProps) {
           {formatCurrency(spent)}
         </p>
         <p className="text-muted-foreground mt-1 text-xs">
-          of {formatCurrency(limit)} limit
+          {hasBudgets ? `of ${formatCurrency(limit)} limit` : "No budgets yet"}
         </p>
       </div>
     </div>
