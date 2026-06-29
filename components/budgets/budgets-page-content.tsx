@@ -37,6 +37,7 @@ export function BudgetsPageContent() {
           <EmptyDataCard
             className="min-h-90"
             icon={<ChartPie className="size-5" aria-hidden />}
+            surface="card"
             title="Build Your First Budget"
             description="Choose a category and set a monthly limit. Once transactions arrive, this space will show spending progress and recent activity."
             action={<AddBudgetDialog />}
