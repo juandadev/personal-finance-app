@@ -1,5 +1,8 @@
 "use client"
 
+import { useState } from "react"
+
+import { AuthStatusMessage } from "@/components/auth/auth-page-shell"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,20 +28,34 @@ export function DeleteBudgetDialog({
   onOpenChange,
 }: DeleteBudgetDialogProps) {
   const { state, actions } = useFinance()
+  const [statusMessage, setStatusMessage] = useState("")
+  const [isDeleting, setIsDeleting] = useState(false)
   const currentBudget = state.budgets.find((budgetRecord) => {
     const category = state.categories.find(
-      (option) => option.id === budgetRecord.categoryId,
+      (option) => option.id === budgetRecord.category_id,
     )
 
     return category?.name === budget.category
   })
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!currentBudget) {
       return
     }
 
-    actions.deleteBudget(currentBudget.id)
+    setIsDeleting(true)
+    setStatusMessage("")
+
+    const result = await actions.deleteBudget(currentBudget.id)
+
+    setIsDeleting(false)
+
+    if (!result.ok) {
+      setStatusMessage(result.message)
+      return
+    }
+
+    onOpenChange(false)
   }
 
   return (
@@ -60,11 +77,19 @@ export function DeleteBudgetDialog({
           <AlertDialogAction
             variant="destructive"
             size="finance-submit"
-            disabled={!currentBudget}
-            onClick={handleConfirmDelete}
+            disabled={!currentBudget || isDeleting}
+            onClick={(event) => {
+              event.preventDefault()
+              void handleConfirmDelete()
+            }}
           >
-            Delete Budget
+            {isDeleting ? "Deleting..." : "Delete Budget"}
           </AlertDialogAction>
+          {statusMessage ? (
+            <AuthStatusMessage variant="error">
+              {statusMessage}
+            </AuthStatusMessage>
+          ) : null}
           <AlertDialogCancel
             variant="muted-link"
             size="text-link"

@@ -1,9 +1,10 @@
 [
   {
-    "id": "acct-main",
+    "id": "951dfa04-c875-4355-9858-4e0d78022712",
+    "user_id": "2f7eae77-e33d-4678-95ac-cb83180314d1",
     "name": "Main Account",
     "type": "checking",
     "currency": "USD",
-    "currentBalanceCents": 483600
+    "current_balance_cents": 483600
   }
 ]

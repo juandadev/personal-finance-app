@@ -14,6 +14,7 @@ import { CurrencyInput } from "@/components/ui/currency-input"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ThemeSelect } from "@/components/theme-select"
+import { AuthStatusMessage } from "@/components/auth/auth-page-shell"
 import { useFinance } from "@/hooks/use-finance"
 import { formatDollarInput, parseDollarAmount } from "@/lib/finance/form-utils"
 import type { ThemeColor } from "@/lib/theme-colors"
@@ -35,6 +36,8 @@ export function EditPotDialog({ pot, open, onOpenChange }: EditPotDialogProps) {
   const [themeColor, setThemeColor] = useState<ThemeColor>(pot.color)
   const [nameError, setNameError] = useState("")
   const [targetError, setTargetError] = useState("")
+  const [statusMessage, setStatusMessage] = useState("")
+  const [isSaving, setIsSaving] = useState(false)
 
   const existingPotNames = useMemo(
     () =>
@@ -50,7 +53,7 @@ export function EditPotDialog({ pot, open, onOpenChange }: EditPotDialogProps) {
       new Set(
         state.pots
           .filter((potRecord) => potRecord.id !== currentPot?.id)
-          .map((potRecord) => potRecord.themeColor.toLowerCase()),
+          .map((potRecord) => potRecord.theme_color.toLowerCase()),
       ),
     [currentPot?.id, state.pots],
   )
@@ -62,6 +65,7 @@ export function EditPotDialog({ pot, open, onOpenChange }: EditPotDialogProps) {
     setThemeColor(pot.color)
     setNameError("")
     setTargetError("")
+    setStatusMessage("")
   }
 
   const handleOpenChange = (nextOpen: boolean) => {
@@ -72,15 +76,16 @@ export function EditPotDialog({ pot, open, onOpenChange }: EditPotDialogProps) {
     onOpenChange(nextOpen)
   }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    setStatusMessage("")
 
     if (!currentPot) {
       return
     }
 
     const trimmedName = name.trim()
-    const targetCents = parseDollarAmount(target)
+    const target_cents = parseDollarAmount(target)
     let hasError = false
 
     if (!trimmedName) {
@@ -91,20 +96,30 @@ export function EditPotDialog({ pot, open, onOpenChange }: EditPotDialogProps) {
       hasError = true
     }
 
-    if (targetCents === null) {
+    if (target_cents === null) {
       setTargetError("Enter a target greater than $0.")
       hasError = true
     }
 
-    if (hasError || targetCents === null) {
+    if (hasError || target_cents === null) {
       return
     }
 
-    actions.updatePot(currentPot.id, {
+    setIsSaving(true)
+
+    const result = await actions.updatePot(currentPot.id, {
       name: trimmedName,
-      targetCents,
-      themeColor,
+      target_cents,
+      theme_color: themeColor,
     })
+
+    setIsSaving(false)
+
+    if (!result.ok) {
+      setStatusMessage(result.message)
+      return
+    }
+
     onOpenChange(false)
   }
 
@@ -198,9 +213,18 @@ export function EditPotDialog({ pot, open, onOpenChange }: EditPotDialogProps) {
             usedThemeColors={usedThemeColors}
           />
 
-          <Button type="submit" size="finance-submit" disabled={!currentPot}>
-            Save Changes
+          <Button
+            type="submit"
+            size="finance-submit"
+            disabled={!currentPot || isSaving}
+          >
+            {isSaving ? "Saving..." : "Save Changes"}
           </Button>
+          {statusMessage ? (
+            <AuthStatusMessage variant="error">
+              {statusMessage}
+            </AuthStatusMessage>
+          ) : null}
         </form>
       </DialogContent>
     </Dialog>

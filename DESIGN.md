@@ -191,6 +191,10 @@ Finance data must stay readable on mobile.
   grouped in dialogs.
 - Destructive actions must use destructive color and explicit labels like
   `Delete Budget`, not vague labels like `OK`.
+- Auth and API-backed forms should show inline status messages near the submit
+  action. Use destructive styling for errors, muted/foreground copy for
+  progress, and concise success copy when the view does not immediately
+  redirect or close.
 
 ### Menus and Secondary Actions
 

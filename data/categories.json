@@ -1,51 +1,51 @@
 [
   {
-    "id": "cat-entertainment",
+    "id": "89b0a107-abc7-43e8-9504-f628917cafeb",
     "name": "Entertainment",
     "slug": "entertainment"
   },
   {
-    "id": "cat-bills",
+    "id": "26695de1-68fc-487d-86fa-b9195ecf9464",
     "name": "Bills",
     "slug": "bills"
   },
   {
-    "id": "cat-groceries",
+    "id": "8c49cbf7-d59c-440b-b867-5d511d6e7c81",
     "name": "Groceries",
     "slug": "groceries"
   },
   {
-    "id": "cat-dining-out",
+    "id": "32f90411-5ab3-4cad-bdfb-39739473286b",
     "name": "Dining Out",
     "slug": "dining-out"
   },
   {
-    "id": "cat-transportation",
+    "id": "929275aa-3131-4cd6-a77f-173e37fe55d5",
     "name": "Transportation",
     "slug": "transportation"
   },
   {
-    "id": "cat-personal-care",
+    "id": "0ccd5e8d-3765-4a1f-936f-31ec37f329a8",
     "name": "Personal Care",
     "slug": "personal-care"
   },
   {
-    "id": "cat-education",
+    "id": "c0670339-0f1f-49eb-b365-b4917e78b576",
     "name": "Education",
     "slug": "education"
   },
   {
-    "id": "cat-lifestyle",
+    "id": "3c2e4044-a1f5-48ee-95b6-0c306a15538f",
     "name": "Lifestyle",
     "slug": "lifestyle"
   },
   {
-    "id": "cat-shopping",
+    "id": "d5c8300b-393f-43eb-b0f9-42f48c89e91a",
     "name": "Shopping",
     "slug": "shopping"
   },
   {
-    "id": "cat-general",
+    "id": "986da27a-8916-4998-a79e-93311b5ad196",
     "name": "General",
     "slug": "general"
   }

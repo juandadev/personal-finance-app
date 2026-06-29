@@ -1,37 +1,42 @@
 [
   {
-    "id": "pot-savings",
+    "id": "8928fbdb-c9ae-4cd1-bb55-623e1b923039",
+    "user_id": "2f7eae77-e33d-4678-95ac-cb83180314d1",
     "name": "Savings",
-    "balanceCents": 15900,
-    "targetCents": 200000,
-    "themeColor": "chart-1"
+    "balance_cents": 15900,
+    "target_cents": 200000,
+    "theme_color": "chart-1"
   },
   {
-    "id": "pot-gift",
+    "id": "07150339-0ac7-4545-ad48-71acf65387f1",
+    "user_id": "2f7eae77-e33d-4678-95ac-cb83180314d1",
     "name": "Gift",
-    "balanceCents": 4000,
-    "targetCents": 6000,
-    "themeColor": "chart-2"
+    "balance_cents": 4000,
+    "target_cents": 6000,
+    "theme_color": "chart-2"
   },
   {
-    "id": "pot-concert-ticket",
+    "id": "ad4701df-0a21-4a19-8fa5-9874ec664318",
+    "user_id": "2f7eae77-e33d-4678-95ac-cb83180314d1",
     "name": "Concert Ticket",
-    "balanceCents": 11000,
-    "targetCents": 15000,
-    "themeColor": "chart-3"
+    "balance_cents": 11000,
+    "target_cents": 15000,
+    "theme_color": "chart-3"
   },
   {
-    "id": "pot-new-laptop",
+    "id": "154183ef-e654-47df-b6a4-85b0738e97dc",
+    "user_id": "2f7eae77-e33d-4678-95ac-cb83180314d1",
     "name": "New Laptop",
-    "balanceCents": 1000,
-    "targetCents": 100000,
-    "themeColor": "chart-4"
+    "balance_cents": 1000,
+    "target_cents": 100000,
+    "theme_color": "chart-4"
   },
   {
-    "id": "pot-holiday",
+    "id": "2f4bca21-510e-4f32-ad07-30c2c0e744eb",
+    "user_id": "2f7eae77-e33d-4678-95ac-cb83180314d1",
     "name": "Holiday",
-    "balanceCents": 53100,
-    "targetCents": 144000,
-    "themeColor": "finance-purple"
+    "balance_cents": 53100,
+    "target_cents": 144000,
+    "theme_color": "finance-purple"
   }
 ]

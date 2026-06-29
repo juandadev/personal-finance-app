@@ -1,18 +1,22 @@
 [
   {
-    "budgetId": "budget-entertainment-2024-08",
-    "spentCents": 1500
+    "user_id": "2f7eae77-e33d-4678-95ac-cb83180314d1",
+    "budget_id": "e7d0420a-2be4-45f3-a0b9-f3de0a6eeaa4",
+    "spent_cents": 1500
   },
   {
-    "budgetId": "budget-bills-2024-08",
-    "spentCents": 15000
+    "user_id": "2f7eae77-e33d-4678-95ac-cb83180314d1",
+    "budget_id": "0fbfbe2b-f581-4b73-ae59-fd748d54ad25",
+    "spent_cents": 15000
   },
   {
-    "budgetId": "budget-dining-out-2024-08",
-    "spentCents": 13300
+    "user_id": "2f7eae77-e33d-4678-95ac-cb83180314d1",
+    "budget_id": "41826855-5b1b-4bf2-8daa-16aee04667ec",
+    "spent_cents": 13300
   },
   {
-    "budgetId": "budget-personal-care-2024-08",
-    "spentCents": 4000
+    "user_id": "2f7eae77-e33d-4678-95ac-cb83180314d1",
+    "budget_id": "8af7cbad-bad0-4aa4-8eab-dba9c3037d62",
+    "spent_cents": 4000
   }
 ]

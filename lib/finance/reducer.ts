@@ -1,6 +1,8 @@
 import type {
   BudgetRecord,
   FinanceState,
+  NewBudgetRecord,
+  NewPotRecord,
   PotRecord,
   RecurringBillRecord,
   TransactionRecord,
@@ -11,27 +13,31 @@ export type FinanceAction =
   | {
       type: "transaction/update"
       id: string
-      updates: Partial<Omit<TransactionRecord, "id">>
+      updates: Partial<Omit<TransactionRecord, "id" | "user_id">>
     }
   | { type: "transaction/delete"; id: string }
-  | { type: "budget/add"; budget: BudgetRecord; spentCents?: number }
+  | { type: "budget/add"; budget: BudgetRecord; spent_cents?: number }
   | {
       type: "budget/update"
       id: string
-      updates: Partial<Omit<BudgetRecord, "id">>
-      spentCents?: number
+      updates: Partial<Omit<BudgetRecord, "id" | "user_id">>
+      spent_cents?: number
     }
   | { type: "budget/delete"; id: string }
   | { type: "pot/add"; pot: PotRecord }
-  | { type: "pot/update"; id: string; updates: Partial<Omit<PotRecord, "id">> }
+  | {
+      type: "pot/update"
+      id: string
+      updates: Partial<Omit<PotRecord, "id" | "user_id">>
+    }
   | { type: "pot/delete"; id: string }
-  | { type: "pot/deposit"; id: string; amountCents: number }
-  | { type: "pot/withdraw"; id: string; amountCents: number }
+  | { type: "pot/deposit"; id: string; amount_cents: number }
+  | { type: "pot/withdraw"; id: string; amount_cents: number }
   | { type: "recurring-bill/add"; bill: RecurringBillRecord }
   | {
       type: "recurring-bill/update"
       id: string
-      updates: Partial<Omit<RecurringBillRecord, "id">>
+      updates: Partial<Omit<RecurringBillRecord, "id" | "user_id">>
     }
   | { type: "recurring-bill/delete"; id: string }
 
@@ -39,28 +45,48 @@ export interface FinanceActions {
   addTransaction: (transaction: TransactionRecord) => void
   updateTransaction: (
     id: string,
-    updates: Partial<Omit<TransactionRecord, "id">>,
+    updates: Partial<Omit<TransactionRecord, "id" | "user_id">>,
   ) => void
   deleteTransaction: (id: string) => void
-  addBudget: (budget: BudgetRecord, spentCents?: number) => void
+  addBudget: (
+    budget: NewBudgetRecord,
+    spent_cents?: number,
+  ) => Promise<FinanceMutationResult>
   updateBudget: (
     id: string,
-    updates: Partial<Omit<BudgetRecord, "id">>,
-    spentCents?: number,
-  ) => void
-  deleteBudget: (id: string) => void
-  addPot: (pot: PotRecord) => void
-  updatePot: (id: string, updates: Partial<Omit<PotRecord, "id">>) => void
-  deletePot: (id: string) => void
-  depositToPot: (id: string, amountCents: number) => void
-  withdrawFromPot: (id: string, amountCents: number) => void
+    updates: Partial<Omit<BudgetRecord, "id" | "user_id">>,
+    spent_cents?: number,
+  ) => Promise<FinanceMutationResult>
+  deleteBudget: (id: string) => Promise<FinanceMutationResult>
+  addPot: (pot: NewPotRecord) => Promise<FinanceMutationResult>
+  updatePot: (
+    id: string,
+    updates: Partial<Omit<PotRecord, "id" | "user_id">>,
+  ) => Promise<FinanceMutationResult>
+  deletePot: (id: string) => Promise<FinanceMutationResult>
+  depositToPot: (
+    id: string,
+    amount_cents: number,
+  ) => Promise<FinanceMutationResult>
+  withdrawFromPot: (
+    id: string,
+    amount_cents: number,
+  ) => Promise<FinanceMutationResult>
   addRecurringBill: (bill: RecurringBillRecord) => void
   updateRecurringBill: (
     id: string,
-    updates: Partial<Omit<RecurringBillRecord, "id">>,
+    updates: Partial<Omit<RecurringBillRecord, "id" | "user_id">>,
   ) => void
   deleteRecurringBill: (id: string) => void
 }
+
+export type FinanceMutationResult =
+  | { ok: true; message: string }
+  | {
+      ok: false
+      message: string
+      fieldErrors?: Record<string, string[] | undefined>
+    }
 
 function updateById<T extends { id: string }>(
   records: T[],
@@ -78,17 +104,20 @@ function removeById<T extends { id: string }>(records: T[], id: string): T[] {
 
 function upsertBudgetSummary(
   summaries: FinanceState["budgetSummaries"],
-  budgetId: string,
-  spentCents: number,
+  budget_id: string,
+  user_id: string,
+  spent_cents: number,
 ): FinanceState["budgetSummaries"] {
-  const hasSummary = summaries.some((summary) => summary.budgetId === budgetId)
+  const hasSummary = summaries.some(
+    (summary) => summary.budget_id === budget_id,
+  )
 
   if (!hasSummary) {
-    return [...summaries, { budgetId, spentCents }]
+    return [...summaries, { budget_id, user_id, spent_cents }]
   }
 
   return summaries.map((summary) =>
-    summary.budgetId === budgetId ? { ...summary, spentCents } : summary,
+    summary.budget_id === budget_id ? { ...summary, spent_cents } : summary,
   )
 }
 
@@ -117,33 +146,40 @@ export function financeReducer(
         ...state,
         budgets: [...state.budgets, action.budget],
         budgetSummaries:
-          action.spentCents === undefined
+          action.spent_cents === undefined
             ? state.budgetSummaries
             : upsertBudgetSummary(
                 state.budgetSummaries,
                 action.budget.id,
-                action.spentCents,
+                action.budget.user_id,
+                action.spent_cents,
               ),
       }
-    case "budget/update":
+    case "budget/update": {
+      const existingBudget = state.budgets.find(
+        (budget) => budget.id === action.id,
+      )
+
       return {
         ...state,
         budgets: updateById(state.budgets, action.id, action.updates),
         budgetSummaries:
-          action.spentCents === undefined
+          action.spent_cents === undefined || !existingBudget
             ? state.budgetSummaries
             : upsertBudgetSummary(
                 state.budgetSummaries,
                 action.id,
-                action.spentCents,
+                existingBudget.user_id,
+                action.spent_cents,
               ),
       }
+    }
     case "budget/delete":
       return {
         ...state,
         budgets: removeById(state.budgets, action.id),
         budgetSummaries: state.budgetSummaries.filter(
-          (summary) => summary.budgetId !== action.id,
+          (summary) => summary.budget_id !== action.id,
         ),
       }
     case "pot/add":
@@ -162,8 +198,8 @@ export function financeReducer(
           pot.id === action.id
             ? {
                 ...pot,
-                balanceCents:
-                  pot.balanceCents + Math.max(action.amountCents, 0),
+                balance_cents:
+                  pot.balance_cents + Math.max(action.amount_cents, 0),
               }
             : pot,
         ),
@@ -175,8 +211,8 @@ export function financeReducer(
           pot.id === action.id
             ? {
                 ...pot,
-                balanceCents: Math.max(
-                  pot.balanceCents - Math.max(action.amountCents, 0),
+                balance_cents: Math.max(
+                  pot.balance_cents - Math.max(action.amount_cents, 0),
                   0,
                 ),
               }

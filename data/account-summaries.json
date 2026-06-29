@@ -1,9 +1,10 @@
 [
   {
-    "id": "summary-2024-08",
-    "accountId": "acct-main",
+    "id": "cf80dc6d-4383-4242-a8af-85cc1e0d67ed",
+    "user_id": "2f7eae77-e33d-4678-95ac-cb83180314d1",
+    "account_id": "951dfa04-c875-4355-9858-4e0d78022712",
     "period": "2024-08",
-    "incomeCents": 381425,
-    "expenseCents": 170050
+    "income_cents": 381425,
+    "expense_cents": 170050
   }
 ]

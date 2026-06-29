@@ -27,6 +27,7 @@ import {
   parseDollarAmount,
   themeOptions,
 } from "@/lib/finance/form-utils"
+import { AuthStatusMessage } from "@/components/auth/auth-page-shell"
 import type { ThemeColor } from "@/lib/theme-colors"
 import { cn } from "@/lib/utils"
 
@@ -39,14 +40,16 @@ export function AddBudgetDialog() {
     themeOptions[0].value,
   )
   const [amountError, setAmountError] = useState("")
+  const [statusMessage, setStatusMessage] = useState("")
+  const [isSaving, setIsSaving] = useState(false)
 
   const budgetedCategoryIds = useMemo(
-    () => new Set(state.budgets.map((budget) => budget.categoryId)),
+    () => new Set(state.budgets.map((budget) => budget.category_id)),
     [state.budgets],
   )
   const usedThemeColors = useMemo(
     () =>
-      new Set(state.budgets.map((budget) => budget.themeColor.toLowerCase())),
+      new Set(state.budgets.map((budget) => budget.theme_color.toLowerCase())),
     [state.budgets],
   )
 
@@ -70,6 +73,7 @@ export function AddBudgetDialog() {
     setMaximumSpend("")
     setThemeColor(themeOptions[0].value)
     setAmountError("")
+    setStatusMessage("")
   }
 
   const handleOpenChange = (nextOpen: boolean) => {
@@ -80,12 +84,13 @@ export function AddBudgetDialog() {
     }
   }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    setStatusMessage("")
 
-    const limitCents = parseDollarAmount(maximumSpend)
+    const limit_cents = parseDollarAmount(maximumSpend)
 
-    if (limitCents === null) {
+    if (limit_cents === null) {
       setAmountError("Enter a maximum spend greater than $0.")
       return
     }
@@ -99,17 +104,26 @@ export function AddBudgetDialog() {
     }
 
     const period = state.budgets[0]?.period ?? getCurrentPeriod()
+    setIsSaving(true)
 
-    actions.addBudget(
+    const result = await actions.addBudget(
       {
-        id: `budget-${category.slug}-${period}`,
-        categoryId: category.id,
+        id: crypto.randomUUID(),
+        category_id: category.id,
         period,
-        limitCents,
-        themeColor,
+        limit_cents,
+        theme_color: themeColor,
       },
       0,
     )
+
+    setIsSaving(false)
+
+    if (!result.ok) {
+      setStatusMessage(result.message)
+      return
+    }
+
     setOpen(false)
     resetForm()
   }
@@ -225,10 +239,15 @@ export function AddBudgetDialog() {
           <Button
             type="submit"
             size="finance-submit"
-            disabled={availableCategories.length === 0}
+            disabled={availableCategories.length === 0 || isSaving}
           >
-            Add Budget
+            {isSaving ? "Saving..." : "Add Budget"}
           </Button>
+          {statusMessage ? (
+            <AuthStatusMessage variant="error">
+              {statusMessage}
+            </AuthStatusMessage>
+          ) : null}
         </form>
       </DialogContent>
     </Dialog>

@@ -14,75 +14,89 @@ export type AccountType = "checking" | "savings" | "credit"
 export type CounterpartyType = "person" | "merchant"
 export type BillFrequency = "monthly"
 
+export type FinanceUserId = string
+export type FinanceRecordId = string
+
 export interface AccountRecord {
-  id: string
+  id: FinanceRecordId
+  user_id: FinanceUserId
   name: string
   type: AccountType
   currency: CurrencyCode
-  currentBalanceCents: number
+  current_balance_cents: number
 }
 
 export interface AccountSummaryRecord {
-  id: string
-  accountId: string
+  id: FinanceRecordId
+  user_id: FinanceUserId
+  account_id: FinanceRecordId
   period: string
-  incomeCents: number
-  expenseCents: number
+  income_cents: number
+  expense_cents: number
 }
 
 export interface CategoryRecord {
-  id: string
+  id: FinanceRecordId
   name: TransactionCategory
   slug: string
 }
 
 export interface CounterpartyRecord {
-  id: string
-  displayName: string
-  avatarUrl: string
+  id: FinanceRecordId
+  user_id: FinanceUserId
+  display_name: string
+  avatar_url: string
   type: CounterpartyType
 }
 
 export interface TransactionRecord {
-  id: string
-  accountId: string
-  counterpartyId: string
-  categoryId: string
-  amountCents: number
-  postedAt: string
+  id: FinanceRecordId
+  user_id: FinanceUserId
+  account_id: FinanceRecordId
+  counterparty_id: FinanceRecordId
+  category_id: FinanceRecordId
+  amount_cents: number
+  posted_at: string
   description: string | null
 }
 
 export interface BudgetRecord {
-  id: string
-  categoryId: string
+  id: FinanceRecordId
+  user_id: FinanceUserId
+  category_id: FinanceRecordId
   period: string
-  limitCents: number
-  themeColor: ThemeColor
+  limit_cents: number
+  theme_color: ThemeColor
 }
 
 export interface BudgetSummaryRecord {
-  budgetId: string
-  spentCents: number
+  user_id: FinanceUserId
+  budget_id: FinanceRecordId
+  spent_cents: number
 }
 
 export interface PotRecord {
-  id: string
+  id: FinanceRecordId
+  user_id: FinanceUserId
   name: string
-  balanceCents: number
-  targetCents: number
-  themeColor: ThemeColor
+  balance_cents: number
+  target_cents: number
+  theme_color: ThemeColor
 }
 
 export interface RecurringBillRecord {
-  id: string
-  counterpartyId: string
-  amountCents: number
+  id: FinanceRecordId
+  user_id: FinanceUserId
+  counterparty_id: FinanceRecordId
+  amount_cents: number
   currency: CurrencyCode
   frequency: BillFrequency
-  dueDayOfMonth: number
+  due_day_of_month: number
   status: RecurringBill["status"]
 }
+
+export type NewBudgetRecord = Omit<BudgetRecord, "user_id">
+export type NewPotRecord = Omit<PotRecord, "user_id">
 
 export interface FinanceState {
   accounts: AccountRecord[]

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog"
 import { CurrencyInput } from "@/components/ui/currency-input"
 import { Label } from "@/components/ui/label"
+import { AuthStatusMessage } from "@/components/auth/auth-page-shell"
 import {
   Select,
   SelectContent,
@@ -40,25 +41,27 @@ export function EditBudgetDialog({
   const { state, actions } = useFinance()
   const currentBudget = state.budgets.find((budgetRecord) => {
     const category = state.categories.find(
-      (option) => option.id === budgetRecord.categoryId,
+      (option) => option.id === budgetRecord.category_id,
     )
 
     return category?.name === budget.category
   })
-  const currentCategoryId = currentBudget?.categoryId ?? ""
+  const currentCategoryId = currentBudget?.category_id ?? ""
   const [categoryId, setCategoryId] = useState(currentCategoryId)
   const [maximumSpend, setMaximumSpend] = useState(
     formatDollarInput(budget.maximum),
   )
   const [themeColor, setThemeColor] = useState<ThemeColor>(budget.color)
   const [amountError, setAmountError] = useState("")
+  const [statusMessage, setStatusMessage] = useState("")
+  const [isSaving, setIsSaving] = useState(false)
 
   const budgetedCategoryIds = useMemo(
     () =>
       new Set(
         state.budgets
           .filter((budgetRecord) => budgetRecord.id !== currentBudget?.id)
-          .map((budgetRecord) => budgetRecord.categoryId),
+          .map((budgetRecord) => budgetRecord.category_id),
       ),
     [currentBudget?.id, state.budgets],
   )
@@ -67,7 +70,7 @@ export function EditBudgetDialog({
       new Set(
         state.budgets
           .filter((budgetRecord) => budgetRecord.id !== currentBudget?.id)
-          .map((budgetRecord) => budgetRecord.themeColor.toLowerCase()),
+          .map((budgetRecord) => budgetRecord.theme_color.toLowerCase()),
       ),
     [currentBudget?.id, state.budgets],
   )
@@ -77,6 +80,7 @@ export function EditBudgetDialog({
     setMaximumSpend(formatDollarInput(budget.maximum))
     setThemeColor(budget.color)
     setAmountError("")
+    setStatusMessage("")
   }
 
   const handleOpenChange = (nextOpen: boolean) => {
@@ -87,16 +91,17 @@ export function EditBudgetDialog({
     onOpenChange(nextOpen)
   }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    setStatusMessage("")
 
     if (!currentBudget) {
       return
     }
 
-    const limitCents = parseDollarAmount(maximumSpend)
+    const limit_cents = parseDollarAmount(maximumSpend)
 
-    if (limitCents === null) {
+    if (limit_cents === null) {
       setAmountError("Enter a maximum spend greater than $0.")
       return
     }
@@ -107,11 +112,21 @@ export function EditBudgetDialog({
       return
     }
 
-    actions.updateBudget(currentBudget.id, {
-      categoryId: category.id,
-      limitCents,
-      themeColor,
+    setIsSaving(true)
+
+    const result = await actions.updateBudget(currentBudget.id, {
+      category_id: category.id,
+      limit_cents,
+      theme_color: themeColor,
     })
+
+    setIsSaving(false)
+
+    if (!result.ok) {
+      setStatusMessage(result.message)
+      return
+    }
+
     onOpenChange(false)
   }
 
@@ -209,9 +224,18 @@ export function EditBudgetDialog({
             usedThemeColors={usedThemeColors}
           />
 
-          <Button type="submit" size="finance-submit" disabled={!currentBudget}>
-            Save Changes
+          <Button
+            type="submit"
+            size="finance-submit"
+            disabled={!currentBudget || isSaving}
+          >
+            {isSaving ? "Saving..." : "Save Changes"}
           </Button>
+          {statusMessage ? (
+            <AuthStatusMessage variant="error">
+              {statusMessage}
+            </AuthStatusMessage>
+          ) : null}
         </form>
       </DialogContent>
     </Dialog>

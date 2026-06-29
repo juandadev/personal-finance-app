@@ -54,19 +54,23 @@ function selectTransactions(
   counterparties: Map<string, CounterpartyRecord>,
 ) {
   return transactions.map((transaction) => {
-    const category = getRequired(categories, transaction.categoryId, "category")
+    const category = getRequired(
+      categories,
+      transaction.category_id,
+      "category",
+    )
     const counterparty = getRequired(
       counterparties,
-      transaction.counterpartyId,
+      transaction.counterparty_id,
       "counterparty",
     )
 
     return {
       id: transaction.id,
-      name: counterparty.displayName,
-      avatarUrl: counterparty.avatarUrl,
-      amount: centsToDollars(transaction.amountCents),
-      date: formatDisplayDate(transaction.postedAt),
+      name: counterparty.display_name,
+      avatarUrl: counterparty.avatar_url,
+      amount: centsToDollars(transaction.amount_cents),
+      date: formatDisplayDate(transaction.posted_at),
       category: category.name,
     }
   })
@@ -78,17 +82,17 @@ function selectBudgets(
   categories: Map<string, CategoryRecord>,
 ): Budget[] {
   const spendingByBudgetId = new Map(
-    budgetSummaries.map((summary) => [summary.budgetId, summary.spentCents]),
+    budgetSummaries.map((summary) => [summary.budget_id, summary.spent_cents]),
   )
 
   return budgets.map((budget) => {
-    const category = getRequired(categories, budget.categoryId, "category")
+    const category = getRequired(categories, budget.category_id, "category")
 
     return {
       category: category.name,
-      maximum: centsToDollars(budget.limitCents),
+      maximum: centsToDollars(budget.limit_cents),
       spent: centsToDollars(spendingByBudgetId.get(budget.id) ?? 0),
-      color: budget.themeColor,
+      color: budget.theme_color,
     }
   })
 }
@@ -100,16 +104,16 @@ function selectRecurringBills(
   return recurringBills.map((bill) => {
     const counterparty = getRequired(
       counterparties,
-      bill.counterpartyId,
+      bill.counterparty_id,
       "counterparty",
     )
 
     return {
       id: bill.id,
-      name: counterparty.displayName,
-      avatarUrl: counterparty.avatarUrl,
-      amount: centsToDollars(bill.amountCents),
-      dueDay: bill.dueDayOfMonth,
+      name: counterparty.display_name,
+      avatarUrl: counterparty.avatar_url,
+      amount: centsToDollars(bill.amount_cents),
+      dueDay: bill.due_day_of_month,
       status: bill.status,
     }
   })
@@ -139,17 +143,40 @@ function selectRecurringBillsSummary(
   ]
 }
 
+function selectSummaryStats(
+  state: FinanceState,
+): FinanceViewModel["summaryStats"] {
+  const primaryAccount = state.accounts[0]
+  const accountSummary = state.accountSummaries[0]
+
+  return [
+    {
+      label: "Current Balance",
+      amount: centsToDollars(primaryAccount?.current_balance_cents ?? 0),
+      variant: "primary",
+    },
+    {
+      label: "Income",
+      amount: centsToDollars(accountSummary?.income_cents ?? 0),
+      variant: "default",
+    },
+    {
+      label: "Expenses",
+      amount: centsToDollars(accountSummary?.expense_cents ?? 0),
+      variant: "default",
+    },
+  ]
+}
+
 export function selectFinanceViewModel(state: FinanceState): FinanceViewModel {
   const categories = byId(state.categories)
   const counterparties = byId(state.counterparties)
-  const primaryAccount = state.accounts[0]
-  const accountSummary = state.accountSummaries[0]
   const pots = state.pots.map((pot) => ({
     id: pot.id,
     name: pot.name,
-    amount: centsToDollars(pot.balanceCents),
-    target: centsToDollars(pot.targetCents),
-    color: pot.themeColor,
+    amount: centsToDollars(pot.balance_cents),
+    target: centsToDollars(pot.target_cents),
+    color: pot.theme_color,
   }))
   const budgets = selectBudgets(
     state.budgets,
@@ -171,23 +198,7 @@ export function selectFinanceViewModel(state: FinanceState): FinanceViewModel {
   )
 
   return {
-    summaryStats: [
-      {
-        label: "Current Balance",
-        amount: centsToDollars(primaryAccount.currentBalanceCents),
-        variant: "primary",
-      },
-      {
-        label: "Income",
-        amount: centsToDollars(accountSummary.incomeCents),
-        variant: "default",
-      },
-      {
-        label: "Expenses",
-        amount: centsToDollars(accountSummary.expenseCents),
-        variant: "default",
-      },
-    ],
+    summaryStats: selectSummaryStats(state),
     pots,
     totalSaved: pots.reduce((sum, pot) => sum + pot.amount, 0),
     budgets,

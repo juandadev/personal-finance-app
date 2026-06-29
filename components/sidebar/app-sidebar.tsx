@@ -10,6 +10,7 @@ import {
   SidebarMenu,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { SignOutButton } from "@/components/auth/sign-out-button"
 import { Logo } from "./logo"
 import { NavItem } from "./nav-item"
 
@@ -45,7 +46,7 @@ export function AppSidebar({ activeKey }: AppSidebarProps) {
         </SidebarContent>
 
         <SidebarFooter>
-          <SidebarCollapseButton />
+          <SidebarFooterActions />
         </SidebarFooter>
       </Sidebar>
     </div>
@@ -56,4 +57,13 @@ function SidebarLogo() {
   const { state } = useSidebar()
 
   return <Logo collapsed={state === "collapsed"} />
+}
+
+function SidebarFooterActions() {
+  return (
+    <>
+      <SignOutButton />
+      <SidebarCollapseButton />
+    </>
+  )
 }

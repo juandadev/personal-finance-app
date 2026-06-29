@@ -7,12 +7,23 @@ import {
   type FinanceActions,
   type FinanceAction,
 } from "@/lib/finance/reducer"
+import {
+  createBudgetAction,
+  createPotAction,
+  deleteBudgetAction,
+  deletePotAction,
+  transferPotAction,
+  updateBudgetAction,
+  updatePotAction,
+} from "@/lib/finance/actions"
 import { createInitialFinanceState } from "@/lib/finance/seed"
 import { selectFinanceViewModel } from "@/lib/finance/selectors"
 import type {
   BudgetRecord,
   FinanceState,
   FinanceViewModel,
+  NewBudgetRecord,
+  NewPotRecord,
   PotRecord,
   RecurringBillRecord,
   TransactionRecord,
@@ -29,12 +40,16 @@ const FinanceContext = createContext<FinanceContextValue | null>(null)
 
 interface FinanceProviderProps {
   children: ReactNode
+  initialState?: FinanceState
 }
 
-export function FinanceProvider({ children }: FinanceProviderProps) {
+export function FinanceProvider({
+  children,
+  initialState,
+}: FinanceProviderProps) {
   const [state, dispatch] = useReducer(
     financeReducer,
-    createInitialFinanceState(),
+    initialState ?? createInitialFinanceState(),
   )
 
   const actions = useMemo<FinanceActions>(
@@ -47,22 +62,119 @@ export function FinanceProvider({ children }: FinanceProviderProps) {
       ) => dispatch({ type: "transaction/update", id, updates }),
       deleteTransaction: (id: string) =>
         dispatch({ type: "transaction/delete", id }),
-      addBudget: (budget: BudgetRecord, spentCents?: number) =>
-        dispatch({ type: "budget/add", budget, spentCents }),
+      addBudget: async (budget: NewBudgetRecord, spent_cents?: number) => {
+        const result = await createBudgetAction(budget, spent_cents ?? 0)
+
+        if (result.ok) {
+          dispatch({
+            type: "budget/add",
+            budget: result.data.budget,
+            spent_cents: result.data.budgetSummary.spent_cents,
+          })
+        }
+
+        return result
+      },
       updateBudget: (
         id: string,
-        updates: Partial<Omit<BudgetRecord, "id">>,
-        spentCents?: number,
-      ) => dispatch({ type: "budget/update", id, updates, spentCents }),
-      deleteBudget: (id: string) => dispatch({ type: "budget/delete", id }),
-      addPot: (pot: PotRecord) => dispatch({ type: "pot/add", pot }),
-      updatePot: (id: string, updates: Partial<Omit<PotRecord, "id">>) =>
-        dispatch({ type: "pot/update", id, updates }),
-      deletePot: (id: string) => dispatch({ type: "pot/delete", id }),
-      depositToPot: (id: string, amountCents: number) =>
-        dispatch({ type: "pot/deposit", id, amountCents }),
-      withdrawFromPot: (id: string, amountCents: number) =>
-        dispatch({ type: "pot/withdraw", id, amountCents }),
+        updates: Partial<Omit<BudgetRecord, "id" | "user_id">>,
+        spent_cents?: number,
+      ) =>
+        updateBudgetAction(id, updates, spent_cents).then((result) => {
+          if (result.ok) {
+            dispatch({
+              type: "budget/update",
+              id,
+              updates: {
+                category_id: result.data.budget.category_id,
+                period: result.data.budget.period,
+                limit_cents: result.data.budget.limit_cents,
+                theme_color: result.data.budget.theme_color,
+              },
+              spent_cents: result.data.budgetSummary?.spent_cents,
+            })
+          }
+
+          return result
+        }),
+      deleteBudget: (id: string) =>
+        deleteBudgetAction(id).then((result) => {
+          if (result.ok) {
+            dispatch({ type: "budget/delete", id })
+          }
+
+          return result
+        }),
+      addPot: (pot: NewPotRecord) =>
+        createPotAction(pot).then((result) => {
+          if (result.ok) {
+            dispatch({ type: "pot/add", pot: result.data })
+          }
+
+          return result
+        }),
+      updatePot: (
+        id: string,
+        updates: Partial<Omit<PotRecord, "id" | "user_id">>,
+      ) =>
+        updatePotAction(id, updates).then((result) => {
+          if (result.ok) {
+            dispatch({
+              type: "pot/update",
+              id,
+              updates: {
+                name: result.data.name,
+                balance_cents: result.data.balance_cents,
+                target_cents: result.data.target_cents,
+                theme_color: result.data.theme_color,
+              },
+            })
+          }
+
+          return result
+        }),
+      deletePot: (id: string) =>
+        deletePotAction(id).then((result) => {
+          if (result.ok) {
+            dispatch({ type: "pot/delete", id })
+          }
+
+          return result
+        }),
+      depositToPot: (id: string, amount_cents: number) =>
+        transferPotAction(id, amount_cents, "deposit").then((result) => {
+          if (result.ok) {
+            dispatch({
+              type: "pot/update",
+              id,
+              updates: {
+                name: result.data.name,
+                balance_cents: result.data.balance_cents,
+                target_cents: result.data.target_cents,
+                theme_color: result.data.theme_color,
+              },
+            })
+          }
+
+          return result
+        }),
+      withdrawFromPot: (id: string, amount_cents: number) =>
+        transferPotAction(id, amount_cents, "withdraw").then((result) => {
+          if (result.ok) {
+            dispatch({
+              type: "pot/update",
+              id,
+              updates: {
+                name: result.data.name,
+                balance_cents: result.data.balance_cents,
+                target_cents: result.data.target_cents,
+                theme_color: result.data.theme_color,
+              },
+            })
+          }
+
+          return result
+        }),
       addRecurringBill: (bill: RecurringBillRecord) =>
         dispatch({ type: "recurring-bill/add", bill }),
       updateRecurringBill: (

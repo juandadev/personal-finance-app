@@ -1,5 +1,8 @@
 "use client"
 
+import { useState } from "react"
+
+import { AuthStatusMessage } from "@/components/auth/auth-page-shell"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,14 +28,28 @@ export function DeletePotDialog({
   onOpenChange,
 }: DeletePotDialogProps) {
   const { state, actions } = useFinance()
+  const [statusMessage, setStatusMessage] = useState("")
+  const [isDeleting, setIsDeleting] = useState(false)
   const currentPot = state.pots.find((potRecord) => potRecord.id === pot.id)
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!currentPot) {
       return
     }
 
-    actions.deletePot(currentPot.id)
+    setIsDeleting(true)
+    setStatusMessage("")
+
+    const result = await actions.deletePot(currentPot.id)
+
+    setIsDeleting(false)
+
+    if (!result.ok) {
+      setStatusMessage(result.message)
+      return
+    }
+
+    onOpenChange(false)
   }
 
   return (
@@ -54,11 +71,19 @@ export function DeletePotDialog({
           <AlertDialogAction
             variant="destructive"
             size="finance-submit"
-            disabled={!currentPot}
-            onClick={handleConfirmDelete}
+            disabled={!currentPot || isDeleting}
+            onClick={(event) => {
+              event.preventDefault()
+              void handleConfirmDelete()
+            }}
           >
-            Delete Pot
+            {isDeleting ? "Deleting..." : "Delete Pot"}
           </AlertDialogAction>
+          {statusMessage ? (
+            <AuthStatusMessage variant="error">
+              {statusMessage}
+            </AuthStatusMessage>
+          ) : null}
           <AlertDialogCancel
             variant="muted-link"
             size="text-link"

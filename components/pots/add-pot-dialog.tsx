@@ -15,38 +15,12 @@ import { CurrencyInput } from "@/components/ui/currency-input"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ThemeSelect } from "@/components/theme-select"
+import { AuthStatusMessage } from "@/components/auth/auth-page-shell"
 import { useFinance } from "@/hooks/use-finance"
 import { parseDollarAmount, themeOptions } from "@/lib/finance/form-utils"
 import type { ThemeColor } from "@/lib/theme-colors"
 
 const maxPotNameLength = 30
-
-function createPotSlug(name: string) {
-  return name
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-}
-
-function createUniquePotId(name: string, existingIds: Set<string>) {
-  const slug = createPotSlug(name) || "new-pot"
-  const baseId = `pot-${slug}`
-
-  if (!existingIds.has(baseId)) {
-    return baseId
-  }
-
-  let suffix = 2
-  let nextId = `${baseId}-${suffix}`
-
-  while (existingIds.has(nextId)) {
-    suffix += 1
-    nextId = `${baseId}-${suffix}`
-  }
-
-  return nextId
-}
 
 export function AddPotDialog() {
   const { state, actions } = useFinance()
@@ -58,17 +32,15 @@ export function AddPotDialog() {
   )
   const [nameError, setNameError] = useState("")
   const [targetError, setTargetError] = useState("")
+  const [statusMessage, setStatusMessage] = useState("")
+  const [isSaving, setIsSaving] = useState(false)
 
-  const existingPotIds = useMemo(
-    () => new Set(state.pots.map((pot) => pot.id)),
-    [state.pots],
-  )
   const existingPotNames = useMemo(
     () => new Set(state.pots.map((pot) => pot.name.trim().toLowerCase())),
     [state.pots],
   )
   const usedThemeColors = useMemo(
-    () => new Set(state.pots.map((pot) => pot.themeColor.toLowerCase())),
+    () => new Set(state.pots.map((pot) => pot.theme_color.toLowerCase())),
     [state.pots],
   )
   const charactersLeft = maxPotNameLength - name.length
@@ -79,6 +51,7 @@ export function AddPotDialog() {
     setThemeColor(themeOptions[0].value)
     setNameError("")
     setTargetError("")
+    setStatusMessage("")
   }
 
   const handleOpenChange = (nextOpen: boolean) => {
@@ -89,11 +62,12 @@ export function AddPotDialog() {
     }
   }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    setStatusMessage("")
 
     const trimmedName = name.trim()
-    const targetCents = parseDollarAmount(target)
+    const target_cents = parseDollarAmount(target)
     let hasError = false
 
     if (!trimmedName) {
@@ -104,22 +78,32 @@ export function AddPotDialog() {
       hasError = true
     }
 
-    if (targetCents === null) {
+    if (target_cents === null) {
       setTargetError("Enter a target greater than $0.")
       hasError = true
     }
 
-    if (hasError || targetCents === null) {
+    if (hasError || target_cents === null) {
       return
     }
 
-    actions.addPot({
-      id: createUniquePotId(trimmedName, existingPotIds),
+    setIsSaving(true)
+
+    const result = await actions.addPot({
+      id: crypto.randomUUID(),
       name: trimmedName,
-      balanceCents: 0,
-      targetCents,
-      themeColor,
+      balance_cents: 0,
+      target_cents,
+      theme_color: themeColor,
     })
+
+    setIsSaving(false)
+
+    if (!result.ok) {
+      setStatusMessage(result.message)
+      return
+    }
+
     setOpen(false)
     resetForm()
   }
@@ -212,9 +196,14 @@ export function AddPotDialog() {
             usedThemeColors={usedThemeColors}
           />
 
-          <Button type="submit" size="finance-submit">
-            Add Pot
+          <Button type="submit" size="finance-submit" disabled={isSaving}>
+            {isSaving ? "Saving..." : "Add Pot"}
           </Button>
+          {statusMessage ? (
+            <AuthStatusMessage variant="error">
+              {statusMessage}
+            </AuthStatusMessage>
+          ) : null}
         </form>
       </DialogContent>
     </Dialog>

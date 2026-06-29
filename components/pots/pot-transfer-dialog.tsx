@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog"
 import { CurrencyInput } from "@/components/ui/currency-input"
 import { Label } from "@/components/ui/label"
+import { AuthStatusMessage } from "@/components/auth/auth-page-shell"
 import { useFinance } from "@/hooks/use-finance"
 import { formatCurrency } from "@/lib/format"
 import { parseDollarAmount } from "@/lib/finance/form-utils"
@@ -57,6 +58,8 @@ export function PotTransferDialog({
   const { actions } = useFinance()
   const [amount, setAmount] = useState("")
   const [amountError, setAmountError] = useState("")
+  const [statusMessage, setStatusMessage] = useState("")
+  const [isSaving, setIsSaving] = useState(false)
   const isWithdrawal = mode === "withdraw"
   const previewAmount = getPreviewAmount(pot.amount, amount, mode)
   const currentPercentage = (pot.amount / pot.target) * 100
@@ -94,6 +97,7 @@ export function PotTransferDialog({
   const resetForm = () => {
     setAmount("")
     setAmountError("")
+    setStatusMessage("")
   }
 
   const handleOpenChange = (nextOpen: boolean) => {
@@ -104,25 +108,33 @@ export function PotTransferDialog({
     }
   }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    setStatusMessage("")
 
-    const amountCents = parseDollarAmount(amount)
+    const amount_cents = parseDollarAmount(amount)
 
-    if (amountCents === null) {
+    if (amount_cents === null) {
       setAmountError("Enter an amount greater than $0.")
       return
     }
 
-    if (isWithdrawal && amountCents > Math.round(pot.amount * 100)) {
+    if (isWithdrawal && amount_cents > Math.round(pot.amount * 100)) {
       setAmountError("You cannot withdraw more than this pot contains.")
       return
     }
 
-    if (isWithdrawal) {
-      actions.withdrawFromPot(pot.id, amountCents)
-    } else {
-      actions.depositToPot(pot.id, amountCents)
+    setIsSaving(true)
+
+    const result = isWithdrawal
+      ? await actions.withdrawFromPot(pot.id, amount_cents)
+      : await actions.depositToPot(pot.id, amount_cents)
+
+    setIsSaving(false)
+
+    if (!result.ok) {
+      setStatusMessage(result.message)
+      return
     }
 
     onOpenChange(false)
@@ -217,9 +229,21 @@ export function PotTransferDialog({
             )}
           </div>
 
-          <Button type="submit" size="finance-submit" className="mt-5">
-            {copy.button}
+          <Button
+            type="submit"
+            size="finance-submit"
+            className="mt-5"
+            disabled={isSaving}
+          >
+            {isSaving ? "Saving..." : copy.button}
           </Button>
+          {statusMessage ? (
+            <div className="mt-4">
+              <AuthStatusMessage variant="error">
+                {statusMessage}
+              </AuthStatusMessage>
+            </div>
+          ) : null}
         </form>
       </DialogContent>
     </Dialog>
