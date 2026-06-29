@@ -3,7 +3,12 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, VariantProps } from "class-variance-authority"
-import { LayoutGroup, motion, useReducedMotion } from "motion/react"
+import {
+  AnimatePresence,
+  LayoutGroup,
+  motion,
+  useReducedMotion,
+} from "motion/react"
 import type { Transition } from "motion/react"
 
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -258,6 +263,7 @@ function SidebarCollapseButton({
 }: React.ComponentProps<typeof Button>) {
   const { state, toggleSidebar } = useSidebar()
   const collapsed = state === "collapsed"
+  const shouldReduceMotion = useReducedMotion()
 
   return (
     <Button
@@ -276,10 +282,32 @@ function SidebarCollapseButton({
       aria-label={collapsed ? "Expand menu" : "Minimize menu"}
       {...props}
     >
-      <MinimizeMenuIcon
-        className={cn("size-5", collapsed && "rotate-180")}
-        aria-hidden
-      />
+      <AnimatePresence initial={false} mode="popLayout">
+        <motion.div
+          key={collapsed ? "collapsed" : "not-collapsed"}
+          animate={
+            shouldReduceMotion
+              ? { opacity: 1 }
+              : { opacity: 1, filter: "blur(0px)" }
+          }
+          exit={
+            shouldReduceMotion
+              ? { opacity: 0 }
+              : { opacity: 0, filter: "blur(2px)" }
+          }
+          initial={
+            shouldReduceMotion ? false : { opacity: 0, filter: "blur(2px)" }
+          }
+          transition={{ duration: shouldReduceMotion ? 0 : 0.2 }}
+          className="flex items-center justify-center"
+        >
+          {collapsed ? (
+            <MinimizeMenuIcon className="size-5 rotate-180" aria-hidden />
+          ) : (
+            <MinimizeMenuIcon className="size-5" aria-hidden />
+          )}
+        </motion.div>
+      </AnimatePresence>
       <span>Minimize Menu</span>
     </Button>
   )
