@@ -22,8 +22,10 @@ $$;
 CREATE TABLE IF NOT EXISTS profiles (
   user_id text PRIMARY KEY,
   display_name text,
+  default_currency text NOT NULL DEFAULT 'USD',
   created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT profiles_default_currency_check CHECK (default_currency IN ('USD', 'MXN'))
 );
 
 CREATE TABLE IF NOT EXISTS categories (
@@ -58,7 +60,7 @@ CREATE TABLE IF NOT EXISTS accounts (
   updated_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (user_id, id),
   CONSTRAINT accounts_type_check CHECK (type IN ('checking', 'savings', 'credit')),
-  CONSTRAINT accounts_currency_check CHECK (currency = 'USD')
+  CONSTRAINT accounts_currency_check CHECK (currency IN ('USD', 'MXN'))
 );
 
 CREATE TABLE IF NOT EXISTS account_summaries (
@@ -214,7 +216,7 @@ CREATE TABLE IF NOT EXISTS recurring_bills (
     REFERENCES counterparties(user_id, id)
     ON DELETE RESTRICT,
   CONSTRAINT recurring_bills_amount_check CHECK (amount_cents > 0),
-  CONSTRAINT recurring_bills_currency_check CHECK (currency = 'USD'),
+  CONSTRAINT recurring_bills_currency_check CHECK (currency IN ('USD', 'MXN')),
   CONSTRAINT recurring_bills_frequency_check CHECK (frequency = 'monthly'),
   CONSTRAINT recurring_bills_due_day_check CHECK (due_day_of_month BETWEEN 1 AND 31),
   CONSTRAINT recurring_bills_status_check CHECK (status IN ('paid', 'upcoming', 'due-soon'))

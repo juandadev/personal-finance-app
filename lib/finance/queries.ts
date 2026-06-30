@@ -14,8 +14,10 @@ import type {
   PotRecord,
   RecurringBillRecord,
   TransactionRecord,
+  UserPreferencesRecord,
 } from "@/lib/finance/types"
 
+const profileColumns = ["user_id", "default_currency"]
 const accountColumns = [
   "user_id",
   "id",
@@ -74,8 +76,8 @@ async function ensureUserProfile(
 ) {
   await client.query(
     `
-      INSERT INTO profiles (user_id, display_name)
-      VALUES ($1, $2)
+      INSERT INTO profiles (user_id, display_name, default_currency)
+      VALUES ($1, $2, 'USD')
       ON CONFLICT (user_id)
       DO UPDATE SET display_name = COALESCE(excluded.display_name, profiles.display_name)
     `,
@@ -90,55 +92,48 @@ export async function loadFinanceState(
   return withFinanceTransaction(userId, async (client) => {
     await ensureUserProfile(client, userId, displayName)
 
-    const [
-      accounts,
-      accountSummaries,
-      categories,
-      counterparties,
-      transactions,
-      budgets,
-      budgetSummaries,
-      pots,
-      recurringBills,
-    ] = await Promise.all([
-      client.query<AccountRecord>(
-        `SELECT ${accountColumns.join(", ")} FROM accounts WHERE user_id = $1 ORDER BY id`,
-        [userId],
-      ),
-      client.query<AccountSummaryRecord>(
-        `SELECT ${accountSummaryColumns.join(", ")} FROM account_summaries WHERE user_id = $1 ORDER BY period DESC, id`,
-        [userId],
-      ),
-      client.query<CategoryRecord>(
-        "SELECT id, name, slug FROM categories ORDER BY id",
-      ),
-      client.query<CounterpartyRecord>(
-        `SELECT ${counterpartyColumns.join(", ")} FROM counterparties WHERE user_id = $1 ORDER BY display_name, id`,
-        [userId],
-      ),
-      client.query<TransactionRecord>(
-        `SELECT user_id, id, account_id, counterparty_id, category_id, amount_cents, posted_at::text, description FROM transactions WHERE user_id = $1 ORDER BY posted_at DESC, id`,
-        [userId],
-      ),
-      client.query<BudgetRecord>(
-        `SELECT ${budgetColumns.join(", ")} FROM budgets WHERE user_id = $1 ORDER BY period DESC, id`,
-        [userId],
-      ),
-      client.query<BudgetSummaryRecord>(
-        `SELECT ${budgetSummaryColumns.join(", ")} FROM budget_summaries WHERE user_id = $1 ORDER BY budget_id`,
-        [userId],
-      ),
-      client.query<PotRecord>(
-        `SELECT ${potColumns.join(", ")} FROM pots WHERE user_id = $1 ORDER BY created_at, id`,
-        [userId],
-      ),
-      client.query<RecurringBillRecord>(
-        `SELECT ${recurringBillColumns.join(", ")} FROM recurring_bills WHERE user_id = $1 ORDER BY due_day_of_month, id`,
-        [userId],
-      ),
-    ])
+    const profile = await client.query<UserPreferencesRecord>(
+      `SELECT ${profileColumns.join(", ")} FROM profiles WHERE user_id = $1`,
+      [userId],
+    )
+    const accounts = await client.query<AccountRecord>(
+      `SELECT ${accountColumns.join(", ")} FROM accounts WHERE user_id = $1 ORDER BY id`,
+      [userId],
+    )
+    const accountSummaries = await client.query<AccountSummaryRecord>(
+      `SELECT ${accountSummaryColumns.join(", ")} FROM account_summaries WHERE user_id = $1 ORDER BY period DESC, id`,
+      [userId],
+    )
+    const categories = await client.query<CategoryRecord>(
+      "SELECT id, name, slug FROM categories ORDER BY id",
+    )
+    const counterparties = await client.query<CounterpartyRecord>(
+      `SELECT ${counterpartyColumns.join(", ")} FROM counterparties WHERE user_id = $1 ORDER BY display_name, id`,
+      [userId],
+    )
+    const transactions = await client.query<TransactionRecord>(
+      `SELECT user_id, id, account_id, counterparty_id, category_id, amount_cents, posted_at::text, description FROM transactions WHERE user_id = $1 ORDER BY posted_at DESC, id`,
+      [userId],
+    )
+    const budgets = await client.query<BudgetRecord>(
+      `SELECT ${budgetColumns.join(", ")} FROM budgets WHERE user_id = $1 ORDER BY period DESC, id`,
+      [userId],
+    )
+    const budgetSummaries = await client.query<BudgetSummaryRecord>(
+      `SELECT ${budgetSummaryColumns.join(", ")} FROM budget_summaries WHERE user_id = $1 ORDER BY budget_id`,
+      [userId],
+    )
+    const pots = await client.query<PotRecord>(
+      `SELECT ${potColumns.join(", ")} FROM pots WHERE user_id = $1 ORDER BY created_at, id`,
+      [userId],
+    )
+    const recurringBills = await client.query<RecurringBillRecord>(
+      `SELECT ${recurringBillColumns.join(", ")} FROM recurring_bills WHERE user_id = $1 ORDER BY due_day_of_month, id`,
+      [userId],
+    )
 
     return {
+      preferences: profile.rows[0],
       accounts: accounts.rows,
       accountSummaries: accountSummaries.rows,
       categories: categories.rows,

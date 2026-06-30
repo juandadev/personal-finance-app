@@ -10,6 +10,10 @@ import transactionsSeed from "@/data/transactions.json"
 import type { FinanceState } from "./types"
 
 export const financeSeed: FinanceState = {
+  preferences: {
+    user_id: accountsSeed[0]?.user_id ?? "demo-user",
+    default_currency: "USD",
+  },
   accounts: accountsSeed,
   accountSummaries: accountSummariesSeed,
   categories: categoriesSeed,
@@ -23,6 +27,7 @@ export const financeSeed: FinanceState = {
 
 export function createInitialFinanceState(): FinanceState {
   return {
+    preferences: { ...financeSeed.preferences },
     accounts: financeSeed.accounts.map((account) => ({ ...account })),
     accountSummaries: financeSeed.accountSummaries.map((summary) => ({
       ...summary,

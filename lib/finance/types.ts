@@ -9,13 +9,18 @@ import type {
 } from "@/lib/types"
 import type { ThemeColor } from "@/lib/theme-colors"
 
-export type CurrencyCode = "USD"
+export type CurrencyCode = "USD" | "MXN"
 export type AccountType = "checking" | "savings" | "credit"
 export type CounterpartyType = "person" | "merchant"
 export type BillFrequency = "monthly"
 
 export type FinanceUserId = string
 export type FinanceRecordId = string
+
+export interface UserPreferencesRecord {
+  user_id: FinanceUserId
+  default_currency: CurrencyCode
+}
 
 export interface AccountRecord {
   id: FinanceRecordId
@@ -99,6 +104,7 @@ export type NewBudgetRecord = Omit<BudgetRecord, "user_id">
 export type NewPotRecord = Omit<PotRecord, "user_id">
 
 export interface FinanceState {
+  preferences: UserPreferencesRecord
   accounts: AccountRecord[]
   accountSummaries: AccountSummaryRecord[]
   categories: CategoryRecord[]
