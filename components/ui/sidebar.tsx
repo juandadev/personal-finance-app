@@ -32,8 +32,7 @@ import {
 } from "@/components/ui/tooltip"
 import MinimizeMenuIcon from "@/components/icons/MinimizeMenuIcon"
 
-const SIDEBAR_COOKIE_NAME = "sidebar_state"
-const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
+const SIDEBAR_STORAGE_KEY = "sidebar_state"
 const SIDEBAR_WIDTH = "18rem"
 const SIDEBAR_WIDTH_MOBILE = "18rem"
 const SIDEBAR_WIDTH_ICON = "5rem"
@@ -43,6 +42,9 @@ const SIDEBAR_ACTIVE_INDICATOR_TRANSITION: Transition = {
   duration: 0.2,
   ease: [0.79, 0.14, 0.15, 0.86],
 }
+const SIDEBAR_STORAGE_EVENT = "sidebar-storage-change"
+
+let sidebarOpenSnapshot: boolean | null = null
 
 type SidebarContextProps = {
   state: "expanded" | "collapsed"
@@ -55,6 +57,59 @@ type SidebarContextProps = {
 }
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null)
+
+function getStoredSidebarOpen(defaultOpen: boolean) {
+  if (sidebarOpenSnapshot !== null) {
+    return sidebarOpenSnapshot
+  }
+
+  try {
+    const value = window.localStorage.getItem(SIDEBAR_STORAGE_KEY)
+
+    if (value === "true") {
+      sidebarOpenSnapshot = true
+      return true
+    }
+
+    if (value === "false") {
+      sidebarOpenSnapshot = false
+      return false
+    }
+  } catch {
+    return defaultOpen
+  }
+
+  return defaultOpen
+}
+
+function storeSidebarOpen(open: boolean) {
+  sidebarOpenSnapshot = open
+
+  try {
+    window.localStorage.setItem(SIDEBAR_STORAGE_KEY, String(open))
+  } catch {
+    // Keep the sidebar usable when storage is unavailable.
+  }
+
+  window.dispatchEvent(new Event(SIDEBAR_STORAGE_EVENT))
+}
+
+function subscribeToSidebarStorage(onStoreChange: () => void) {
+  const handleStorageChange = (event: StorageEvent) => {
+    if (event.key === SIDEBAR_STORAGE_KEY) {
+      sidebarOpenSnapshot = null
+      onStoreChange()
+    }
+  }
+
+  window.addEventListener(SIDEBAR_STORAGE_EVENT, onStoreChange)
+  window.addEventListener("storage", handleStorageChange)
+
+  return () => {
+    window.removeEventListener(SIDEBAR_STORAGE_EVENT, onStoreChange)
+    window.removeEventListener("storage", handleStorageChange)
+  }
+}
 
 function useSidebar() {
   const context = React.useContext(SidebarContext)
@@ -81,18 +136,21 @@ function SidebarProvider({
   const isMobile = useIsMobile()
   const [openMobile, setOpenMobile] = React.useState(false)
 
-  const [_open, _setOpen] = React.useState(defaultOpen)
-  const open = openProp ?? _open
+  const storedOpen = React.useSyncExternalStore(
+    subscribeToSidebarStorage,
+    () => getStoredSidebarOpen(defaultOpen),
+    () => defaultOpen,
+  )
+  const open = openProp ?? storedOpen
+
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
       const openState = typeof value === "function" ? value(open) : value
       if (setOpenProp) {
         setOpenProp(openState)
-      } else {
-        _setOpen(openState)
       }
 
-      document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
+      storeSidebarOpen(openState)
     },
     [setOpenProp, open],
   )
