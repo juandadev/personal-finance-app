@@ -37,6 +37,8 @@ const SIDEBAR_WIDTH = "18rem"
 const SIDEBAR_WIDTH_MOBILE = "18rem"
 const SIDEBAR_WIDTH_ICON = "5rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
+const SIDEBAR_TOOLTIP_DELAY = 300
+const SIDEBAR_TOOLTIP_SKIP_DELAY = 500
 const SIDEBAR_ACTIVE_INDICATOR_LAYOUT_ID = "sidebar-active-indicator"
 const SIDEBAR_ACTIVE_INDICATOR_TRANSITION: Transition = {
   duration: 0.2,
@@ -191,7 +193,10 @@ function SidebarProvider({
 
   return (
     <SidebarContext.Provider value={contextValue}>
-      <TooltipProvider delayDuration={0}>
+      <TooltipProvider
+        delayDuration={SIDEBAR_TOOLTIP_DELAY}
+        skipDelayDuration={SIDEBAR_TOOLTIP_SKIP_DELAY}
+      >
         <div
           data-slot="sidebar-wrapper"
           style={
@@ -324,50 +329,103 @@ function SidebarCollapseButton({
   const shouldReduceMotion = useReducedMotion()
 
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      onClick={(event) => {
-        onClick?.(event)
-        toggleSidebar()
-      }}
-      className={cn(
-        "text-sidebar-foreground hover:text-sidebar-primary-foreground flex h-12 items-center justify-start gap-4 rounded-r-xl px-2 text-sm font-bold transition-[padding,color] hover:bg-transparent",
-        "focus-visible:ring-sidebar-ring focus-visible:ring-2 focus-visible:ring-offset-0",
-        "group-data-[collapsible=icon]:size-12 group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:px-3 [&>span:last-child]:truncate group-data-[collapsible=icon]:[&>span:last-child]:sr-only",
-        className,
-      )}
-      aria-label={collapsed ? "Expand menu" : "Minimize menu"}
-      {...props}
-    >
-      <AnimatePresence initial={false} mode="popLayout">
-        <motion.div
-          key={collapsed ? "collapsed" : "not-collapsed"}
-          animate={
-            shouldReduceMotion
-              ? { opacity: 1 }
-              : { opacity: 1, filter: "blur(0px)" }
-          }
-          exit={
-            shouldReduceMotion
-              ? { opacity: 0 }
-              : { opacity: 0, filter: "blur(2px)" }
-          }
-          initial={
-            shouldReduceMotion ? false : { opacity: 0, filter: "blur(2px)" }
-          }
+    <SidebarIconTooltip label={collapsed ? "Expand menu" : "Minimize menu"}>
+      <Button
+        type="button"
+        variant="ghost"
+        onClick={(event) => {
+          onClick?.(event)
+          toggleSidebar()
+        }}
+        className={cn(
+          "text-sidebar-foreground hover:text-sidebar-primary-foreground flex h-12 items-center justify-start gap-4 rounded-r-xl px-2 text-sm font-bold transition-[padding,color] hover:bg-transparent",
+          "focus-visible:ring-sidebar-ring focus-visible:ring-2 focus-visible:ring-offset-0",
+          "group-data-[collapsible=icon]:size-12 group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:px-3 [&>span:last-child]:truncate",
+          className,
+        )}
+        aria-label={collapsed ? "Expand menu" : "Minimize menu"}
+        {...props}
+      >
+        <AnimatePresence initial={false} mode="popLayout">
+          <motion.div
+            key={collapsed ? "collapsed" : "not-collapsed"}
+            animate={
+              shouldReduceMotion
+                ? { opacity: 1 }
+                : { opacity: 1, filter: "blur(0px)" }
+            }
+            exit={
+              shouldReduceMotion
+                ? { opacity: 0 }
+                : { opacity: 0, filter: "blur(2px)" }
+            }
+            initial={
+              shouldReduceMotion ? false : { opacity: 0, filter: "blur(2px)" }
+            }
+            transition={{ duration: shouldReduceMotion ? 0 : 0.2 }}
+            className="flex items-center justify-center"
+          >
+            {collapsed ? (
+              <MinimizeMenuIcon className="size-5 rotate-180" aria-hidden />
+            ) : (
+              <MinimizeMenuIcon className="size-5" aria-hidden />
+            )}
+          </motion.div>
+        </AnimatePresence>
+        <SidebarLabel>Minimize Menu</SidebarLabel>
+      </Button>
+    </SidebarIconTooltip>
+  )
+}
+
+function SidebarIconTooltip({
+  label,
+  children,
+}: {
+  label: string
+  children: React.ReactNode
+}) {
+  const { isMobile, state } = useSidebar()
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent
+        side="right"
+        align="center"
+        sideOffset={15}
+        hidden={state !== "collapsed" || isMobile}
+      >
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
+function SidebarLabel({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<typeof motion.span>) {
+  const { state } = useSidebar()
+  const shouldReduceMotion = useReducedMotion()
+
+  return (
+    <AnimatePresence initial={false} mode="popLayout">
+      {state !== "collapsed" && (
+        <motion.span
+          key="expanded-label"
+          initial={shouldReduceMotion ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
           transition={{ duration: shouldReduceMotion ? 0 : 0.2 }}
-          className="flex items-center justify-center"
+          className={cn("relative z-10 truncate", className)}
+          {...props}
         >
-          {collapsed ? (
-            <MinimizeMenuIcon className="size-5 rotate-180" aria-hidden />
-          ) : (
-            <MinimizeMenuIcon className="size-5" aria-hidden />
-          )}
-        </motion.div>
-      </AnimatePresence>
-      <span>Minimize Menu</span>
-    </Button>
+          {children}
+        </motion.span>
+      )}
+    </AnimatePresence>
   )
 }
 
@@ -472,7 +530,7 @@ function SidebarContent({ className, ...props }: React.ComponentProps<"div">) {
       data-slot="sidebar-content"
       data-sidebar="content"
       className={cn(
-        "scrollbar-track-sidebar scrollbar-thumb-accent flex min-h-0 flex-1 flex-col gap-2 overflow-hidden overflow-y-auto p-0 group-data-[collapsible=icon]:overflow-hidden",
+        "scrollbar-track-sidebar scrollbar-thumb-accent flex min-h-0 flex-1 flex-col gap-2 overflow-hidden overflow-y-auto p-0 group-data-[collapsible=icon]:overflow-hidden group-data-[collapsible=icon]:overflow-y-auto",
         className,
       )}
       {...props}
@@ -556,7 +614,7 @@ function SidebarMenu({ className, ...props }: React.ComponentProps<"ul">) {
         data-slot="sidebar-menu"
         data-sidebar="menu"
         className={cn(
-          "flex w-full min-w-0 flex-col gap-1 pr-6 group-data-[collapsible=icon]:items-start",
+          "flex w-full min-w-0 flex-col gap-1 group-data-[collapsible=icon]:items-start",
           className,
         )}
         {...props}
@@ -570,14 +628,14 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
     <li
       data-slot="sidebar-menu-item"
       data-sidebar="menu-item"
-      className={cn("group/menu-item relative w-full", className)}
+      className={cn("group/menu-item relative w-full pl-3", className)}
       {...props}
     />
   )
 }
 
 const sidebarMenuButtonVariants = cva(
-  "peer/menu-button group/sidebar-menu-button relative isolate flex w-full items-center overflow-hidden text-left outline-hidden ring-sidebar-ring transition-[padding] focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 group-has-data-[sidebar=menu-action]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 group-data-[collapsible=icon]:[&>span:last-child]:sr-only [&>span:last-child]:relative [&>span:last-child]:z-10 [&>span:last-child]:truncate [&>svg]:relative [&>svg]:z-10 [&>svg]:size-5 [&>svg]:shrink-0 data-[active=true]:[&>svg]:text-sidebar-primary",
+  "peer/menu-button group/sidebar-menu-button relative isolate flex w-full items-center overflow-hidden text-left outline-hidden ring-sidebar-ring transition-[padding] focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 group-has-data-[sidebar=menu-action]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&>span:last-child]:relative [&>span:last-child]:z-10 [&>span:last-child]:truncate [&>svg]:relative [&>svg]:z-10 [&>svg]:size-5 [&>svg]:shrink-0 data-[active=true]:[&>svg]:text-sidebar-primary",
   {
     variants: {
       variant: {
@@ -588,9 +646,9 @@ const sidebarMenuButtonVariants = cva(
       },
       size: {
         default:
-          "h-14 gap-4 rounded-none rounded-r-xl px-6 text-sm font-bold group-data-[collapsible=icon]:justify-start group-data-[collapsible=icon]:px-3",
+          "h-14 gap-4 rounded-none rounded-r-xl px-4 text-sm font-bold group-data-[collapsible=icon]:justify-start group-data-[collapsible=icon]:px-3",
         sm: "h-10 gap-3 rounded-none rounded-r-lg px-4 text-xs font-bold group-data-[collapsible=icon]:justify-start group-data-[collapsible=icon]:px-2",
-        lg: "h-14 gap-4 rounded-none rounded-r-xl px-8 py-4 text-base font-bold group-data-[collapsible=icon]:justify-start group-data-[collapsible=icon]:px-4",
+        lg: "h-14 gap-4 rounded-none rounded-r-xl px-4 py-4 text-base font-bold group-data-[collapsible=icon]:justify-start group-data-[collapsible=icon]:px-4",
       },
     },
     defaultVariants: {
@@ -667,7 +725,7 @@ function SidebarMenuActiveIndicator({
           : SIDEBAR_ACTIVE_INDICATOR_TRANSITION
       }
       className={cn(
-        "bg-sidebar-accent pointer-events-none absolute inset-0 z-0 rounded-r-xl",
+        "bg-sidebar-accent pointer-events-none absolute inset-0 z-0 mr-3 rounded-r-xl",
         "before:bg-sidebar-primary before:absolute before:inset-y-0 before:left-0 before:w-1",
         className,
       )}
@@ -843,8 +901,10 @@ export {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarHeader,
+  SidebarIconTooltip,
   SidebarInput,
   SidebarInset,
+  SidebarLabel,
   SidebarMenu,
   SidebarMenuAction,
   SidebarMenuActiveIndicator,

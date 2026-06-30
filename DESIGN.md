@@ -129,8 +129,54 @@ Motion should clarify a state change, not decorate the page.
   uses the `ease-in-out-expo` token.
 - Set animation duration per component so each surface can match its scale and
   context.
+- Use an opacity-only fade when an element needs to suddenly disappear from or
+  reappear on screen, such as sidebar labels during collapse and expand.
+- Use blur plus opacity when one element switches to a different element in the
+  same position, such as the sidebar collapse button icon changing direction.
+- Avoid animation on controls or elements users are likely to trigger
+  repeatedly. If the interaction frequency is unclear, ask for the developer's
+  preference before adding motion.
+- Use `motion` or a similar local pattern when it fits the component, but keep
+  the animation behavior aligned with these principles.
 - Avoid looping, bouncing, or attention-grabbing animation.
 - Honor `prefers-reduced-motion` when adding custom motion.
+
+Reference patterns:
+
+```tsx
+// Opacity-only fade for elements that appear or disappear.
+<AnimatePresence initial={false} mode="popLayout">
+  {isVisible && (
+    <motion.span
+      initial={shouldReduceMotion ? false : { opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: shouldReduceMotion ? 0 : 0.2 }}
+    >
+      Label
+    </motion.span>
+  )}
+</AnimatePresence>
+```
+
+```tsx
+// Blur + opacity for switching between two elements in the same position.
+<AnimatePresence initial={false} mode="popLayout">
+  <motion.div
+    key={isCollapsed ? "collapsed" : "expanded"}
+    initial={shouldReduceMotion ? false : { opacity: 0, filter: "blur(2px)" }}
+    animate={
+      shouldReduceMotion ? { opacity: 1 } : { opacity: 1, filter: "blur(0px)" }
+    }
+    exit={
+      shouldReduceMotion ? { opacity: 0 } : { opacity: 0, filter: "blur(2px)" }
+    }
+    transition={{ duration: shouldReduceMotion ? 0 : 0.2 }}
+  >
+    {isCollapsed ? <CollapsedIcon /> : <ExpandedIcon />}
+  </motion.div>
+</AnimatePresence>
+```
 
 ## Layout Patterns
 
@@ -218,6 +264,12 @@ Lucide icons, and `cn()` for class merging.
 - Do not fork styling locally if the same need appears in multiple places.
 - Avoid raw `button`, `input`, `select`, or `dialog` for reusable UI. Product
   wrappers are acceptable when they encode a local pattern.
+- Tooltip groups are mandatory for nearby controls, button groups, and repeated
+  icon-only actions. Wrap the group in one shared `TooltipProvider` and set a
+  `skipDelayDuration` so moving quickly between tooltips opens the next tooltip
+  instantly instead of replaying enter animations. Keep tooltip entrance
+  animation tied to Radix's `delayed-open` state so `instant-open` tooltips are
+  visually quiet.
 
 ### Buttons
 

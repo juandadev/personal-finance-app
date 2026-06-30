@@ -1,6 +1,7 @@
 import Link from "next/link"
 import type { NavItem as NavItemType } from "@/lib/types"
 import {
+  SidebarLabel,
   SidebarMenuActiveIndicator,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -23,9 +24,13 @@ export function NavItem({ item, active = false }: NavItemProps) {
         size="lg"
         tooltip={item.label}
       >
-        <Link href={item.href} aria-current={active ? "page" : undefined}>
+        <Link
+          href={item.href}
+          aria-current={active ? "page" : undefined}
+          aria-label={item.label}
+        >
           <Icon aria-hidden />
-          <span>{item.label}</span>
+          <SidebarLabel>{item.label}</SidebarLabel>
         </Link>
       </SidebarMenuButton>
     </SidebarMenuItem>
