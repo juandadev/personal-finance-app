@@ -55,7 +55,7 @@ export function DeletePotDialog({
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent variant="finance">
-        <AlertDialogHeader className="pr-12 text-left">
+        <AlertDialogHeader className="text-left">
           <AlertDialogTitle variant="finance">
             Delete &lsquo;{pot.name}&rsquo;?
           </AlertDialogTitle>

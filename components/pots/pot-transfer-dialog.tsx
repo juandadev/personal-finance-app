@@ -144,7 +144,7 @@ export function PotTransferDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent variant="finance" showCloseButton={false}>
-        <DialogHeader className="pr-12 text-left">
+        <DialogHeader className="text-left">
           <DialogTitle variant="finance">{copy.title}</DialogTitle>
           <DialogDescription variant="finance">
             {copy.description}

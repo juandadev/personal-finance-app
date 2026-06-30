@@ -126,7 +126,7 @@ export function EditPotDialog({ pot, open, onOpenChange }: EditPotDialogProps) {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent variant="finance" showCloseButton={false}>
-        <DialogHeader className="pr-12 text-left">
+        <DialogHeader className="text-left">
           <DialogTitle variant="finance">Edit Pot</DialogTitle>
           <DialogDescription variant="finance">
             If your saving targets change, feel free to update your pots.

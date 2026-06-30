@@ -133,7 +133,7 @@ export function EditBudgetDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent variant="finance" showCloseButton={false}>
-        <DialogHeader className="pr-12 text-left">
+        <DialogHeader className="text-left">
           <DialogTitle variant="finance">Edit Budget</DialogTitle>
           <DialogDescription variant="finance">
             As your budgets change, feel free to update your spending limits.

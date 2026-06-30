@@ -114,7 +114,7 @@ export function AddPotDialog() {
         <Button>Add Pot</Button>
       </DialogTrigger>
       <DialogContent variant="finance" showCloseButton={false}>
-        <DialogHeader className="pr-12 text-left">
+        <DialogHeader className="text-left">
           <DialogTitle variant="finance">Add New Pot</DialogTitle>
           <DialogDescription variant="finance">
             Create a pot to set savings targets. These can help keep you on

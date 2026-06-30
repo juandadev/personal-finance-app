@@ -134,7 +134,7 @@ export function AddBudgetDialog() {
         <Button>Add Budget</Button>
       </DialogTrigger>
       <DialogContent variant="finance" showCloseButton={false}>
-        <DialogHeader className="pr-12 text-left">
+        <DialogHeader className="text-left">
           <DialogTitle variant="finance">Add New Budget</DialogTitle>
           <DialogDescription variant="finance">
             Choose a category to set a spending budget. These categories can

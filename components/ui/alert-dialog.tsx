@@ -76,10 +76,7 @@ function AlertDialogCloseButton({
   ...props
 }: React.ComponentProps<typeof Button>) {
   return (
-    <AlertDialogCancel
-      asChild
-      className="border-none bg-transparent p-0 shadow-none hover:bg-transparent"
-    >
+    <AlertDialogPrimitive.Cancel asChild>
       <Button
         type="button"
         variant="ghost"
@@ -92,7 +89,7 @@ function AlertDialogCloseButton({
       >
         {children ?? <X className="size-4" aria-hidden />}
       </Button>
-    </AlertDialogCancel>
+    </AlertDialogPrimitive.Cancel>
   )
 }
 
