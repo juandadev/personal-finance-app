@@ -4,6 +4,7 @@ import { createContext, useContext, useMemo, useReducer } from "react"
 import type { Dispatch, ReactNode } from "react"
 import {
   financeReducer,
+  runFinanceAction,
   type FinanceActions,
   type FinanceAction,
 } from "@/lib/finance/reducer"
@@ -62,119 +63,134 @@ export function FinanceProvider({
       ) => dispatch({ type: "transaction/update", id, updates }),
       deleteTransaction: (id: string) =>
         dispatch({ type: "transaction/delete", id }),
-      addBudget: async (budget: NewBudgetRecord, spent_cents?: number) => {
-        const result = await createBudgetAction(budget, spent_cents ?? 0)
+      addBudget: (budget: NewBudgetRecord, spent_cents?: number) =>
+        runFinanceAction(() =>
+          createBudgetAction(budget, spent_cents ?? 0).then((result) => {
+            if (result.ok) {
+              dispatch({
+                type: "budget/add",
+                budget: result.data.budget,
+                spent_cents: result.data.budgetSummary.spent_cents,
+              })
+            }
 
-        if (result.ok) {
-          dispatch({
-            type: "budget/add",
-            budget: result.data.budget,
-            spent_cents: result.data.budgetSummary.spent_cents,
-          })
-        }
-
-        return result
-      },
+            return result
+          }),
+        ),
       updateBudget: (
         id: string,
         updates: Partial<Omit<BudgetRecord, "id" | "user_id">>,
         spent_cents?: number,
       ) =>
-        updateBudgetAction(id, updates, spent_cents).then((result) => {
-          if (result.ok) {
-            dispatch({
-              type: "budget/update",
-              id,
-              updates: {
-                category_id: result.data.budget.category_id,
-                period: result.data.budget.period,
-                limit_cents: result.data.budget.limit_cents,
-                theme_color: result.data.budget.theme_color,
-              },
-              spent_cents: result.data.budgetSummary?.spent_cents,
-            })
-          }
+        runFinanceAction(() =>
+          updateBudgetAction(id, updates, spent_cents).then((result) => {
+            if (result.ok) {
+              dispatch({
+                type: "budget/update",
+                id,
+                updates: {
+                  category_id: result.data.budget.category_id,
+                  period: result.data.budget.period,
+                  limit_cents: result.data.budget.limit_cents,
+                  theme_color: result.data.budget.theme_color,
+                },
+                spent_cents: result.data.budgetSummary?.spent_cents,
+              })
+            }
 
-          return result
-        }),
+            return result
+          }),
+        ),
       deleteBudget: (id: string) =>
-        deleteBudgetAction(id).then((result) => {
-          if (result.ok) {
-            dispatch({ type: "budget/delete", id })
-          }
+        runFinanceAction(() =>
+          deleteBudgetAction(id).then((result) => {
+            if (result.ok) {
+              dispatch({ type: "budget/delete", id })
+            }
 
-          return result
-        }),
+            return result
+          }),
+        ),
       addPot: (pot: NewPotRecord) =>
-        createPotAction(pot).then((result) => {
-          if (result.ok) {
-            dispatch({ type: "pot/add", pot: result.data })
-          }
+        runFinanceAction(() =>
+          createPotAction(pot).then((result) => {
+            if (result.ok) {
+              dispatch({ type: "pot/add", pot: result.data })
+            }
 
-          return result
-        }),
+            return result
+          }),
+        ),
       updatePot: (
         id: string,
         updates: Partial<Omit<PotRecord, "id" | "user_id">>,
       ) =>
-        updatePotAction(id, updates).then((result) => {
-          if (result.ok) {
-            dispatch({
-              type: "pot/update",
-              id,
-              updates: {
-                name: result.data.name,
-                balance_cents: result.data.balance_cents,
-                target_cents: result.data.target_cents,
-                theme_color: result.data.theme_color,
-              },
-            })
-          }
+        runFinanceAction(() =>
+          updatePotAction(id, updates).then((result) => {
+            if (result.ok) {
+              dispatch({
+                type: "pot/update",
+                id,
+                updates: {
+                  name: result.data.name,
+                  balance_cents: result.data.balance_cents,
+                  target_cents: result.data.target_cents,
+                  theme_color: result.data.theme_color,
+                },
+              })
+            }
 
-          return result
-        }),
+            return result
+          }),
+        ),
       deletePot: (id: string) =>
-        deletePotAction(id).then((result) => {
-          if (result.ok) {
-            dispatch({ type: "pot/delete", id })
-          }
+        runFinanceAction(() =>
+          deletePotAction(id).then((result) => {
+            if (result.ok) {
+              dispatch({ type: "pot/delete", id })
+            }
 
-          return result
-        }),
+            return result
+          }),
+        ),
       depositToPot: (id: string, amount_cents: number) =>
-        transferPotAction(id, amount_cents, "deposit").then((result) => {
-          if (result.ok) {
-            dispatch({
-              type: "pot/update",
-              id,
-              updates: {
-                name: result.data.name,
-                balance_cents: result.data.balance_cents,
-                target_cents: result.data.target_cents,
-                theme_color: result.data.theme_color,
-              },
-            })
-          }
+        runFinanceAction(() =>
+          transferPotAction(id, amount_cents, "deposit").then((result) => {
+            if (result.ok) {
+              dispatch({
+                type: "pot/update",
+                id,
+                updates: {
+                  name: result.data.name,
+                  balance_cents: result.data.balance_cents,
+                  target_cents: result.data.target_cents,
+                  theme_color: result.data.theme_color,
+                },
+              })
+            }
 
-          return result
-        }),
+            return result
+          }),
+        ),
       withdrawFromPot: (id: string, amount_cents: number) =>
-        transferPotAction(id, amount_cents, "withdraw").then((result) => {
-          if (result.ok) {
-            dispatch({
-              type: "pot/update",
-              id,
-              updates: {
-                name: result.data.name,
-                balance_cents: result.data.balance_cents,
-                target_cents: result.data.target_cents,
-                theme_color: result.data.theme_color,
-              },
-            })
-          }
+        runFinanceAction(() =>
+          transferPotAction(id, amount_cents, "withdraw").then((result) => {
+            if (result.ok) {
+              dispatch({
+                type: "pot/update",
+                id,
+                updates: {
+                  name: result.data.name,
+                  balance_cents: result.data.balance_cents,
+                  target_cents: result.data.target_cents,
+                  theme_color: result.data.theme_color,
+                },
+              })
+            }
 
-          return result
-        }),
+            return result
+          }),
+        ),
       addRecurringBill: (bill: RecurringBillRecord) =>
         dispatch({ type: "recurring-bill/add", bill }),
       updateRecurringBill: (

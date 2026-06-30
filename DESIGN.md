@@ -241,6 +241,24 @@ Finance data must stay readable on mobile.
   action. Use destructive styling for errors, muted/foreground copy for
   progress, and concise success copy when the view does not immediately
   redirect or close.
+- A Server Action call must never leave the user without feedback. Resolve
+  every action with a `{ ok, message }` result (see
+  `lib/finance/reducer.ts#runFinanceAction`) instead of letting the call
+  reject, and always render `result.message` through the inline status
+  message when `ok` is `false`.
+
+### Error States
+
+- Route-level crashes use the `app/error.tsx` boundary: a centered `Card` with
+  a destructive icon badge, a short title, one sentence of plain-language
+  explanation, a `Try Again` button (`reset()`), and a secondary link back to
+  `/`.
+- `app/global-error.tsx` is the last-resort fallback when the root layout
+  itself fails. It cannot assume any providers are mounted, so it stays
+  minimal: plain tokens, no shadcn primitives, no `EmptyDataCard`.
+- Prefer the inline status message pattern (above) for expected, recoverable
+  failures inside a form or dialog. Reserve the full-page error boundary for
+  unexpected render-time crashes.
 
 ### Menus and Secondary Actions
 

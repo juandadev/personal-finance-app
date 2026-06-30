@@ -89,6 +89,58 @@ async function getUserId() {
   return session.user.id
 }
 
+interface PostgresError extends Error {
+  code: string
+  constraint?: string
+}
+
+function isPostgresError(error: unknown): error is PostgresError {
+  return (
+    error instanceof Error &&
+    "code" in error &&
+    typeof (error as { code?: unknown }).code === "string"
+  )
+}
+
+// Postgres constraint names for known uniqueness rules, mapped to copy a user
+// can act on instead of raw SQL ("duplicate key value violates unique...").
+const uniqueConstraintMessages: Record<string, string> = {
+  pots_user_name_unique: "A pot with this name already exists.",
+  budgets_user_id_category_id_period_key:
+    "This category already has a budget for this period.",
+}
+
+function handlePostgresError<T>(error: PostgresError): FinanceActionResult<T> {
+  switch (error.code) {
+    case "23505": {
+      const message = error.constraint
+        ? uniqueConstraintMessages[error.constraint]
+        : undefined
+
+      return {
+        ok: false,
+        message: message ?? "That already exists. Try a different value.",
+      }
+    }
+    case "23503":
+      return {
+        ok: false,
+        message:
+          "Your account isn't fully set up yet. Refresh the page and try again.",
+      }
+    case "23514":
+      return {
+        ok: false,
+        message: "Check the highlighted fields and try again.",
+      }
+    default:
+      return {
+        ok: false,
+        message: "Something went wrong while saving. Try again in a moment.",
+      }
+  }
+}
+
 function handleFinanceActionError<T>(error: unknown): FinanceActionResult<T> {
   if (error instanceof z.ZodError) {
     return {
@@ -96,6 +148,10 @@ function handleFinanceActionError<T>(error: unknown): FinanceActionResult<T> {
       message: "Check the highlighted fields and try again.",
       fieldErrors: error.flatten().fieldErrors,
     }
+  }
+
+  if (isPostgresError(error)) {
+    return handlePostgresError(error)
   }
 
   if (error instanceof Error) {

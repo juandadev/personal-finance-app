@@ -29,12 +29,23 @@ export async function signUpWithEmail(
     }
   }
 
-  const { error } = await auth.signUp.email(parsed.data)
+  let result: Awaited<ReturnType<typeof auth.signUp.email>>
 
-  if (error) {
+  try {
+    result = await auth.signUp.email(parsed.data)
+  } catch (error) {
+    console.error("Sign-up request failed:", error)
+
     return {
       message:
-        error.message ||
+        "We couldn't reach the server. Check your connection and try again.",
+    }
+  }
+
+  if (result.error) {
+    return {
+      message:
+        result.error.message ||
         "We could not create your account. Try again in a moment.",
     }
   }

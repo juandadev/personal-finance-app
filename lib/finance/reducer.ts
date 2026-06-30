@@ -88,6 +88,29 @@ export type FinanceMutationResult =
       fieldErrors?: Record<string, string[] | undefined>
     }
 
+/**
+ * Server Actions can reject instead of resolving when the request itself
+ * never reaches our try/catch (e.g. a dropped connection, or Next.js failing
+ * to decode the response). Routing every call through this helper guarantees
+ * callers always get a normal `{ ok: false }` result to show inline, instead
+ * of an uncaught exception that crashes the UI with no feedback.
+ */
+export async function runFinanceAction<T extends FinanceMutationResult>(
+  action: () => Promise<T>,
+): Promise<T | FinanceMutationResult> {
+  try {
+    return await action()
+  } catch (error) {
+    console.error("Finance action request failed:", error)
+
+    return {
+      ok: false,
+      message:
+        "We couldn't reach the server. Check your connection and try again.",
+    }
+  }
+}
+
 function updateById<T extends { id: string }>(
   records: T[],
   id: string,

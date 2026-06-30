@@ -27,12 +27,23 @@ export async function signInWithEmail(
     }
   }
 
-  const { error } = await auth.signIn.email(parsed.data)
+  let result: Awaited<ReturnType<typeof auth.signIn.email>>
 
-  if (error) {
+  try {
+    result = await auth.signIn.email(parsed.data)
+  } catch (error) {
+    console.error("Sign-in request failed:", error)
+
     return {
       message:
-        error.message ||
+        "We couldn't reach the server. Check your connection and try again.",
+    }
+  }
+
+  if (result.error) {
+    return {
+      message:
+        result.error.message ||
         "We could not sign you in. Check your details and try again.",
     }
   }
