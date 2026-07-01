@@ -30,6 +30,11 @@
     "slug": "personal-care"
   },
   {
+    "id": "e61dfd83-bef1-4b8a-bdb0-9d3ba30f4f5f",
+    "name": "Emergency Fund",
+    "slug": "emergency-fund"
+  },
+  {
     "id": "c0670339-0f1f-49eb-b365-b4917e78b576",
     "name": "Education",
     "slug": "education"

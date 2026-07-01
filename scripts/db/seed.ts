@@ -72,14 +72,15 @@ async function seedDemoData(client: PoolClient) {
 
   await client.query(
     `
-      INSERT INTO profiles (user_id, display_name, default_currency)
-      VALUES ($1, $2, $3)
+      INSERT INTO profiles (user_id, display_name, default_currency, timezone)
+      VALUES ($1, $2, $3, $4)
       ON CONFLICT (user_id)
       DO UPDATE SET
         display_name = excluded.display_name,
-        default_currency = excluded.default_currency
+        default_currency = excluded.default_currency,
+        timezone = excluded.timezone
     `,
-    [demoUserId, "Demo User", "USD"],
+    [demoUserId, "Demo User", "USD", "America/Mexico_City"],
   )
 
   await insertRows(

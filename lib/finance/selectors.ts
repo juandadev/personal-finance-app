@@ -52,7 +52,16 @@ function selectTransactions(
   transactions: TransactionRecord[],
   categories: Map<string, CategoryRecord>,
   counterparties: Map<string, CounterpartyRecord>,
+  budgetAssignments: FinanceState["budgetTransactionAssignments"],
+  budgets: Map<string, BudgetRecord>,
 ) {
+  const assignmentByTransactionId = new Map(
+    budgetAssignments.map((assignment) => [
+      assignment.transaction_id,
+      assignment,
+    ]),
+  )
+
   return transactions.map((transaction) => {
     const category = getRequired(
       categories,
@@ -64,6 +73,13 @@ function selectTransactions(
       transaction.counterparty_id,
       "counterparty",
     )
+    const assignment = assignmentByTransactionId.get(transaction.id)
+    const assignedBudget = assignment
+      ? budgets.get(assignment.budget_id)
+      : undefined
+    const assignedCategory = assignedBudget
+      ? getRequired(categories, assignedBudget.category_id, "category")
+      : undefined
 
     return {
       id: transaction.id,
@@ -72,29 +88,50 @@ function selectTransactions(
       amount: centsToDollars(transaction.amount_cents),
       date: formatDisplayDate(transaction.posted_at),
       category: category.name,
+      budgetId: assignment?.budget_id,
+      budgetCategory: assignedCategory?.name,
     }
   })
 }
 
 function selectBudgets(
   budgets: BudgetRecord[],
-  budgetSummaries: FinanceState["budgetSummaries"],
+  budgetAssignments: FinanceState["budgetTransactionAssignments"],
   categories: Map<string, CategoryRecord>,
 ): Budget[] {
-  const spendingByBudgetId = new Map(
-    budgetSummaries.map((summary) => [summary.budget_id, summary.spent_cents]),
-  )
+  const spendingByBudgetId = new Map(budgets.map((budget) => [budget.id, 0]))
+
+  for (const assignment of budgetAssignments) {
+    spendingByBudgetId.set(
+      assignment.budget_id,
+      (spendingByBudgetId.get(assignment.budget_id) ?? 0) +
+        assignment.assigned_amount_cents,
+    )
+  }
 
   return budgets.map((budget) => {
     const category = getRequired(categories, budget.category_id, "category")
 
     return {
+      id: budget.id,
+      period: budget.period,
       category: category.name,
       maximum: centsToDollars(budget.limit_cents),
       spent: centsToDollars(spendingByBudgetId.get(budget.id) ?? 0),
       color: budget.theme_color,
     }
   })
+}
+
+function selectBudgetAssignmentsForCurrentBudgets(
+  budgetAssignments: FinanceState["budgetTransactionAssignments"],
+  budgets: BudgetRecord[],
+) {
+  const currentBudgetIds = new Set(budgets.map((budget) => budget.id))
+
+  return budgetAssignments.filter((assignment) =>
+    currentBudgetIds.has(assignment.budget_id),
+  )
 }
 
 function selectRecurringBills(
@@ -171,6 +208,11 @@ function selectSummaryStats(
 export function selectFinanceViewModel(state: FinanceState): FinanceViewModel {
   const categories = byId(state.categories)
   const counterparties = byId(state.counterparties)
+  const budgetsById = byId(state.budgets)
+  const currentBudgetAssignments = selectBudgetAssignmentsForCurrentBudgets(
+    state.budgetTransactionAssignments,
+    state.budgets,
+  )
   const pots = state.pots.map((pot) => ({
     id: pot.id,
     name: pot.name,
@@ -180,13 +222,15 @@ export function selectFinanceViewModel(state: FinanceState): FinanceViewModel {
   }))
   const budgets = selectBudgets(
     state.budgets,
-    state.budgetSummaries,
+    currentBudgetAssignments,
     categories,
   )
   const transactions = selectTransactions(
     state.transactions,
     categories,
     counterparties,
+    currentBudgetAssignments,
+    budgetsById,
   )
   const recurringBills = selectRecurringBills(
     state.recurringBills,

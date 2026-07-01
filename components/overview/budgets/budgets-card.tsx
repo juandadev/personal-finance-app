@@ -40,7 +40,7 @@ export function BudgetsCard() {
           />
           <ul className="grid w-full grid-cols-2 justify-items-start gap-4 md:h-full md:max-h-75.5 md:w-fit md:max-w-31 md:grid-cols-1 md:overflow-y-auto md:pr-2">
             {hasBudgets ? (
-              budgets.map((b) => <BudgetItem key={b.category} budget={b} />)
+              budgets.map((b) => <BudgetItem key={b.id} budget={b} />)
             ) : (
               <GhostBudgetItem />
             )}

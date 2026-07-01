@@ -20,6 +20,7 @@ export type FinanceRecordId = string
 export interface UserPreferencesRecord {
   user_id: FinanceUserId
   default_currency: CurrencyCode
+  timezone: string
 }
 
 export interface AccountRecord {
@@ -80,6 +81,43 @@ export interface BudgetSummaryRecord {
   spent_cents: number
 }
 
+export interface BudgetTransactionAssignmentRecord {
+  id: FinanceRecordId
+  user_id: FinanceUserId
+  budget_id: FinanceRecordId
+  transaction_id: FinanceRecordId
+  assigned_amount_cents: number
+}
+
+export type MonthlyReportModule = "budgets"
+export type MonthlyReportRunStatus = "running" | "completed" | "failed"
+
+export interface MonthlyReportRunRecord {
+  id: FinanceRecordId
+  user_id: FinanceUserId
+  period: string
+  module: MonthlyReportModule
+  status: MonthlyReportRunStatus
+  started_at: string
+  completed_at: string | null
+  error_message: string | null
+}
+
+export interface BudgetMonthlySnapshotRecord {
+  id: FinanceRecordId
+  user_id: FinanceUserId
+  monthly_report_run_id: FinanceRecordId
+  period: string
+  source_budget_id: FinanceRecordId
+  category_id: FinanceRecordId
+  category_name: string
+  theme_color: ThemeColor
+  limit_cents: number
+  spent_cents: number
+  free_cents: number
+  assigned_transaction_count: number
+}
+
 export interface PotRecord {
   id: FinanceRecordId
   user_id: FinanceUserId
@@ -112,6 +150,7 @@ export interface FinanceState {
   transactions: TransactionRecord[]
   budgets: BudgetRecord[]
   budgetSummaries: BudgetSummaryRecord[]
+  budgetTransactionAssignments: BudgetTransactionAssignmentRecord[]
   pots: PotRecord[]
   recurringBills: RecurringBillRecord[]
 }

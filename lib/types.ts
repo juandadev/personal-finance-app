@@ -27,6 +27,8 @@ export interface Pot {
 }
 
 export interface Budget {
+  id: string
+  period: string
   category: TransactionCategory
   maximum: number
   spent: number
@@ -42,6 +44,7 @@ export type TransactionCategory =
   | "Shopping"
   | "Bills"
   | "Personal Care"
+  | "Emergency Fund"
   | "Education"
   | "Lifestyle"
 
@@ -52,6 +55,8 @@ export interface Transaction {
   amount: number
   date: string
   category: TransactionCategory
+  budgetId?: string
+  budgetCategory?: TransactionCategory
 }
 
 export type SortOption =

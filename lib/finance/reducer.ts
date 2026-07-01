@@ -1,5 +1,6 @@
 import type {
   BudgetRecord,
+  BudgetTransactionAssignmentRecord,
   FinanceState,
   NewBudgetRecord,
   NewPotRecord,
@@ -24,6 +25,11 @@ export type FinanceAction =
       spent_cents?: number
     }
   | { type: "budget/delete"; id: string }
+  | {
+      type: "budget-assignment/upsert"
+      assignment: BudgetTransactionAssignmentRecord
+    }
+  | { type: "budget-assignment/delete"; transaction_id: string }
   | { type: "pot/add"; pot: PotRecord }
   | {
       type: "pot/update"
@@ -58,6 +64,13 @@ export interface FinanceActions {
     spent_cents?: number,
   ) => Promise<FinanceMutationResult>
   deleteBudget: (id: string) => Promise<FinanceMutationResult>
+  assignTransactionToBudget: (
+    transactionId: string,
+    budgetId: string,
+  ) => Promise<FinanceMutationResult>
+  unassignTransactionFromBudget: (
+    transactionId: string,
+  ) => Promise<FinanceMutationResult>
   addPot: (pot: NewPotRecord) => Promise<FinanceMutationResult>
   updatePot: (
     id: string,
@@ -144,6 +157,25 @@ function upsertBudgetSummary(
   )
 }
 
+function upsertBudgetAssignment(
+  assignments: FinanceState["budgetTransactionAssignments"],
+  nextAssignment: BudgetTransactionAssignmentRecord,
+): FinanceState["budgetTransactionAssignments"] {
+  const hasAssignment = assignments.some(
+    (assignment) => assignment.transaction_id === nextAssignment.transaction_id,
+  )
+
+  if (!hasAssignment) {
+    return [...assignments, nextAssignment]
+  }
+
+  return assignments.map((assignment) =>
+    assignment.transaction_id === nextAssignment.transaction_id
+      ? nextAssignment
+      : assignment,
+  )
+}
+
 export function financeReducer(
   state: FinanceState,
   action: FinanceAction,
@@ -203,6 +235,24 @@ export function financeReducer(
         budgets: removeById(state.budgets, action.id),
         budgetSummaries: state.budgetSummaries.filter(
           (summary) => summary.budget_id !== action.id,
+        ),
+        budgetTransactionAssignments: state.budgetTransactionAssignments.filter(
+          (assignment) => assignment.budget_id !== action.id,
+        ),
+      }
+    case "budget-assignment/upsert":
+      return {
+        ...state,
+        budgetTransactionAssignments: upsertBudgetAssignment(
+          state.budgetTransactionAssignments,
+          action.assignment,
+        ),
+      }
+    case "budget-assignment/delete":
+      return {
+        ...state,
+        budgetTransactionAssignments: state.budgetTransactionAssignments.filter(
+          (assignment) => assignment.transaction_id !== action.transaction_id,
         ),
       }
     case "pot/add":

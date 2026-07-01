@@ -39,13 +39,9 @@ export function EditBudgetDialog({
   onOpenChange,
 }: EditBudgetDialogProps) {
   const { state, actions } = useFinance()
-  const currentBudget = state.budgets.find((budgetRecord) => {
-    const category = state.categories.find(
-      (option) => option.id === budgetRecord.category_id,
-    )
-
-    return category?.name === budget.category
-  })
+  const currentBudget = state.budgets.find(
+    (budgetRecord) => budgetRecord.id === budget.id,
+  )
   const currentCategoryId = currentBudget?.category_id ?? ""
   const [categoryId, setCategoryId] = useState(currentCategoryId)
   const [maximumSpend, setMaximumSpend] = useState(

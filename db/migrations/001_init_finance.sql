@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS categories (
       'Dining Out',
       'Transportation',
       'Personal Care',
+      'Emergency Fund',
       'Education',
       'Lifestyle',
       'Shopping',

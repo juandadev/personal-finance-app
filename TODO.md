@@ -17,3 +17,7 @@
       common global preferences
   - Need to figure it out a way to run a "currency migration", this will be part of the global preferences, just need
     to carefully think how is this going to work and if it really has a purpose
+- [ ] Use nuqs to handle state from URL query params, so we can quickly load filters when navigating to the transactions
+      page. e.g from the budgets page, the user clicks to see all the transactions that belongs to a target budget, to it
+      niavigates through the URL and the transactions page will quickly apply the filters
+- [ ] let the user select their pinned pots & budgets shown in the "Overview" page. Only when it exceeds 4 items

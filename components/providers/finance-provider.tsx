@@ -9,11 +9,13 @@ import {
   type FinanceAction,
 } from "@/lib/finance/reducer"
 import {
+  assignTransactionToBudgetAction,
   createBudgetAction,
   createPotAction,
   deleteBudgetAction,
   deletePotAction,
   transferPotAction,
+  unassignTransactionFromBudgetAction,
   updateBudgetAction,
   updatePotAction,
 } from "@/lib/finance/actions"
@@ -106,6 +108,34 @@ export function FinanceProvider({
           deleteBudgetAction(id).then((result) => {
             if (result.ok) {
               dispatch({ type: "budget/delete", id })
+            }
+
+            return result
+          }),
+        ),
+      assignTransactionToBudget: (transactionId: string, budgetId: string) =>
+        runFinanceAction(() =>
+          assignTransactionToBudgetAction(transactionId, budgetId).then(
+            (result) => {
+              if (result.ok) {
+                dispatch({
+                  type: "budget-assignment/upsert",
+                  assignment: result.data,
+                })
+              }
+
+              return result
+            },
+          ),
+        ),
+      unassignTransactionFromBudget: (transactionId: string) =>
+        runFinanceAction(() =>
+          unassignTransactionFromBudgetAction(transactionId).then((result) => {
+            if (result.ok) {
+              dispatch({
+                type: "budget-assignment/delete",
+                transaction_id: transactionId,
+              })
             }
 
             return result

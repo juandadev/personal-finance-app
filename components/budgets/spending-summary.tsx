@@ -26,7 +26,7 @@ export function SpendingSummary() {
           <ul className="divide-muted-foreground/10 mt-6 divide-y md:mt-4">
             {hasBudgets ? (
               budgets.map((budget) => (
-                <SpendingSummaryItem key={budget.category} budget={budget} />
+                <SpendingSummaryItem key={budget.id} budget={budget} />
               ))
             ) : (
               <li className="py-4">

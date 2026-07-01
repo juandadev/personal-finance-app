@@ -13,6 +13,7 @@ export const financeSeed: FinanceState = {
   preferences: {
     user_id: accountsSeed[0]?.user_id ?? "demo-user",
     default_currency: "USD",
+    timezone: "America/Mexico_City",
   },
   accounts: accountsSeed,
   accountSummaries: accountSummariesSeed,
@@ -21,6 +22,7 @@ export const financeSeed: FinanceState = {
   transactions: transactionsSeed,
   budgets: budgetsSeed,
   budgetSummaries: budgetSummariesSeed,
+  budgetTransactionAssignments: [],
   pots: potsSeed,
   recurringBills: recurringBillsSeed,
 } as FinanceState
@@ -43,6 +45,9 @@ export function createInitialFinanceState(): FinanceState {
     budgetSummaries: financeSeed.budgetSummaries.map((summary) => ({
       ...summary,
     })),
+    budgetTransactionAssignments: financeSeed.budgetTransactionAssignments.map(
+      (assignment) => ({ ...assignment }),
+    ),
     pots: financeSeed.pots.map((pot) => ({ ...pot })),
     recurringBills: financeSeed.recurringBills.map((bill) => ({ ...bill })),
   }

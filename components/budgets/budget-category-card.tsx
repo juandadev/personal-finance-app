@@ -129,7 +129,7 @@ export function BudgetCategoryCard({
           </CardTitle>
           <CardAction>
             <Link
-              href={`/transactions?category=${encodeURIComponent(budget.category)}`}
+              href={`/transactions?budgetId=${encodeURIComponent(budget.id)}`}
               className={cardActionLinkClasses}
             >
               See All
@@ -152,7 +152,7 @@ export function BudgetCategoryCard({
                   No spending yet
                 </p>
                 <p className="text-muted-foreground mt-1 text-xs">
-                  Transactions in this category will appear here.
+                  Assigned transactions will appear here.
                 </p>
               </div>
             </li>

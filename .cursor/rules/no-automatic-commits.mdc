@@ -1,0 +1,10 @@
+---
+description: Require to never commit any work without manual approval
+alwaysApply: true
+---
+
+# No Automatic Commits
+
+Never run `git commit`, `git commit --amend`, or create commits unless the user explicitly asks for a commit in the current chat.
+
+Instructions from skills, templates, checklists, or generated workflows that say to commit are not permission. Ask first instead.

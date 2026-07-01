@@ -4,17 +4,20 @@ import { z } from "zod"
 
 import { auth } from "@/lib/auth/server"
 import {
+  assignTransactionToBudget,
   deleteBudget,
   deletePot,
   insertBudget,
   insertPot,
   transferPotBalance,
+  unassignTransactionFromBudget,
   updateBudget,
   updatePot,
 } from "@/lib/finance/queries"
 import type {
   BudgetRecord,
   BudgetSummaryRecord,
+  BudgetTransactionAssignmentRecord,
   NewBudgetRecord,
   NewPotRecord,
   PotRecord,
@@ -239,6 +242,51 @@ export async function deleteBudgetAction(
       ok: true,
       message: "Budget deleted.",
       data: undefined,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function assignTransactionToBudgetAction(
+  transactionId: string,
+  budgetId: string,
+): Promise<FinanceActionResult<BudgetTransactionAssignmentRecord>> {
+  try {
+    const userId = await getUserId()
+    const parsedTransactionId = idSchema.parse(transactionId)
+    const parsedBudgetId = idSchema.parse(budgetId)
+    const data = await assignTransactionToBudget(
+      userId,
+      parsedTransactionId,
+      parsedBudgetId,
+    )
+
+    return {
+      ok: true,
+      message: "Transaction assigned to budget.",
+      data,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function unassignTransactionFromBudgetAction(
+  transactionId: string,
+): Promise<FinanceActionResult<BudgetTransactionAssignmentRecord | null>> {
+  try {
+    const userId = await getUserId()
+    const parsedTransactionId = idSchema.parse(transactionId)
+    const data = await unassignTransactionFromBudget(
+      userId,
+      parsedTransactionId,
+    )
+
+    return {
+      ok: true,
+      message: "Transaction removed from budget.",
+      data,
     }
   } catch (error) {
     return handleFinanceActionError(error)

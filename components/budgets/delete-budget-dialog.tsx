@@ -27,26 +27,15 @@ export function DeleteBudgetDialog({
   open,
   onOpenChange,
 }: DeleteBudgetDialogProps) {
-  const { state, actions } = useFinance()
+  const { actions } = useFinance()
   const [statusMessage, setStatusMessage] = useState("")
   const [isDeleting, setIsDeleting] = useState(false)
-  const currentBudget = state.budgets.find((budgetRecord) => {
-    const category = state.categories.find(
-      (option) => option.id === budgetRecord.category_id,
-    )
-
-    return category?.name === budget.category
-  })
 
   const handleConfirmDelete = async () => {
-    if (!currentBudget) {
-      return
-    }
-
     setIsDeleting(true)
     setStatusMessage("")
 
-    const result = await actions.deleteBudget(currentBudget.id)
+    const result = await actions.deleteBudget(budget.id)
 
     setIsDeleting(false)
 
@@ -77,7 +66,7 @@ export function DeleteBudgetDialog({
           <AlertDialogAction
             variant="destructive"
             size="finance-submit"
-            disabled={!currentBudget || isDeleting}
+            disabled={isDeleting}
             onClick={(event) => {
               event.preventDefault()
               void handleConfirmDelete()

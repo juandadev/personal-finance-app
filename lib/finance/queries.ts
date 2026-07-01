@@ -8,6 +8,7 @@ import type {
   AccountSummaryRecord,
   BudgetRecord,
   BudgetSummaryRecord,
+  BudgetTransactionAssignmentRecord,
   CategoryRecord,
   CounterpartyRecord,
   FinanceState,
@@ -16,8 +17,9 @@ import type {
   TransactionRecord,
   UserPreferencesRecord,
 } from "@/lib/finance/types"
+import { getCurrentPeriod } from "@/lib/finance/period"
 
-const profileColumns = ["user_id", "default_currency"]
+const profileColumns = ["user_id", "default_currency", "timezone"]
 const accountColumns = [
   "user_id",
   "id",
@@ -50,6 +52,13 @@ const budgetColumns = [
   "theme_color",
 ]
 const budgetSummaryColumns = ["user_id", "budget_id", "spent_cents"]
+const budgetAssignmentColumns = [
+  "user_id",
+  "id",
+  "budget_id",
+  "transaction_id",
+  "assigned_amount_cents",
+]
 const potColumns = [
   "user_id",
   "id",
@@ -91,6 +100,7 @@ export async function loadFinanceState(
 ): Promise<FinanceState> {
   return withFinanceTransaction(userId, async (client) => {
     await ensureUserProfile(client, userId, displayName)
+    const currentPeriod = getCurrentPeriod()
 
     const profile = await client.query<UserPreferencesRecord>(
       `SELECT ${profileColumns.join(", ")} FROM profiles WHERE user_id = $1`,
@@ -116,13 +126,27 @@ export async function loadFinanceState(
       [userId],
     )
     const budgets = await client.query<BudgetRecord>(
-      `SELECT ${budgetColumns.join(", ")} FROM budgets WHERE user_id = $1 ORDER BY period DESC, id`,
-      [userId],
+      `SELECT ${budgetColumns.join(", ")} FROM budgets WHERE user_id = $1 AND period = $2 ORDER BY id`,
+      [userId, currentPeriod],
     )
     const budgetSummaries = await client.query<BudgetSummaryRecord>(
       `SELECT ${budgetSummaryColumns.join(", ")} FROM budget_summaries WHERE user_id = $1 ORDER BY budget_id`,
       [userId],
     )
+    const budgetTransactionAssignments =
+      await client.query<BudgetTransactionAssignmentRecord>(
+        `
+          SELECT ${budgetAssignmentColumns.map((column) => `bta.${column}`).join(", ")}
+          FROM budget_transaction_assignments bta
+          JOIN budgets b
+            ON b.user_id = bta.user_id
+            AND b.id = bta.budget_id
+          WHERE bta.user_id = $1
+            AND b.period = $2
+          ORDER BY bta.created_at, bta.id
+        `,
+        [userId, currentPeriod],
+      )
     const pots = await client.query<PotRecord>(
       `SELECT ${potColumns.join(", ")} FROM pots WHERE user_id = $1 ORDER BY created_at, id`,
       [userId],
@@ -141,6 +165,7 @@ export async function loadFinanceState(
       transactions: transactions.rows,
       budgets: budgets.rows,
       budgetSummaries: budgetSummaries.rows,
+      budgetTransactionAssignments: budgetTransactionAssignments.rows,
       pots: pots.rows,
       recurringBills: recurringBills.rows,
     }
@@ -250,6 +275,80 @@ export async function deleteBudget(userId: string, id: string) {
     if (!result.rowCount) {
       throw new Error("Budget not found.")
     }
+  })
+}
+
+export async function assignTransactionToBudget(
+  userId: string,
+  transactionId: string,
+  budgetId: string,
+) {
+  return withFinanceTransaction(userId, async (client) => {
+    const currentPeriod = getCurrentPeriod()
+    const result = await client.query<BudgetTransactionAssignmentRecord>(
+      `
+        WITH eligible_assignment AS (
+          SELECT
+            t.user_id,
+            b.id AS budget_id,
+            t.id AS transaction_id,
+            abs(t.amount_cents) AS assigned_amount_cents
+          FROM transactions t
+          JOIN budgets b
+            ON b.user_id = t.user_id
+            AND b.id = $3
+            AND b.period = $4
+          WHERE t.user_id = $1
+            AND t.id = $2
+            AND t.amount_cents < 0
+            AND to_char(t.posted_at, 'YYYY-MM') = b.period
+        )
+        INSERT INTO budget_transaction_assignments (
+          user_id,
+          budget_id,
+          transaction_id,
+          assigned_amount_cents
+        )
+        SELECT
+          user_id,
+          budget_id,
+          transaction_id,
+          assigned_amount_cents
+        FROM eligible_assignment
+        ON CONFLICT (user_id, transaction_id)
+        DO UPDATE SET
+          budget_id = excluded.budget_id,
+          assigned_amount_cents = excluded.assigned_amount_cents
+        RETURNING user_id, id, budget_id, transaction_id, assigned_amount_cents
+      `,
+      [userId, transactionId, budgetId, currentPeriod],
+    )
+
+    if (!result.rowCount) {
+      throw new Error(
+        "Only current-month expense transactions can be assigned to budgets.",
+      )
+    }
+
+    return result.rows[0]
+  })
+}
+
+export async function unassignTransactionFromBudget(
+  userId: string,
+  transactionId: string,
+) {
+  return withFinanceTransaction(userId, async (client) => {
+    const result = await client.query<BudgetTransactionAssignmentRecord>(
+      `
+        DELETE FROM budget_transaction_assignments
+        WHERE user_id = $1 AND transaction_id = $2
+        RETURNING user_id, id, budget_id, transaction_id, assigned_amount_cents
+      `,
+      [userId, transactionId],
+    )
+
+    return result.rows[0] ?? null
   })
 }
 
