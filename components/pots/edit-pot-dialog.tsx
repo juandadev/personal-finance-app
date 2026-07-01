@@ -16,9 +16,11 @@ import { Label } from "@/components/ui/label"
 import { ThemeSelect } from "@/components/theme-select"
 import { AuthStatusMessage } from "@/components/auth/auth-page-shell"
 import { useFinance } from "@/hooks/use-finance"
+import { isFutureISODate } from "@/lib/finance/pot-due-date"
 import { formatDollarInput, parseDollarAmount } from "@/lib/finance/form-utils"
 import type { ThemeColor } from "@/lib/theme-colors"
 import type { Pot } from "@/lib/types"
+import { PotDueDatePicker } from "./pot-due-date-picker"
 
 const maxPotNameLength = 30
 
@@ -33,9 +35,11 @@ export function EditPotDialog({ pot, open, onOpenChange }: EditPotDialogProps) {
   const currentPot = state.pots.find((potRecord) => potRecord.id === pot.id)
   const [name, setName] = useState(pot.name)
   const [target, setTarget] = useState(formatDollarInput(pot.target))
+  const [dueDate, setDueDate] = useState<string | null>(pot.dueDate ?? null)
   const [themeColor, setThemeColor] = useState<ThemeColor>(pot.color)
   const [nameError, setNameError] = useState("")
   const [targetError, setTargetError] = useState("")
+  const [dueDateError, setDueDateError] = useState("")
   const [statusMessage, setStatusMessage] = useState("")
   const [isSaving, setIsSaving] = useState(false)
 
@@ -62,9 +66,11 @@ export function EditPotDialog({ pot, open, onOpenChange }: EditPotDialogProps) {
   const resetForm = () => {
     setName(pot.name)
     setTarget(formatDollarInput(pot.target))
+    setDueDate(pot.dueDate ?? null)
     setThemeColor(pot.color)
     setNameError("")
     setTargetError("")
+    setDueDateError("")
     setStatusMessage("")
   }
 
@@ -101,6 +107,11 @@ export function EditPotDialog({ pot, open, onOpenChange }: EditPotDialogProps) {
       hasError = true
     }
 
+    if (dueDate && !isFutureISODate(dueDate)) {
+      setDueDateError("Choose a future due date.")
+      hasError = true
+    }
+
     if (hasError || target_cents === null) {
       return
     }
@@ -111,6 +122,7 @@ export function EditPotDialog({ pot, open, onOpenChange }: EditPotDialogProps) {
       name: trimmedName,
       target_cents,
       theme_color: themeColor,
+      due_date: dueDate,
     })
 
     setIsSaving(false)
@@ -202,6 +214,33 @@ export function EditPotDialog({ pot, open, onOpenChange }: EditPotDialogProps) {
                 className="text-destructive text-xs"
               >
                 {targetError}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label
+              htmlFor="edit-pot-due-date"
+              className="text-muted-foreground text-xs font-bold"
+            >
+              Due Date
+            </Label>
+            <PotDueDatePicker
+              id="edit-pot-due-date"
+              value={dueDate}
+              onChange={(nextDate) => {
+                setDueDate(nextDate)
+                setDueDateError("")
+              }}
+              hasError={Boolean(dueDateError)}
+              describedBy={dueDateError ? "edit-pot-due-date-error" : undefined}
+            />
+            {dueDateError && (
+              <p
+                id="edit-pot-due-date-error"
+                className="text-destructive text-xs"
+              >
+                {dueDateError}
               </p>
             )}
           </div>

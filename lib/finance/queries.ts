@@ -66,6 +66,7 @@ const potColumns = [
   "balance_cents",
   "target_cents",
   "theme_color",
+  "due_date::text AS due_date",
 ]
 const recurringBillColumns = [
   "user_id",
@@ -356,9 +357,9 @@ export async function insertPot(userId: string, pot: PotRecord) {
   return withFinanceTransaction(userId, async (client) => {
     const result = await client.query<PotRecord>(
       `
-        INSERT INTO pots (user_id, id, name, balance_cents, target_cents, theme_color)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING user_id, id, name, balance_cents, target_cents, theme_color
+        INSERT INTO pots (user_id, id, name, balance_cents, target_cents, theme_color, due_date)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING user_id, id, name, balance_cents, target_cents, theme_color, due_date::text AS due_date
       `,
       [
         userId,
@@ -367,6 +368,7 @@ export async function insertPot(userId: string, pot: PotRecord) {
         pot.balance_cents,
         pot.target_cents,
         pot.theme_color,
+        pot.due_date,
       ],
     )
 
@@ -387,9 +389,10 @@ export async function updatePot(
           name = COALESCE($2, name),
           balance_cents = COALESCE($3, balance_cents),
           target_cents = COALESCE($4, target_cents),
-          theme_color = COALESCE($5, theme_color)
-        WHERE user_id = $1 AND id = $6
-        RETURNING user_id, id, name, balance_cents, target_cents, theme_color
+          theme_color = COALESCE($5, theme_color),
+          due_date = CASE WHEN $6::boolean THEN $7::date ELSE due_date END
+        WHERE user_id = $1 AND id = $8
+        RETURNING user_id, id, name, balance_cents, target_cents, theme_color, due_date::text AS due_date
       `,
       [
         userId,
@@ -397,6 +400,8 @@ export async function updatePot(
         updates.balance_cents ?? null,
         updates.target_cents ?? null,
         updates.theme_color ?? null,
+        updates.due_date !== undefined,
+        updates.due_date ?? null,
         id,
       ],
     )
@@ -427,7 +432,7 @@ export async function transferPotBalance(
         WHERE user_id = $1
           AND id = $4
           AND ($3::text = 'deposit' OR balance_cents >= $2)
-        RETURNING user_id, id, name, balance_cents, target_cents, theme_color
+        RETURNING user_id, id, name, balance_cents, target_cents, theme_color, due_date::text AS due_date
       `,
       [userId, amountCents, mode, id],
     )

@@ -112,7 +112,7 @@ function CurrencyInput({
 
     pendingSelectionIndexRef.current = null
 
-    if (input !== document.activeElement) {
+    if (!input || input !== document.activeElement) {
       return
     }
 

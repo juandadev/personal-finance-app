@@ -170,6 +170,7 @@ CREATE TABLE IF NOT EXISTS pots (
   balance_cents integer NOT NULL DEFAULT 0,
   target_cents integer NOT NULL,
   theme_color text NOT NULL,
+  due_date date,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (user_id, id),

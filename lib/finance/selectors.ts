@@ -219,6 +219,7 @@ export function selectFinanceViewModel(state: FinanceState): FinanceViewModel {
     amount: centsToDollars(pot.balance_cents),
     target: centsToDollars(pot.target_cents),
     color: pot.theme_color,
+    dueDate: pot.due_date ?? undefined,
   }))
   const budgets = selectBudgets(
     state.budgets,

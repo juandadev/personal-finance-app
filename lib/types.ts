@@ -24,6 +24,7 @@ export interface Pot {
   amount: number
   target: number
   color: ThemeColor
+  dueDate?: string
 }
 
 export interface Budget {

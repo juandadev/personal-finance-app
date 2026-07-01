@@ -125,6 +125,7 @@ export interface PotRecord {
   balance_cents: number
   target_cents: number
   theme_color: ThemeColor
+  due_date: string | null
 }
 
 export interface RecurringBillRecord {

@@ -17,8 +17,10 @@ import { Label } from "@/components/ui/label"
 import { ThemeSelect } from "@/components/theme-select"
 import { AuthStatusMessage } from "@/components/auth/auth-page-shell"
 import { useFinance } from "@/hooks/use-finance"
+import { isFutureISODate } from "@/lib/finance/pot-due-date"
 import { parseDollarAmount, themeOptions } from "@/lib/finance/form-utils"
 import type { ThemeColor } from "@/lib/theme-colors"
+import { PotDueDatePicker } from "./pot-due-date-picker"
 
 const maxPotNameLength = 30
 
@@ -27,11 +29,13 @@ export function AddPotDialog() {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState("")
   const [target, setTarget] = useState("")
+  const [dueDate, setDueDate] = useState<string | null>(null)
   const [themeColor, setThemeColor] = useState<ThemeColor>(
     themeOptions[0].value,
   )
   const [nameError, setNameError] = useState("")
   const [targetError, setTargetError] = useState("")
+  const [dueDateError, setDueDateError] = useState("")
   const [statusMessage, setStatusMessage] = useState("")
   const [isSaving, setIsSaving] = useState(false)
 
@@ -48,9 +52,11 @@ export function AddPotDialog() {
   const resetForm = () => {
     setName("")
     setTarget("")
+    setDueDate(null)
     setThemeColor(themeOptions[0].value)
     setNameError("")
     setTargetError("")
+    setDueDateError("")
     setStatusMessage("")
   }
 
@@ -83,6 +89,11 @@ export function AddPotDialog() {
       hasError = true
     }
 
+    if (dueDate && !isFutureISODate(dueDate)) {
+      setDueDateError("Choose a future due date.")
+      hasError = true
+    }
+
     if (hasError || target_cents === null) {
       return
     }
@@ -95,6 +106,7 @@ export function AddPotDialog() {
       balance_cents: 0,
       target_cents,
       theme_color: themeColor,
+      due_date: dueDate,
     })
 
     setIsSaving(false)
@@ -185,6 +197,30 @@ export function AddPotDialog() {
             {targetError && (
               <p id="pot-target-error" className="text-destructive text-xs">
                 {targetError}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label
+              htmlFor="pot-due-date"
+              className="text-muted-foreground text-xs font-bold"
+            >
+              Due Date
+            </Label>
+            <PotDueDatePicker
+              id="pot-due-date"
+              value={dueDate}
+              onChange={(nextDate) => {
+                setDueDate(nextDate)
+                setDueDateError("")
+              }}
+              hasError={Boolean(dueDateError)}
+              describedBy={dueDateError ? "pot-due-date-error" : undefined}
+            />
+            {dueDateError && (
+              <p id="pot-due-date-error" className="text-destructive text-xs">
+                {dueDateError}
               </p>
             )}
           </div>

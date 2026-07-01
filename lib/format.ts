@@ -27,6 +27,18 @@ export function formatCurrency(
   }).format(value)
 }
 
+export function formatCompactCurrency(
+  value: number,
+  options?: Omit<CurrencyFormatOptions, "forceDecimals">,
+): string {
+  return new Intl.NumberFormat(options?.locale ?? "en-US", {
+    style: "currency",
+    currency: options?.currency ?? "USD",
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(value)
+}
+
 /**
  * Format a signed transaction amount with explicit sign and two decimals.
  * e.g. +$75.50 / -$42.30

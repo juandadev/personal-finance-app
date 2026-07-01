@@ -26,6 +26,12 @@ const pool = new Pool({ connectionString, max: 1 })
 
 type SeedRow = Record<string, string | number | null>
 
+const potsSeedRows: SeedRow[] = potsSeed.map((pot) => ({
+  ...pot,
+  due_date:
+    "due_date" in pot && typeof pot.due_date === "string" ? pot.due_date : null,
+}))
+
 async function insertRows(
   client: PoolClient,
   table: string,
@@ -165,10 +171,18 @@ async function seedDemoData(client: PoolClient) {
   await insertRows(
     client,
     "pots",
-    ["user_id", "id", "name", "balance_cents", "target_cents", "theme_color"],
-    potsSeed,
+    [
+      "user_id",
+      "id",
+      "name",
+      "balance_cents",
+      "target_cents",
+      "theme_color",
+      "due_date",
+    ],
+    potsSeedRows,
     "(user_id, id)",
-    ["name", "balance_cents", "target_cents", "theme_color"],
+    ["name", "balance_cents", "target_cents", "theme_color", "due_date"],
   )
 
   await insertRows(

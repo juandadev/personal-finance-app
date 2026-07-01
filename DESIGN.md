@@ -296,6 +296,8 @@ Lucide icons, and `cn()` for class merging.
   surrounding surface
 - Low-emphasis action: `variant="ghost"` or muted link styling
 - Destructive action: `variant="destructive"` or destructive text in a menu
+- Input-like trigger: `variant="input"` for picker buttons that should match
+  regular form inputs, such as date picker triggers.
 - Icon-only action: `size-9` to `size-11`, rounded full, with a visible focus
   ring and an accessible name
 

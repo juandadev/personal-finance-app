@@ -9,6 +9,12 @@ import recurringBillsSeed from "@/data/recurring-bills.json"
 import transactionsSeed from "@/data/transactions.json"
 import type { FinanceState } from "./types"
 
+const potsSeedRows = potsSeed.map((pot) => ({
+  ...pot,
+  due_date:
+    "due_date" in pot && typeof pot.due_date === "string" ? pot.due_date : null,
+}))
+
 export const financeSeed: FinanceState = {
   preferences: {
     user_id: accountsSeed[0]?.user_id ?? "demo-user",
@@ -23,7 +29,7 @@ export const financeSeed: FinanceState = {
   budgets: budgetsSeed,
   budgetSummaries: budgetSummariesSeed,
   budgetTransactionAssignments: [],
-  pots: potsSeed,
+  pots: potsSeedRows,
   recurringBills: recurringBillsSeed,
 } as FinanceState
 

@@ -166,6 +166,7 @@ export function FinanceProvider({
                   balance_cents: result.data.balance_cents,
                   target_cents: result.data.target_cents,
                   theme_color: result.data.theme_color,
+                  due_date: result.data.due_date,
                 },
               })
             }
@@ -195,6 +196,7 @@ export function FinanceProvider({
                   balance_cents: result.data.balance_cents,
                   target_cents: result.data.target_cents,
                   theme_color: result.data.theme_color,
+                  due_date: result.data.due_date,
                 },
               })
             }
@@ -214,6 +216,7 @@ export function FinanceProvider({
                   balance_cents: result.data.balance_cents,
                   target_cents: result.data.target_cents,
                   theme_color: result.data.theme_color,
+                  due_date: result.data.due_date,
                 },
               })
             }

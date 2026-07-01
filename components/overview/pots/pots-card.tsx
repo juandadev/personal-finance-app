@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card"
 import { useFinance } from "@/hooks/use-finance"
 import { formatCurrency } from "@/lib/format"
+import { PotMoneyReveal } from "./pot-money-reveal"
 import { PotItem } from "./pot-item"
 import PotIcon from "@/components/icons/PotIcon"
 
@@ -38,7 +39,10 @@ export function PotsCard() {
             <div>
               <p className="text-muted-foreground text-sm">Total Saved</p>
               <p className="mt-1 text-3xl font-bold tracking-tight">
-                {formatCurrency(totalSaved)}
+                <PotMoneyReveal
+                  amount={totalSaved}
+                  expandedClassName="bg-background"
+                />
               </p>
             </div>
           </div>

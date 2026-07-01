@@ -14,6 +14,7 @@ import {
   updateBudget,
   updatePot,
 } from "@/lib/finance/queries"
+import { isFutureISODate } from "@/lib/finance/pot-due-date"
 import type {
   BudgetRecord,
   BudgetSummaryRecord,
@@ -63,6 +64,12 @@ const budgetUpdateSchema = z.object({
   theme_color: themeColorSchema.optional(),
 })
 
+const potDueDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid due date.")
+  .refine((value) => isFutureISODate(value), "Choose a future due date.")
+  .nullable()
+
 const potSchema = z.object({
   id: recordIdSchema,
   user_id: z.string().min(1),
@@ -70,6 +77,7 @@ const potSchema = z.object({
   balance_cents: z.number().int().min(0),
   target_cents: z.number().int().positive(),
   theme_color: themeColorSchema,
+  due_date: potDueDateSchema,
 })
 
 const potUpdateSchema = z.object({
@@ -77,6 +85,7 @@ const potUpdateSchema = z.object({
   balance_cents: z.number().int().min(0).optional(),
   target_cents: z.number().int().positive().optional(),
   theme_color: themeColorSchema.optional(),
+  due_date: potDueDateSchema.optional(),
 })
 
 const idSchema = recordIdSchema
