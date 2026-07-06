@@ -78,9 +78,6 @@ function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
   const [amount, setAmount] = useState(
     transaction ? formatDollarInput(Math.abs(transaction.amount)) : "",
   )
-  const [accountId, setAccountId] = useState(
-    transaction?.accountId ?? state.accounts[0]?.id ?? "",
-  )
   const [postedAt, setPostedAt] = useState(
     transaction?.postedAt ?? todayIsoDate(),
   )
@@ -133,7 +130,6 @@ function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
   const resetForm = () => {
     setTransactionType("expense")
     setAmount("")
-    setAccountId(state.accounts[0]?.id ?? "")
     setPostedAt(todayIsoDate())
     setConcept("")
     setCategoryId(state.categories[0]?.id ?? "")
@@ -255,8 +251,17 @@ function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
       return
     }
 
-    if (!accountId || !categoryId || !counterpartyId) {
-      setStatusMessage("Choose an account, category, and contact.")
+    const accountId = transaction?.accountId ?? state.accounts[0]?.id ?? ""
+
+    if (!accountId) {
+      setStatusMessage(
+        "Your main account is not ready yet. Refresh and try again.",
+      )
+      return
+    }
+
+    if (!categoryId || !counterpartyId) {
+      setStatusMessage("Choose a category and contact.")
       return
     }
 
@@ -344,32 +349,19 @@ function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <FormSelect
-              id="transaction-account"
-              label="Account"
-              value={accountId}
-              onValueChange={setAccountId}
-              options={state.accounts.map((account) => ({
-                value: account.id,
-                label: account.name,
-              }))}
-              placeholder="Select an account"
+          <div className="space-y-2">
+            <Label
+              htmlFor="transaction-date"
+              className="text-muted-foreground text-xs font-bold"
+            >
+              Date
+            </Label>
+            <Input
+              id="transaction-date"
+              type="date"
+              value={postedAt}
+              onChange={(event) => setPostedAt(event.target.value)}
             />
-            <div className="space-y-2">
-              <Label
-                htmlFor="transaction-date"
-                className="text-muted-foreground text-xs font-bold"
-              >
-                Date
-              </Label>
-              <Input
-                id="transaction-date"
-                type="date"
-                value={postedAt}
-                onChange={(event) => setPostedAt(event.target.value)}
-              />
-            </div>
           </div>
 
           <div className="space-y-2">
