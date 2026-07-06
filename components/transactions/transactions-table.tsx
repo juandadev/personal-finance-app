@@ -1,9 +1,10 @@
 "use client"
 
-import Image from "next/image"
 import { useState } from "react"
 
 import { AuthStatusMessage } from "@/components/auth/auth-page-shell"
+import { ContactAvatar } from "@/components/contact-avatar"
+import { EditTransactionDialog } from "@/components/transactions/transaction-dialog"
 import {
   Select,
   SelectContent,
@@ -78,10 +79,12 @@ export function TransactionsTable({ transactions }: TransactionsTableProps) {
           <TableHeader>
             <TableRow>
               <TableHead>Recipient / Sender</TableHead>
+              <TableHead>Concept</TableHead>
               <TableHead>Category</TableHead>
               <TableHead>Budget</TableHead>
               <TableHead>Transaction Date</TableHead>
               <TableHead className="text-right">Amount</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -120,16 +123,18 @@ function MobileTransactionItem({
     <li className="flex flex-col gap-3 py-3">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Image
-            src={transaction.avatarUrl}
-            alt=""
-            width={40}
-            height={40}
-            className="size-10 rounded-full object-cover"
+          <ContactAvatar
+            name={transaction.name}
+            initials={transaction.contactInitials}
+            color={transaction.contactColor}
+            avatarUrl={transaction.avatarUrl}
           />
           <div className="flex flex-col">
             <span className="text-foreground text-sm font-bold">
               {transaction.name}
+            </span>
+            <span className="text-muted-foreground text-xs">
+              {transaction.concept}
             </span>
             <span className="text-muted-foreground text-xs">
               {transaction.category}
@@ -160,6 +165,9 @@ function MobileTransactionItem({
           compact
         />
       </div>
+      <div className="flex justify-end">
+        <EditTransactionDialog transaction={transaction} />
+      </div>
     </li>
   )
 }
@@ -176,15 +184,17 @@ function TransactionRow({
     <TableRow>
       <TableCell>
         <div className="flex items-center gap-3">
-          <Image
-            src={transaction.avatarUrl}
-            alt=""
-            width={40}
-            height={40}
-            className="size-10 rounded-full object-cover"
+          <ContactAvatar
+            name={transaction.name}
+            initials={transaction.contactInitials}
+            color={transaction.contactColor}
+            avatarUrl={transaction.avatarUrl}
           />
           <span className="text-foreground font-bold">{transaction.name}</span>
         </div>
+      </TableCell>
+      <TableCell className="text-muted-foreground max-w-44">
+        {transaction.concept}
       </TableCell>
       <TableCell className="text-muted-foreground">
         {transaction.category}
@@ -208,6 +218,9 @@ function TransactionRow({
       >
         {formatSignedAmount(transaction.amount)}
       </TableCell>
+      <TableCell className="text-right">
+        <EditTransactionDialog transaction={transaction} />
+      </TableCell>
     </TableRow>
   )
 }
@@ -228,14 +241,17 @@ function BudgetAssignmentSelect({
   onBudgetChange,
 }: BudgetAssignmentSelectProps) {
   const isExpense = transaction.amount < 0
+  const matchingBudgets = budgets.filter(
+    (budget) => budget.categoryId === transaction.categoryId,
+  )
 
   if (!isExpense) {
     return <span className="text-muted-foreground text-xs">Not available</span>
   }
 
-  if (budgets.length === 0) {
+  if (matchingBudgets.length === 0) {
     return (
-      <span className="text-muted-foreground text-xs">No active budgets</span>
+      <span className="text-muted-foreground text-xs">No matching budget</span>
     )
   }
 
@@ -253,7 +269,7 @@ function BudgetAssignmentSelect({
       </SelectTrigger>
       <SelectContent align="end">
         <SelectItem value={UNASSIGNED_BUDGET_VALUE}>Unassigned</SelectItem>
-        {budgets.map((budget) => (
+        {matchingBudgets.map((budget) => (
           <SelectItem key={budget.id} value={budget.id}>
             {budget.category}
           </SelectItem>

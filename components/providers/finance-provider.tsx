@@ -11,13 +11,22 @@ import {
 import {
   assignTransactionToBudgetAction,
   createBudgetAction,
+  createCategoryAction,
+  createCounterpartyAction,
   createPotAction,
+  createTransactionAction,
   deleteBudgetAction,
+  deleteCategoryAction,
+  deleteCounterpartyAction,
   deletePotAction,
+  deleteTransactionAction,
   transferPotAction,
   unassignTransactionFromBudgetAction,
   updateBudgetAction,
+  updateCategoryAction,
+  updateCounterpartyAction,
   updatePotAction,
+  updateTransactionAction,
 } from "@/lib/finance/actions"
 import { createInitialFinanceState } from "@/lib/finance/seed"
 import { selectFinanceViewModel } from "@/lib/finance/selectors"
@@ -26,10 +35,12 @@ import type {
   FinanceState,
   FinanceViewModel,
   NewBudgetRecord,
+  NewCategoryRecord,
+  NewCounterpartyRecord,
   NewPotRecord,
+  NewTransactionRecord,
   PotRecord,
   RecurringBillRecord,
-  TransactionRecord,
 } from "@/lib/finance/types"
 import { SidebarProvider } from "@/components/ui/sidebar"
 
@@ -57,14 +68,124 @@ export function FinanceProvider({
 
   const actions = useMemo<FinanceActions>(
     () => ({
-      addTransaction: (transaction: TransactionRecord) =>
-        dispatch({ type: "transaction/add", transaction }),
+      addTransaction: (
+        transaction: NewTransactionRecord,
+        budgetId: string | null,
+      ) =>
+        runFinanceAction(() =>
+          createTransactionAction(transaction, budgetId).then((result) => {
+            if (result.ok) {
+              dispatch({ type: "transaction/save", payload: result.data })
+            }
+
+            return result
+          }),
+        ),
       updateTransaction: (
         id: string,
-        updates: Partial<Omit<TransactionRecord, "id">>,
-      ) => dispatch({ type: "transaction/update", id, updates }),
+        updates: Omit<NewTransactionRecord, "id">,
+        budgetId: string | null,
+      ) =>
+        runFinanceAction(() =>
+          updateTransactionAction(id, updates, budgetId).then((result) => {
+            if (result.ok) {
+              dispatch({ type: "transaction/save", payload: result.data })
+            }
+
+            return result
+          }),
+        ),
       deleteTransaction: (id: string) =>
-        dispatch({ type: "transaction/delete", id }),
+        runFinanceAction(() =>
+          deleteTransactionAction(id).then((result) => {
+            if (result.ok) {
+              dispatch({
+                type: "transaction/delete",
+                id,
+                accounts: result.data.accounts,
+                accountSummaries: result.data.accountSummaries,
+              })
+            }
+
+            return result
+          }),
+        ),
+      addCategory: (
+        category: Pick<NewCategoryRecord, "id" | "name" | "theme_color">,
+      ) =>
+        runFinanceAction(() =>
+          createCategoryAction(category).then((result) => {
+            if (result.ok) {
+              dispatch({ type: "category/add", category: result.data })
+            }
+
+            return result
+          }),
+        ),
+      updateCategory: (
+        id: string,
+        updates: Partial<Pick<NewCategoryRecord, "name" | "theme_color">>,
+      ) =>
+        runFinanceAction(() =>
+          updateCategoryAction(id, updates).then((result) => {
+            if (result.ok) {
+              dispatch({ type: "category/update", category: result.data })
+            }
+
+            return result
+          }),
+        ),
+      deleteCategory: (id: string) =>
+        runFinanceAction(() =>
+          deleteCategoryAction(id).then((result) => {
+            if (result.ok) {
+              dispatch({ type: "category/delete", id })
+            }
+
+            return result
+          }),
+        ),
+      addCounterparty: (
+        counterparty: Omit<NewCounterpartyRecord, "avatar_url">,
+      ) =>
+        runFinanceAction(() =>
+          createCounterpartyAction(counterparty).then((result) => {
+            if (result.ok) {
+              dispatch({
+                type: "counterparty/add",
+                counterparty: result.data,
+              })
+            }
+
+            return result
+          }),
+        ),
+      updateCounterparty: (
+        id: string,
+        updates: Partial<Omit<NewCounterpartyRecord, "id" | "avatar_url">>,
+      ) =>
+        runFinanceAction(() =>
+          updateCounterpartyAction(id, updates).then((result) => {
+            if (result.ok) {
+              dispatch({
+                type: "counterparty/update",
+                counterparty: result.data,
+              })
+            }
+
+            return result
+          }),
+        ),
+      deleteCounterparty: (id: string) =>
+        runFinanceAction(() =>
+          deleteCounterpartyAction(id).then((result) => {
+            if (result.ok) {
+              dispatch({ type: "counterparty/delete", id })
+            }
+
+            return result
+          }),
+        ),
       addBudget: (budget: NewBudgetRecord, spent_cents?: number) =>
         runFinanceAction(() =>
           createBudgetAction(budget, spent_cents ?? 0).then((result) => {

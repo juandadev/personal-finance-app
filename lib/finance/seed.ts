@@ -9,6 +9,52 @@ import recurringBillsSeed from "@/data/recurring-bills.json"
 import transactionsSeed from "@/data/transactions.json"
 import type { FinanceState } from "./types"
 
+const demoUserId = accountsSeed[0]?.user_id ?? "demo-user"
+const categoryThemeColors = [
+  "chart-1",
+  "chart-2",
+  "chart-3",
+  "chart-4",
+  "chart-5",
+  "finance-purple",
+  "finance-turquoise",
+  "finance-brown",
+  "finance-magenta",
+  "finance-blue",
+  "finance-grey",
+] as const
+const categoriesById = new Map(
+  categoriesSeed.map((category) => [category.id, category]),
+)
+const counterpartiesById = new Map(
+  counterpartiesSeed.map((counterparty) => [counterparty.id, counterparty]),
+)
+const categoriesSeedRows = categoriesSeed.map((category, index) => ({
+  ...category,
+  user_id: demoUserId,
+  theme_color: categoryThemeColors[index % categoryThemeColors.length],
+}))
+const counterpartiesSeedRows = counterpartiesSeed.map(
+  (counterparty, index) => ({
+    ...counterparty,
+    avatar_url: counterparty.avatar_url ?? null,
+    theme_color: categoryThemeColors[index % categoryThemeColors.length],
+    notes: null,
+  }),
+)
+const transactionsSeedRows = transactionsSeed.map((transaction) => {
+  const category = categoriesById.get(transaction.category_id)
+  const counterparty = counterpartiesById.get(transaction.counterparty_id)
+
+  return {
+    ...transaction,
+    concept:
+      transaction.description ??
+      category?.name ??
+      counterparty?.display_name ??
+      "Manual transaction",
+  }
+})
 const potsSeedRows = potsSeed.map((pot) => ({
   ...pot,
   due_date:
@@ -17,15 +63,15 @@ const potsSeedRows = potsSeed.map((pot) => ({
 
 export const financeSeed: FinanceState = {
   preferences: {
-    user_id: accountsSeed[0]?.user_id ?? "demo-user",
+    user_id: demoUserId,
     default_currency: "USD",
     timezone: "America/Mexico_City",
   },
   accounts: accountsSeed,
   accountSummaries: accountSummariesSeed,
-  categories: categoriesSeed,
-  counterparties: counterpartiesSeed,
-  transactions: transactionsSeed,
+  categories: categoriesSeedRows,
+  counterparties: counterpartiesSeedRows,
+  transactions: transactionsSeedRows,
   budgets: budgetsSeed,
   budgetSummaries: budgetSummariesSeed,
   budgetTransactionAssignments: [],

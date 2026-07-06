@@ -1,22 +1,48 @@
 import type {
+  AccountRecord,
+  AccountSummaryRecord,
   BudgetRecord,
   BudgetTransactionAssignmentRecord,
+  CategoryRecord,
+  CounterpartyRecord,
   FinanceState,
   NewBudgetRecord,
+  NewCategoryRecord,
+  NewCounterpartyRecord,
   NewPotRecord,
+  NewTransactionRecord,
   PotRecord,
   RecurringBillRecord,
   TransactionRecord,
 } from "./types"
 
+interface TransactionMutationPayload {
+  transaction: TransactionRecord
+  accounts: AccountRecord[]
+  accountSummaries: AccountSummaryRecord[]
+  budgetAssignment: BudgetTransactionAssignmentRecord | null
+}
+
 export type FinanceAction =
   | { type: "transaction/add"; transaction: TransactionRecord }
+  | { type: "transaction/save"; payload: TransactionMutationPayload }
   | {
       type: "transaction/update"
       id: string
       updates: Partial<Omit<TransactionRecord, "id" | "user_id">>
     }
-  | { type: "transaction/delete"; id: string }
+  | {
+      type: "transaction/delete"
+      id: string
+      accounts?: AccountRecord[]
+      accountSummaries?: AccountSummaryRecord[]
+    }
+  | { type: "category/add"; category: CategoryRecord }
+  | { type: "category/update"; category: CategoryRecord }
+  | { type: "category/delete"; id: string }
+  | { type: "counterparty/add"; counterparty: CounterpartyRecord }
+  | { type: "counterparty/update"; counterparty: CounterpartyRecord }
+  | { type: "counterparty/delete"; id: string }
   | { type: "budget/add"; budget: BudgetRecord; spent_cents?: number }
   | {
       type: "budget/update"
@@ -48,12 +74,32 @@ export type FinanceAction =
   | { type: "recurring-bill/delete"; id: string }
 
 export interface FinanceActions {
-  addTransaction: (transaction: TransactionRecord) => void
+  addTransaction: (
+    transaction: NewTransactionRecord,
+    budgetId: string | null,
+  ) => Promise<FinanceMutationResult>
   updateTransaction: (
     id: string,
-    updates: Partial<Omit<TransactionRecord, "id" | "user_id">>,
-  ) => void
-  deleteTransaction: (id: string) => void
+    updates: Omit<NewTransactionRecord, "id">,
+    budgetId: string | null,
+  ) => Promise<FinanceMutationResult>
+  deleteTransaction: (id: string) => Promise<FinanceMutationResult>
+  addCategory: (
+    category: Pick<NewCategoryRecord, "id" | "name" | "theme_color">,
+  ) => Promise<FinanceMutationResult>
+  updateCategory: (
+    id: string,
+    updates: Partial<Pick<CategoryRecord, "name" | "theme_color">>,
+  ) => Promise<FinanceMutationResult>
+  deleteCategory: (id: string) => Promise<FinanceMutationResult>
+  addCounterparty: (
+    counterparty: Omit<NewCounterpartyRecord, "avatar_url">,
+  ) => Promise<FinanceMutationResult>
+  updateCounterparty: (
+    id: string,
+    updates: Partial<Omit<CounterpartyRecord, "id" | "user_id" | "avatar_url">>,
+  ) => Promise<FinanceMutationResult>
+  deleteCounterparty: (id: string) => Promise<FinanceMutationResult>
   addBudget: (
     budget: NewBudgetRecord,
     spent_cents?: number,
@@ -108,9 +154,11 @@ export type FinanceMutationResult =
  * callers always get a normal `{ ok: false }` result to show inline, instead
  * of an uncaught exception that crashes the UI with no feedback.
  */
-export async function runFinanceAction<T extends FinanceMutationResult>(
+export async function runFinanceAction<
+  T extends { ok: boolean; message: string },
+>(
   action: () => Promise<T>,
-): Promise<T | FinanceMutationResult> {
+): Promise<T | Extract<FinanceMutationResult, { ok: false }>> {
   try {
     return await action()
   } catch (error) {
@@ -138,6 +186,28 @@ function removeById<T extends { id: string }>(records: T[], id: string): T[] {
   return records.filter((record) => record.id !== id)
 }
 
+function upsertById<T extends { id: string }>(
+  records: T[],
+  nextRecord: T,
+): T[] {
+  const hasRecord = records.some((record) => record.id === nextRecord.id)
+
+  if (!hasRecord) {
+    return [...records, nextRecord]
+  }
+
+  return records.map((record) =>
+    record.id === nextRecord.id ? nextRecord : record,
+  )
+}
+
+function upsertManyById<T extends { id: string }>(
+  records: T[],
+  nextRecords: T[],
+): T[] {
+  return nextRecords.reduce(upsertById, records)
+}
+
 function upsertBudgetSummary(
   summaries: FinanceState["budgetSummaries"],
   budget_id: string,
@@ -154,6 +224,17 @@ function upsertBudgetSummary(
 
   return summaries.map((summary) =>
     summary.budget_id === budget_id ? { ...summary, spent_cents } : summary,
+  )
+}
+
+function upsertAccountSummaries(
+  summaries: FinanceState["accountSummaries"],
+  nextSummaries: AccountSummaryRecord[],
+): FinanceState["accountSummaries"] {
+  return nextSummaries.reduce(
+    (currentSummaries, nextSummary) =>
+      upsertById(currentSummaries, nextSummary),
+    summaries,
   )
 }
 
@@ -186,6 +267,28 @@ export function financeReducer(
         ...state,
         transactions: [...state.transactions, action.transaction],
       }
+    case "transaction/save":
+      return {
+        ...state,
+        transactions: upsertById(
+          state.transactions,
+          action.payload.transaction,
+        ).sort((a, b) => b.posted_at.localeCompare(a.posted_at)),
+        accounts: upsertManyById(state.accounts, action.payload.accounts),
+        accountSummaries: upsertAccountSummaries(
+          state.accountSummaries,
+          action.payload.accountSummaries,
+        ),
+        budgetTransactionAssignments: action.payload.budgetAssignment
+          ? upsertBudgetAssignment(
+              state.budgetTransactionAssignments,
+              action.payload.budgetAssignment,
+            )
+          : state.budgetTransactionAssignments.filter(
+              (assignment) =>
+                assignment.transaction_id !== action.payload.transaction.id,
+            ),
+      }
     case "transaction/update":
       return {
         ...state,
@@ -195,6 +298,54 @@ export function financeReducer(
       return {
         ...state,
         transactions: removeById(state.transactions, action.id),
+        accounts: action.accounts
+          ? upsertManyById(state.accounts, action.accounts)
+          : state.accounts,
+        accountSummaries: action.accountSummaries
+          ? upsertAccountSummaries(
+              state.accountSummaries,
+              action.accountSummaries,
+            )
+          : state.accountSummaries,
+        budgetTransactionAssignments: state.budgetTransactionAssignments.filter(
+          (assignment) => assignment.transaction_id !== action.id,
+        ),
+      }
+    case "category/add":
+      return {
+        ...state,
+        categories: [...state.categories, action.category].sort((a, b) =>
+          a.name.localeCompare(b.name),
+        ),
+      }
+    case "category/update":
+      return {
+        ...state,
+        categories: upsertById(state.categories, action.category).sort((a, b) =>
+          a.name.localeCompare(b.name),
+        ),
+      }
+    case "category/delete":
+      return { ...state, categories: removeById(state.categories, action.id) }
+    case "counterparty/add":
+      return {
+        ...state,
+        counterparties: [...state.counterparties, action.counterparty].sort(
+          (a, b) => a.display_name.localeCompare(b.display_name),
+        ),
+      }
+    case "counterparty/update":
+      return {
+        ...state,
+        counterparties: upsertById(
+          state.counterparties,
+          action.counterparty,
+        ).sort((a, b) => a.display_name.localeCompare(b.display_name)),
+      }
+    case "counterparty/delete":
+      return {
+        ...state,
+        counterparties: removeById(state.counterparties, action.id),
       }
     case "budget/add":
       return {

@@ -6,6 +6,10 @@ interface BottomNavProps {
   navItems: NavItem[]
 }
 
+function isActiveNavItem(activeKey: string, href: string) {
+  return href === "/" ? activeKey === href : activeKey.startsWith(href)
+}
+
 export function BottomNav({ activeKey, navItems }: BottomNavProps) {
   return (
     <nav
@@ -15,7 +19,10 @@ export function BottomNav({ activeKey, navItems }: BottomNavProps) {
       <ul className="flex flex-1 items-center justify-around">
         {navItems.map((item) => (
           <li key={item.key} className="relative isolate">
-            <BottomNavItem item={item} active={activeKey === item.href} />
+            <BottomNavItem
+              item={item}
+              active={isActiveNavItem(activeKey, item.href)}
+            />
           </li>
         ))}
       </ul>

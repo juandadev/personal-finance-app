@@ -31,31 +31,29 @@ export interface Budget {
   id: string
   period: string
   category: TransactionCategory
+  categoryId: string
   maximum: number
   spent: number
   color: ThemeColor
 }
 
-export type TransactionCategory =
-  | "General"
-  | "Dining Out"
-  | "Groceries"
-  | "Entertainment"
-  | "Transportation"
-  | "Shopping"
-  | "Bills"
-  | "Personal Care"
-  | "Emergency Fund"
-  | "Education"
-  | "Lifestyle"
+export type TransactionCategory = string
 
 export interface Transaction {
   id: string
   name: string
   avatarUrl: string
+  contactColor: ThemeColor
+  contactInitials: string
   amount: number
+  accountId: string
+  counterpartyId: string
+  categoryId: string
+  concept: string
   date: string
+  postedAt: string
   category: TransactionCategory
+  description?: string
   budgetId?: string
   budgetCategory?: TransactionCategory
 }

@@ -43,16 +43,20 @@ export interface AccountSummaryRecord {
 
 export interface CategoryRecord {
   id: FinanceRecordId
+  user_id: FinanceUserId
   name: TransactionCategory
   slug: string
+  theme_color: ThemeColor
 }
 
 export interface CounterpartyRecord {
   id: FinanceRecordId
   user_id: FinanceUserId
   display_name: string
-  avatar_url: string
+  avatar_url: string | null
   type: CounterpartyType
+  theme_color: ThemeColor
+  notes: string | null
 }
 
 export interface TransactionRecord {
@@ -61,6 +65,7 @@ export interface TransactionRecord {
   account_id: FinanceRecordId
   counterparty_id: FinanceRecordId
   category_id: FinanceRecordId
+  concept: string
   amount_cents: number
   posted_at: string
   description: string | null
@@ -141,6 +146,9 @@ export interface RecurringBillRecord {
 
 export type NewBudgetRecord = Omit<BudgetRecord, "user_id">
 export type NewPotRecord = Omit<PotRecord, "user_id">
+export type NewCategoryRecord = Omit<CategoryRecord, "user_id">
+export type NewCounterpartyRecord = Omit<CounterpartyRecord, "user_id">
+export type NewTransactionRecord = Omit<TransactionRecord, "user_id">
 
 export interface FinanceState {
   preferences: UserPreferencesRecord

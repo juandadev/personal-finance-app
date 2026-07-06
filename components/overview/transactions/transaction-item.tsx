@@ -1,4 +1,4 @@
-import Image from "next/image"
+import { ContactAvatar } from "@/components/contact-avatar"
 import { cn } from "@/lib/utils"
 import { formatSignedAmount } from "@/lib/format"
 import type { Transaction } from "@/lib/types"
@@ -12,15 +12,12 @@ export function TransactionItem({ transaction }: TransactionItemProps) {
 
   return (
     <li className="flex items-center gap-4 py-5 first:pt-0 last:pb-0">
-      <div className="bg-muted relative size-10 shrink-0 overflow-hidden rounded-full">
-        <Image
-          src={transaction.avatarUrl || "/placeholder.svg"}
-          alt=""
-          fill
-          sizes="40px"
-          className="object-cover"
-        />
-      </div>
+      <ContactAvatar
+        name={transaction.name}
+        initials={transaction.contactInitials}
+        color={transaction.contactColor}
+        avatarUrl={transaction.avatarUrl}
+      />
       <p className="text-foreground flex-1 truncate text-sm font-bold">
         {transaction.name}
       </p>

@@ -26,6 +26,51 @@ const pool = new Pool({ connectionString, max: 1 })
 
 type SeedRow = Record<string, string | number | null>
 
+const categoryThemeColors = [
+  "chart-1",
+  "chart-2",
+  "chart-3",
+  "chart-4",
+  "chart-5",
+  "finance-purple",
+  "finance-turquoise",
+  "finance-brown",
+  "finance-magenta",
+  "finance-blue",
+] as const
+
+const categoriesById = new Map(
+  categoriesSeed.map((category) => [category.id, category]),
+)
+const counterpartiesById = new Map(
+  counterpartiesSeed.map((counterparty) => [counterparty.id, counterparty]),
+)
+
+const categoriesSeedRows: SeedRow[] = categoriesSeed.map((category, index) => ({
+  ...category,
+  user_id: demoUserId,
+  theme_color: categoryThemeColors[index % categoryThemeColors.length],
+}))
+
+const counterpartiesSeedRows: SeedRow[] = counterpartiesSeed.map(
+  (counterparty, index) => ({
+    ...counterparty,
+    theme_color: categoryThemeColors[index % categoryThemeColors.length],
+    notes: null,
+  }),
+)
+
+const transactionsSeedRows: SeedRow[] = transactionsSeed.map((transaction) => {
+  const category = categoriesById.get(transaction.category_id)
+  const counterparty = counterpartiesById.get(transaction.counterparty_id)
+  const fallbackConcept = category?.name ?? counterparty?.display_name
+
+  return {
+    ...transaction,
+    concept: transaction.description ?? fallbackConcept ?? "Manual transaction",
+  }
+})
+
 const potsSeedRows: SeedRow[] = potsSeed.map((pot) => ({
   ...pot,
   due_date:
@@ -92,10 +137,10 @@ async function seedDemoData(client: PoolClient) {
   await insertRows(
     client,
     "categories",
-    ["id", "name", "slug"],
-    categoriesSeed,
+    ["user_id", "id", "name", "slug", "theme_color"],
+    categoriesSeedRows,
     "(id)",
-    ["name", "slug"],
+    ["user_id", "name", "slug", "theme_color"],
   )
 
   await insertRows(
@@ -119,10 +164,18 @@ async function seedDemoData(client: PoolClient) {
   await insertRows(
     client,
     "counterparties",
-    ["user_id", "id", "display_name", "avatar_url", "type"],
-    counterpartiesSeed,
+    [
+      "user_id",
+      "id",
+      "display_name",
+      "avatar_url",
+      "type",
+      "theme_color",
+      "notes",
+    ],
+    counterpartiesSeedRows,
     "(user_id, id)",
-    ["display_name", "avatar_url", "type"],
+    ["display_name", "avatar_url", "type", "theme_color", "notes"],
   )
 
   await insertRows(
@@ -134,16 +187,18 @@ async function seedDemoData(client: PoolClient) {
       "account_id",
       "counterparty_id",
       "category_id",
+      "concept",
       "amount_cents",
       "posted_at",
       "description",
     ],
-    transactionsSeed,
+    transactionsSeedRows,
     "(user_id, id)",
     [
       "account_id",
       "counterparty_id",
       "category_id",
+      "concept",
       "amount_cents",
       "posted_at",
       "description",

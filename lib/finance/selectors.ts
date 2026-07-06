@@ -42,6 +42,17 @@ function formatDisplayDate(isoDate: string): string {
   }).format(localDate)
 }
 
+function getInitials(name: string): string {
+  const initials = name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("")
+
+  return initials || "?"
+}
+
 function selectTransactionCategories(
   categories: CategoryRecord[],
 ): TransactionCategory[] {
@@ -84,10 +95,18 @@ function selectTransactions(
     return {
       id: transaction.id,
       name: counterparty.display_name,
-      avatarUrl: counterparty.avatar_url,
+      avatarUrl: counterparty.avatar_url ?? "",
+      contactColor: counterparty.theme_color,
+      contactInitials: getInitials(counterparty.display_name),
       amount: centsToDollars(transaction.amount_cents),
+      accountId: transaction.account_id,
+      counterpartyId: transaction.counterparty_id,
+      categoryId: transaction.category_id,
+      concept: transaction.concept,
       date: formatDisplayDate(transaction.posted_at),
+      postedAt: transaction.posted_at,
       category: category.name,
+      description: transaction.description ?? undefined,
       budgetId: assignment?.budget_id,
       budgetCategory: assignedCategory?.name,
     }
@@ -116,6 +135,7 @@ function selectBudgets(
       id: budget.id,
       period: budget.period,
       category: category.name,
+      categoryId: budget.category_id,
       maximum: centsToDollars(budget.limit_cents),
       spent: centsToDollars(spendingByBudgetId.get(budget.id) ?? 0),
       color: budget.theme_color,
@@ -148,7 +168,7 @@ function selectRecurringBills(
     return {
       id: bill.id,
       name: counterparty.display_name,
-      avatarUrl: counterparty.avatar_url,
+      avatarUrl: counterparty.avatar_url ?? "",
       amount: centsToDollars(bill.amount_cents),
       dueDay: bill.due_day_of_month,
       status: bill.status,

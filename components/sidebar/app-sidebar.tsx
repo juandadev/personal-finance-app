@@ -19,6 +19,10 @@ interface AppSidebarProps {
   navItems: NavItemType[]
 }
 
+function isActiveNavItem(activeKey: string, href: string) {
+  return href === "/" ? activeKey === href : activeKey.startsWith(href)
+}
+
 export function AppSidebar({ activeKey, navItems }: AppSidebarProps) {
   return (
     <div className="hidden lg:block">
@@ -36,7 +40,7 @@ export function AppSidebar({ activeKey, navItems }: AppSidebarProps) {
                     <NavItem
                       key={item.key}
                       item={item}
-                      active={activeKey === item.href}
+                      active={isActiveNavItem(activeKey, item.href)}
                     />
                   ))}
                 </SidebarMenu>

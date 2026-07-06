@@ -6,22 +6,39 @@ import { auth } from "@/lib/auth/server"
 import {
   assignTransactionToBudget,
   deleteBudget,
+  deleteCategory,
+  deleteCounterparty,
   deletePot,
+  deleteTransaction,
   insertBudget,
+  insertCategory,
+  insertCounterparty,
   insertPot,
+  insertTransaction,
   transferPotBalance,
   unassignTransactionFromBudget,
   updateBudget,
+  updateCategory,
+  updateCounterparty,
   updatePot,
+  updateTransaction,
 } from "@/lib/finance/queries"
 import { isFutureISODate } from "@/lib/finance/pot-due-date"
 import type {
+  AccountRecord,
+  AccountSummaryRecord,
   BudgetRecord,
   BudgetSummaryRecord,
   BudgetTransactionAssignmentRecord,
+  CategoryRecord,
+  CounterpartyRecord,
   NewBudgetRecord,
+  NewCategoryRecord,
+  NewCounterpartyRecord,
   NewPotRecord,
+  NewTransactionRecord,
   PotRecord,
+  TransactionRecord,
 } from "@/lib/finance/types"
 import { themeColorClasses } from "@/lib/theme-colors"
 
@@ -64,6 +81,41 @@ const budgetUpdateSchema = z.object({
   theme_color: themeColorSchema.optional(),
 })
 
+const nameSchema = z.string().trim().min(1).max(60)
+const categoryNameSchema = z.string().trim().min(1).max(40)
+const optionalNotesSchema = z
+  .string()
+  .trim()
+  .max(240)
+  .transform((value) => (value ? value : null))
+  .nullable()
+
+const categorySchema = z.object({
+  id: recordIdSchema,
+  name: categoryNameSchema,
+  theme_color: themeColorSchema,
+})
+
+const categoryUpdateSchema = z.object({
+  name: categoryNameSchema.optional(),
+  theme_color: themeColorSchema.optional(),
+})
+
+const counterpartySchema = z.object({
+  id: recordIdSchema,
+  display_name: nameSchema,
+  type: z.enum(["person", "merchant"]),
+  theme_color: themeColorSchema,
+  notes: optionalNotesSchema,
+})
+
+const counterpartyUpdateSchema = z.object({
+  display_name: nameSchema.optional(),
+  type: z.enum(["person", "merchant"]).optional(),
+  theme_color: themeColorSchema.optional(),
+  notes: optionalNotesSchema.optional(),
+})
+
 const potDueDateSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid due date.")
@@ -90,6 +142,40 @@ const potUpdateSchema = z.object({
 
 const idSchema = recordIdSchema
 const amountSchema = z.number().int().positive()
+const transactionSchema = z.object({
+  id: recordIdSchema,
+  user_id: z.string().min(1),
+  account_id: recordIdSchema,
+  counterparty_id: recordIdSchema,
+  category_id: recordIdSchema,
+  concept: z.string().trim().min(1).max(80),
+  amount_cents: z
+    .number()
+    .int()
+    .refine((value) => value !== 0, {
+      message: "Enter a transaction amount greater than $0.",
+    }),
+  posted_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  description: z
+    .string()
+    .trim()
+    .max(240)
+    .transform((value) => (value ? value : null))
+    .nullable(),
+})
+
+const transactionUpdateSchema = transactionSchema.omit({
+  id: true,
+  user_id: true,
+})
+const optionalBudgetIdSchema = recordIdSchema.nullable()
+
+type TransactionMutationData = {
+  transaction: TransactionRecord
+  accounts: AccountRecord[]
+  accountSummaries: AccountSummaryRecord[]
+  budgetAssignment: BudgetTransactionAssignmentRecord | null
+}
 
 async function getUserId() {
   const { data: session } = await auth.getSession()
@@ -120,6 +206,20 @@ const uniqueConstraintMessages: Record<string, string> = {
   pots_user_name_unique: "A pot with this name already exists.",
   budgets_user_id_category_id_period_key:
     "This category already has a budget for this period.",
+  categories_user_name_unique: "A category with this name already exists.",
+  categories_user_slug_unique: "A category with this name already exists.",
+  counterparties_user_display_name_unique:
+    "A contact with this name already exists.",
+}
+
+function slugify(value: string) {
+  const slug = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+
+  return slug || crypto.randomUUID()
 }
 
 function handlePostgresError<T>(error: PostgresError): FinanceActionResult<T> {
@@ -176,6 +276,203 @@ function handleFinanceActionError<T>(error: unknown): FinanceActionResult<T> {
   return {
     ok: false,
     message: "Something went wrong. Try again in a moment.",
+  }
+}
+
+export async function createCategoryAction(
+  category: Pick<NewCategoryRecord, "id" | "name" | "theme_color">,
+): Promise<FinanceActionResult<CategoryRecord>> {
+  try {
+    const userId = await getUserId()
+    const parsedCategory = categorySchema.parse(category)
+    const data = await insertCategory(userId, {
+      ...parsedCategory,
+      slug: slugify(parsedCategory.name),
+    })
+
+    return {
+      ok: true,
+      message: "Category created.",
+      data,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function updateCategoryAction(
+  id: string,
+  updates: Partial<Pick<CategoryRecord, "name" | "theme_color">>,
+): Promise<FinanceActionResult<CategoryRecord>> {
+  try {
+    const userId = await getUserId()
+    const parsedId = idSchema.parse(id)
+    const parsedUpdates = categoryUpdateSchema.parse(updates)
+    const data = await updateCategory(userId, parsedId, {
+      ...parsedUpdates,
+      slug: parsedUpdates.name ? slugify(parsedUpdates.name) : undefined,
+    })
+
+    return {
+      ok: true,
+      message: "Category updated.",
+      data,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function deleteCategoryAction(
+  id: string,
+): Promise<FinanceActionResult> {
+  try {
+    const userId = await getUserId()
+    const parsedId = idSchema.parse(id)
+    await deleteCategory(userId, parsedId)
+
+    return {
+      ok: true,
+      message: "Category deleted.",
+      data: undefined,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function createCounterpartyAction(
+  counterparty: Omit<NewCounterpartyRecord, "avatar_url">,
+): Promise<FinanceActionResult<CounterpartyRecord>> {
+  try {
+    const userId = await getUserId()
+    const parsedCounterparty = counterpartySchema.parse(counterparty)
+    const data = await insertCounterparty(userId, {
+      ...parsedCounterparty,
+      avatar_url: null,
+    })
+
+    return {
+      ok: true,
+      message: "Contact created.",
+      data,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function updateCounterpartyAction(
+  id: string,
+  updates: Partial<Omit<CounterpartyRecord, "id" | "user_id" | "avatar_url">>,
+): Promise<FinanceActionResult<CounterpartyRecord>> {
+  try {
+    const userId = await getUserId()
+    const parsedId = idSchema.parse(id)
+    const parsedUpdates = counterpartyUpdateSchema.parse(updates)
+    const data = await updateCounterparty(userId, parsedId, parsedUpdates)
+
+    return {
+      ok: true,
+      message: "Contact updated.",
+      data,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function deleteCounterpartyAction(
+  id: string,
+): Promise<FinanceActionResult> {
+  try {
+    const userId = await getUserId()
+    const parsedId = idSchema.parse(id)
+    await deleteCounterparty(userId, parsedId)
+
+    return {
+      ok: true,
+      message: "Contact deleted.",
+      data: undefined,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function createTransactionAction(
+  transaction: NewTransactionRecord,
+  budgetId: string | null,
+): Promise<FinanceActionResult<TransactionMutationData>> {
+  try {
+    const userId = await getUserId()
+    const parsedTransaction = transactionSchema.parse({
+      ...transaction,
+      user_id: userId,
+    })
+    const parsedBudgetId = optionalBudgetIdSchema.parse(budgetId)
+    const data = await insertTransaction(
+      userId,
+      parsedTransaction,
+      parsedBudgetId,
+    )
+
+    return {
+      ok: true,
+      message: "Transaction recorded.",
+      data,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function updateTransactionAction(
+  id: string,
+  updates: Omit<NewTransactionRecord, "id">,
+  budgetId: string | null,
+): Promise<FinanceActionResult<TransactionMutationData>> {
+  try {
+    const userId = await getUserId()
+    const parsedId = idSchema.parse(id)
+    const parsedUpdates = transactionUpdateSchema.parse(updates)
+    const parsedBudgetId = optionalBudgetIdSchema.parse(budgetId)
+    const data = await updateTransaction(
+      userId,
+      parsedId,
+      parsedUpdates,
+      parsedBudgetId,
+    )
+
+    return {
+      ok: true,
+      message: "Transaction updated.",
+      data,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function deleteTransactionAction(id: string): Promise<
+  FinanceActionResult<{
+    id: string
+    accounts: AccountRecord[]
+    accountSummaries: AccountSummaryRecord[]
+  }>
+> {
+  try {
+    const userId = await getUserId()
+    const parsedId = idSchema.parse(id)
+    const data = await deleteTransaction(userId, parsedId)
+
+    return {
+      ok: true,
+      message: "Transaction deleted.",
+      data,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
   }
 }
 

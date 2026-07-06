@@ -43,7 +43,11 @@ export function TransactionsContent() {
 
     if (search) {
       const searchLower = search.toLowerCase()
-      result = result.filter((t) => t.name.toLowerCase().includes(searchLower))
+      result = result.filter(
+        (t) =>
+          t.name.toLowerCase().includes(searchLower) ||
+          t.concept.toLowerCase().includes(searchLower),
+      )
     }
 
     if (category !== "all") {
@@ -52,14 +56,10 @@ export function TransactionsContent() {
 
     switch (sortBy) {
       case "latest":
-        result.sort(
-          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-        )
+        result.sort((a, b) => b.postedAt.localeCompare(a.postedAt))
         break
       case "oldest":
-        result.sort(
-          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
-        )
+        result.sort((a, b) => a.postedAt.localeCompare(b.postedAt))
         break
       case "a-z":
         result.sort((a, b) => a.name.localeCompare(b.name))
