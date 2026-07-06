@@ -4,6 +4,7 @@ import NavTransactionsIcon from "@/components/icons/NavTransactionsIcon"
 import NavBudgetsIcon from "@/components/icons/NavBudgetsIcon"
 import NavPotsIcon from "@/components/icons/NavPotsIcon"
 import NavRecurringBillsIcon from "@/components/icons/NavRecurringBillsIcon"
+import { ShieldCheck } from "lucide-react"
 
 export const navItems: NavItem[] = [
   { key: "overview", label: "Overview", icon: NavOverviewIcon, href: "/" },
@@ -22,3 +23,14 @@ export const navItems: NavItem[] = [
     href: "/recurring-bills",
   },
 ]
+
+const adminNavItem: NavItem = {
+  key: "admin",
+  label: "Admin",
+  icon: ShieldCheck,
+  href: "/admin",
+}
+
+export function getNavItems({ isAdmin = false }: { isAdmin?: boolean } = {}) {
+  return isAdmin ? [...navItems, adminNavItem] : navItems
+}

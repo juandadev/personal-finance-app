@@ -2,6 +2,7 @@ import type { ReactNode } from "react"
 import { redirect } from "next/navigation"
 
 import { FinanceAppShell } from "@/components/providers/finance-app-shell"
+import { isAdminUser } from "@/lib/admin/access"
 import { auth } from "@/lib/auth/server"
 import { loadFinanceState } from "@/lib/finance/queries"
 
@@ -27,6 +28,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   )
 
   return (
-    <FinanceAppShell initialState={initialState}>{children}</FinanceAppShell>
+    <FinanceAppShell
+      initialState={initialState}
+      isAdmin={isAdminUser(session.user)}
+    >
+      {children}
+    </FinanceAppShell>
   )
 }

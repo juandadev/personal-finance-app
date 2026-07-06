@@ -1,4 +1,3 @@
-import { navItems } from "@/lib/data"
 import {
   Sidebar,
   SidebarCollapseButton,
@@ -11,14 +10,16 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { SignOutButton } from "@/components/auth/sign-out-button"
+import type { NavItem as NavItemType } from "@/lib/types"
 import { Logo } from "./logo"
 import { NavItem } from "./nav-item"
 
 interface AppSidebarProps {
   activeKey: string
+  navItems: NavItemType[]
 }
 
-export function AppSidebar({ activeKey }: AppSidebarProps) {
+export function AppSidebar({ activeKey, navItems }: AppSidebarProps) {
   return (
     <div className="hidden lg:block">
       <Sidebar collapsible="icon">
