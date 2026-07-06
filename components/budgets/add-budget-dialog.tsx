@@ -1,6 +1,7 @@
 "use client"
 
-import { useMemo, useState, type FormEvent } from "react"
+import { useMemo, useState } from "react"
+import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -12,7 +13,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { CurrencyInput } from "@/components/ui/currency-input"
-import { Label } from "@/components/ui/label"
+import { FormField, FormStatusMessage } from "@/components/ui/form"
 import {
   Select,
   SelectContent,
@@ -22,26 +23,26 @@ import {
 } from "@/components/ui/select"
 import { ThemeSelect } from "@/components/theme-select"
 import { useFinance } from "@/hooks/use-finance"
+import { getCurrentPeriod, themeOptions } from "@/lib/finance/form-utils"
 import {
-  getCurrentPeriod,
-  parseDollarAmount,
-  themeOptions,
-} from "@/lib/finance/form-utils"
-import { AuthStatusMessage } from "@/components/auth/auth-page-shell"
-import type { ThemeColor } from "@/lib/theme-colors"
+  currencyCentsSchema,
+  requiredSelectSchema,
+  themeColorSchema,
+} from "@/lib/forms/validation"
+import { useStandardForm } from "@/lib/forms/use-standard-form"
 import { cn } from "@/lib/utils"
+
+const addBudgetFormSchema = z.object({
+  categoryId: requiredSelectSchema("Choose a budget category."),
+  maximumSpend: currencyCentsSchema("Enter a maximum spend greater than $0."),
+  themeColor: themeColorSchema,
+})
+
+type AddBudgetFormValues = z.input<typeof addBudgetFormSchema>
 
 export function AddBudgetDialog() {
   const { state, actions } = useFinance()
   const [open, setOpen] = useState(false)
-  const [categoryId, setCategoryId] = useState("")
-  const [maximumSpend, setMaximumSpend] = useState("")
-  const [themeColor, setThemeColor] = useState<ThemeColor>(
-    themeOptions[0].value,
-  )
-  const [amountError, setAmountError] = useState("")
-  const [statusMessage, setStatusMessage] = useState("")
-  const [isSaving, setIsSaving] = useState(false)
 
   const budgetedCategoryIds = useMemo(
     () => new Set(state.budgets.map((budget) => budget.category_id)),
@@ -62,70 +63,60 @@ export function AddBudgetDialog() {
   )
 
   const firstCategoryId = availableCategories[0]?.id ?? ""
-  const selectedCategoryId = availableCategories.some(
-    (category) => category.id === categoryId,
+  const defaultValues = useMemo(
+    () =>
+      ({
+        categoryId: firstCategoryId,
+        maximumSpend: "",
+        themeColor: themeOptions[0].value,
+      }) satisfies AddBudgetFormValues,
+    [firstCategoryId],
   )
-    ? categoryId
-    : firstCategoryId
 
-  const resetForm = () => {
-    setCategoryId("")
-    setMaximumSpend("")
-    setThemeColor(themeOptions[0].value)
-    setAmountError("")
-    setStatusMessage("")
-  }
+  const standardForm = useStandardForm({
+    defaultValues,
+    schema: addBudgetFormSchema,
+    onSubmit: async ({ applyActionResult, resetForm, value }) => {
+      const category = availableCategories.find(
+        (option) => option.id === value.categoryId,
+      )
+
+      if (!category) {
+        applyActionResult({
+          ok: false,
+          message: "Choose a budget category.",
+          fieldErrors: { categoryId: ["Choose a budget category."] },
+        })
+        return
+      }
+
+      const period = state.budgets[0]?.period ?? getCurrentPeriod()
+      const result = await actions.addBudget(
+        {
+          id: crypto.randomUUID(),
+          category_id: category.id,
+          period,
+          limit_cents: value.maximumSpend,
+          theme_color: value.themeColor,
+        },
+        0,
+      )
+
+      if (!applyActionResult(result)) {
+        return
+      }
+
+      setOpen(false)
+      resetForm(defaultValues)
+    },
+  })
 
   const handleOpenChange = (nextOpen: boolean) => {
     setOpen(nextOpen)
 
     if (!nextOpen) {
-      resetForm()
+      standardForm.reset(defaultValues)
     }
-  }
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    setStatusMessage("")
-
-    const limit_cents = parseDollarAmount(maximumSpend)
-
-    if (limit_cents === null) {
-      setAmountError("Enter a maximum spend greater than $0.")
-      return
-    }
-
-    const category = availableCategories.find(
-      (option) => option.id === selectedCategoryId,
-    )
-
-    if (!category) {
-      return
-    }
-
-    const period = state.budgets[0]?.period ?? getCurrentPeriod()
-    setIsSaving(true)
-
-    const result = await actions.addBudget(
-      {
-        id: crypto.randomUUID(),
-        category_id: category.id,
-        period,
-        limit_cents,
-        theme_color: themeColor,
-      },
-      0,
-    )
-
-    setIsSaving(false)
-
-    if (!result.ok) {
-      setStatusMessage(result.message)
-      return
-    }
-
-    setOpen(false)
-    resetForm()
   }
 
   return (
@@ -144,58 +135,68 @@ export function AddBudgetDialog() {
 
         <DialogCloseButton aria-label="Close add budget dialog" />
 
-        <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
-          <div className="space-y-2">
-            <Label
-              htmlFor="budget-category"
-              className="text-muted-foreground text-xs font-bold"
-            >
-              Budget Category
-            </Label>
-            <Select
-              value={selectedCategoryId}
-              onValueChange={setCategoryId}
-              disabled={availableCategories.length === 0}
-            >
-              <SelectTrigger id="budget-category" variant="form">
-                <SelectValue placeholder="Select a category" />
-              </SelectTrigger>
-              <SelectContent className="max-h-107.5" matchTriggerWidth>
-                {state.categories.map((category) => {
-                  const isAlreadyBudgeted = budgetedCategoryIds.has(category.id)
+        <form className="mt-6 space-y-5" onSubmit={standardForm.handleSubmit}>
+          <standardForm.form.Field name="categoryId">
+            {(field) => (
+              <FormField
+                id="budget-category"
+                label="Budget Category"
+                error={standardForm.fieldErrors.categoryId}
+              >
+                {(fieldProps) => (
+                  <Select
+                    value={field.state.value}
+                    onValueChange={(value) =>
+                      standardForm.setValue("categoryId", value)
+                    }
+                    disabled={availableCategories.length === 0}
+                  >
+                    <SelectTrigger {...fieldProps} variant="form">
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-107.5" matchTriggerWidth>
+                      {state.categories.map((category) => {
+                        const isAlreadyBudgeted = budgetedCategoryIds.has(
+                          category.id,
+                        )
 
-                  return (
-                    <SelectItem
-                      key={category.id}
-                      value={category.id}
-                      disabled={isAlreadyBudgeted}
-                      variant="form"
-                    >
-                      <span className="flex w-full min-w-0 items-center justify-between gap-3">
-                        <span
-                          className={cn(
-                            "min-w-0",
-                            isAlreadyBudgeted && "opacity-35",
-                          )}
-                        >
-                          {category.name}
-                        </span>
-                        {isAlreadyBudgeted && (
-                          <span className="text-muted-foreground shrink-0 text-xs">
-                            Already used
-                          </span>
-                        )}
-                      </span>
-                    </SelectItem>
-                  )
-                })}
-                {state.categories.length === 0 && (
-                  <SelectItem value="empty" disabled>
-                    No categories available
-                  </SelectItem>
+                        return (
+                          <SelectItem
+                            key={category.id}
+                            value={category.id}
+                            disabled={isAlreadyBudgeted}
+                            variant="form"
+                          >
+                            <span className="flex w-full min-w-0 items-center justify-between gap-3">
+                              <span
+                                className={cn(
+                                  "min-w-0",
+                                  isAlreadyBudgeted && "opacity-35",
+                                )}
+                              >
+                                {category.name}
+                              </span>
+                              {isAlreadyBudgeted && (
+                                <span className="text-muted-foreground shrink-0 text-xs">
+                                  Already used
+                                </span>
+                              )}
+                            </span>
+                          </SelectItem>
+                        )
+                      })}
+                      {state.categories.length === 0 && (
+                        <SelectItem value="empty" disabled>
+                          No categories available
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
                 )}
-              </SelectContent>
-            </Select>
+              </FormField>
+            )}
+          </standardForm.form.Field>
+          <div>
             {availableCategories.length === 0 && (
               <p className="text-muted-foreground text-xs">
                 Every category already has a budget.
@@ -203,51 +204,58 @@ export function AddBudgetDialog() {
             )}
           </div>
 
-          <div className="space-y-2">
-            <Label
-              htmlFor="maximum-spend"
-              className="text-muted-foreground text-xs font-bold"
-            >
-              Maximum Spend
-            </Label>
-            <CurrencyInput
-              id="maximum-spend"
-              inputMode="decimal"
-              value={maximumSpend}
-              onChange={(event) => {
-                setMaximumSpend(event.target.value)
-                setAmountError("")
-              }}
-              placeholder="e.g. 2000"
-              aria-invalid={amountError ? "true" : "false"}
-              aria-describedby={amountError ? "maximum-spend-error" : undefined}
-            />
-            {amountError && (
-              <p id="maximum-spend-error" className="text-destructive text-xs">
-                {amountError}
-              </p>
+          <standardForm.form.Field name="maximumSpend">
+            {(field) => (
+              <FormField
+                id="maximum-spend"
+                label="Maximum Spend"
+                error={standardForm.fieldErrors.maximumSpend}
+              >
+                {(fieldProps) => (
+                  <CurrencyInput
+                    {...fieldProps}
+                    inputMode="decimal"
+                    value={field.state.value}
+                    onChange={(event) =>
+                      standardForm.setValue("maximumSpend", event.target.value)
+                    }
+                    onBlur={field.handleBlur}
+                    placeholder="e.g. 2000"
+                  />
+                )}
+              </FormField>
             )}
-          </div>
+          </standardForm.form.Field>
 
-          <ThemeSelect
-            id="budget-theme"
-            value={themeColor}
-            onValueChange={setThemeColor}
-            usedThemeColors={usedThemeColors}
-          />
+          <standardForm.form.Field name="themeColor">
+            {(field) => (
+              <ThemeSelect
+                id="budget-theme"
+                value={field.state.value}
+                onValueChange={(value) =>
+                  standardForm.setValue("themeColor", value)
+                }
+                usedThemeColors={usedThemeColors}
+              />
+            )}
+          </standardForm.form.Field>
 
-          <Button
-            type="submit"
-            size="finance-submit"
-            disabled={availableCategories.length === 0 || isSaving}
-          >
-            {isSaving ? "Saving..." : "Add Budget"}
-          </Button>
-          {statusMessage ? (
-            <AuthStatusMessage variant="error">
-              {statusMessage}
-            </AuthStatusMessage>
+          {standardForm.status?.message ? (
+            <FormStatusMessage variant={standardForm.status.variant}>
+              {standardForm.status.message}
+            </FormStatusMessage>
           ) : null}
+          <standardForm.form.Subscribe selector={(state) => state.isSubmitting}>
+            {(isSubmitting) => (
+              <Button
+                type="submit"
+                size="finance-submit"
+                disabled={availableCategories.length === 0 || isSubmitting}
+              >
+                {isSubmitting ? "Saving..." : "Add Budget"}
+              </Button>
+            )}
+          </standardForm.form.Subscribe>
         </form>
       </DialogContent>
     </Dialog>

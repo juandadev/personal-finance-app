@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, type FormEvent } from "react"
+import { useMemo, useState } from "react"
+import { z } from "zod"
 import { ContactAvatar } from "@/components/contact-avatar"
-import { AuthStatusMessage } from "@/components/auth/auth-page-shell"
 import { ThemeSelect } from "@/components/theme-select"
 import {
   AlertDialog,
@@ -25,8 +25,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { FormField, FormStatusMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -38,9 +38,27 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { useFinance } from "@/hooks/use-finance"
 import { themeOptions } from "@/lib/finance/form-utils"
+import {
+  optionalTrimmedStringSchema,
+  requiredStringSchema,
+  themeColorSchema,
+} from "@/lib/forms/validation"
+import { useStandardForm } from "@/lib/forms/use-standard-form"
 import type { CategoryRecord, CounterpartyRecord } from "@/lib/finance/types"
-import { themeColorClasses, type ThemeColor } from "@/lib/theme-colors"
+import { themeColorClasses } from "@/lib/theme-colors"
 import { cn } from "@/lib/utils"
+
+const categoryDialogSchema = z.object({
+  name: requiredStringSchema("Enter a category name.", 40),
+  themeColor: themeColorSchema,
+})
+
+const contactDialogSchema = z.object({
+  displayName: requiredStringSchema("Enter a contact name.", 60),
+  type: z.enum(["person", "merchant"]),
+  themeColor: themeColorSchema,
+  notes: optionalTrimmedStringSchema(240),
+})
 
 export function TransactionLibraryContent() {
   const { state } = useFinance()
@@ -161,52 +179,50 @@ function ContactRow({ counterparty }: { counterparty: CounterpartyRecord }) {
 function CategoryDialog({ category }: { category?: CategoryRecord }) {
   const { actions } = useFinance()
   const [open, setOpen] = useState(false)
-  const [name, setName] = useState(category?.name ?? "")
-  const [themeColor, setThemeColor] = useState<ThemeColor>(
-    category?.theme_color ?? themeOptions[0].value,
+  const defaultValues = useMemo(
+    () => ({
+      name: category?.name ?? "",
+      themeColor: category?.theme_color ?? themeOptions[0].value,
+    }),
+    [category?.name, category?.theme_color],
   )
-  const [statusMessage, setStatusMessage] = useState("")
-  const [isSaving, setIsSaving] = useState(false)
+  const standardForm = useStandardForm({
+    defaultValues,
+    schema: categoryDialogSchema,
+    onSubmit: async ({ applyActionResult, resetForm, value }) => {
+      const result = category
+        ? await actions.updateCategory(category.id, {
+            name: value.name,
+            theme_color: value.themeColor,
+          })
+        : await actions.addCategory({
+            id: crypto.randomUUID(),
+            name: value.name,
+            theme_color: value.themeColor,
+          })
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    setStatusMessage("")
+      if (!applyActionResult(result)) {
+        return
+      }
 
-    if (!name.trim()) {
-      setStatusMessage("Enter a category name.")
-      return
-    }
+      setOpen(false)
 
-    setIsSaving(true)
+      if (!category) {
+        resetForm(defaultValues)
+      }
+    },
+  })
 
-    const result = category
-      ? await actions.updateCategory(category.id, {
-          name,
-          theme_color: themeColor,
-        })
-      : await actions.addCategory({
-          id: crypto.randomUUID(),
-          name,
-          theme_color: themeColor,
-        })
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen)
 
-    setIsSaving(false)
-
-    if (!result.ok) {
-      setStatusMessage(result.message)
-      return
-    }
-
-    setOpen(false)
-
-    if (!category) {
-      setName("")
-      setThemeColor(themeOptions[0].value)
+    if (nextOpen) {
+      standardForm.reset(defaultValues)
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button variant={category ? "ghost" : "default"} size="sm">
           {category ? "Edit" : "Add Category"}
@@ -222,37 +238,58 @@ function CategoryDialog({ category }: { category?: CategoryRecord }) {
           </DialogDescription>
         </DialogHeader>
         <DialogCloseButton aria-label="Close category dialog" />
-        <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
-          <div className="space-y-2">
-            <Label
-              htmlFor="library-category-name"
-              className="text-muted-foreground text-xs font-bold"
-            >
-              Name
-            </Label>
-            <Input
-              id="library-category-name"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-            />
-          </div>
-          <ThemeSelect
-            id="library-category-theme"
-            value={themeColor}
-            onValueChange={setThemeColor}
-          />
-          <Button type="submit" size="finance-submit" disabled={isSaving}>
-            {isSaving
-              ? "Saving..."
-              : category
-                ? "Save Category"
-                : "Add Category"}
-          </Button>
-          {statusMessage ? (
-            <AuthStatusMessage variant="error">
-              {statusMessage}
-            </AuthStatusMessage>
+        <form className="mt-6 space-y-5" onSubmit={standardForm.handleSubmit}>
+          <standardForm.form.Field name="name">
+            {(field) => (
+              <FormField
+                id="library-category-name"
+                label="Name"
+                error={standardForm.fieldErrors.name}
+              >
+                {(fieldProps) => (
+                  <Input
+                    {...fieldProps}
+                    value={field.state.value}
+                    onChange={(event) =>
+                      standardForm.setValue("name", event.target.value)
+                    }
+                    onBlur={field.handleBlur}
+                  />
+                )}
+              </FormField>
+            )}
+          </standardForm.form.Field>
+          <standardForm.form.Field name="themeColor">
+            {(field) => (
+              <ThemeSelect
+                id="library-category-theme"
+                value={field.state.value}
+                onValueChange={(value) =>
+                  standardForm.setValue("themeColor", value)
+                }
+              />
+            )}
+          </standardForm.form.Field>
+          {standardForm.status?.message ? (
+            <FormStatusMessage variant={standardForm.status.variant}>
+              {standardForm.status.message}
+            </FormStatusMessage>
           ) : null}
+          <standardForm.form.Subscribe selector={(state) => state.isSubmitting}>
+            {(isSubmitting) => (
+              <Button
+                type="submit"
+                size="finance-submit"
+                disabled={isSubmitting}
+              >
+                {isSubmitting
+                  ? "Saving..."
+                  : category
+                    ? "Save Category"
+                    : "Add Category"}
+              </Button>
+            )}
+          </standardForm.form.Subscribe>
         </form>
       </DialogContent>
     </Dialog>
@@ -266,63 +303,62 @@ function ContactDialog({
 }) {
   const { actions } = useFinance()
   const [open, setOpen] = useState(false)
-  const [displayName, setDisplayName] = useState(
-    counterparty?.display_name ?? "",
+  const defaultValues = useMemo(
+    () => ({
+      displayName: counterparty?.display_name ?? "",
+      type: counterparty?.type ?? "person",
+      themeColor:
+        counterparty?.theme_color ??
+        themeOptions[1]?.value ??
+        themeOptions[0].value,
+      notes: counterparty?.notes ?? "",
+    }),
+    [
+      counterparty?.display_name,
+      counterparty?.notes,
+      counterparty?.theme_color,
+      counterparty?.type,
+    ],
   )
-  const [type, setType] = useState<"person" | "merchant">(
-    counterparty?.type ?? "person",
-  )
-  const [themeColor, setThemeColor] = useState<ThemeColor>(
-    counterparty?.theme_color ??
-      themeOptions[1]?.value ??
-      themeOptions[0].value,
-  )
-  const [notes, setNotes] = useState(counterparty?.notes ?? "")
-  const [statusMessage, setStatusMessage] = useState("")
-  const [isSaving, setIsSaving] = useState(false)
+  const standardForm = useStandardForm({
+    defaultValues,
+    schema: contactDialogSchema,
+    onSubmit: async ({ applyActionResult, resetForm, value }) => {
+      const payload = {
+        display_name: value.displayName,
+        type: value.type,
+        theme_color: value.themeColor,
+        notes: value.notes,
+      }
+      const result = counterparty
+        ? await actions.updateCounterparty(counterparty.id, payload)
+        : await actions.addCounterparty({
+            id: crypto.randomUUID(),
+            ...payload,
+          })
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    setStatusMessage("")
+      if (!applyActionResult(result)) {
+        return
+      }
 
-    if (!displayName.trim()) {
-      setStatusMessage("Enter a contact name.")
-      return
-    }
+      setOpen(false)
 
-    setIsSaving(true)
+      if (!counterparty) {
+        resetForm(defaultValues)
+      }
+    },
+  })
 
-    const payload = {
-      display_name: displayName,
-      type,
-      theme_color: themeColor,
-      notes,
-    }
-    const result = counterparty
-      ? await actions.updateCounterparty(counterparty.id, payload)
-      : await actions.addCounterparty({
-          id: crypto.randomUUID(),
-          ...payload,
-        })
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen)
 
-    setIsSaving(false)
-
-    if (!result.ok) {
-      setStatusMessage(result.message)
-      return
-    }
-
-    setOpen(false)
-
-    if (!counterparty) {
-      setDisplayName("")
-      setNotes("")
-      setThemeColor(themeOptions[1]?.value ?? themeOptions[0].value)
+    if (nextOpen) {
+      standardForm.reset(defaultValues)
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button variant={counterparty ? "ghost" : "default"} size="sm">
           {counterparty ? "Edit" : "Add Contact"}
@@ -338,75 +374,112 @@ function ContactDialog({
           </DialogDescription>
         </DialogHeader>
         <DialogCloseButton aria-label="Close contact dialog" />
-        <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
-          <div className="space-y-2">
-            <Label
-              htmlFor="library-contact-name"
-              className="text-muted-foreground text-xs font-bold"
-            >
-              Name
-            </Label>
-            <Input
-              id="library-contact-name"
-              value={displayName}
-              onChange={(event) => setDisplayName(event.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label
-              htmlFor="library-contact-type"
-              className="text-muted-foreground text-xs font-bold"
-            >
-              Type
-            </Label>
-            <Select
-              value={type}
-              onValueChange={(value) => setType(value as "person" | "merchant")}
-            >
-              <SelectTrigger id="library-contact-type" variant="form">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent matchTriggerWidth>
-                <SelectItem value="person" variant="form">
-                  Person
-                </SelectItem>
-                <SelectItem value="merchant" variant="form">
-                  Merchant
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <ThemeSelect
-            id="library-contact-theme"
-            value={themeColor}
-            onValueChange={setThemeColor}
-          />
-          <div className="space-y-2">
-            <Label
-              htmlFor="library-contact-notes"
-              className="text-muted-foreground text-xs font-bold"
-            >
-              Notes
-            </Label>
-            <Textarea
-              id="library-contact-notes"
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-              placeholder="Optional details"
-            />
-          </div>
-          <Button type="submit" size="finance-submit" disabled={isSaving}>
-            {isSaving
-              ? "Saving..."
-              : counterparty
-                ? "Save Contact"
-                : "Add Contact"}
-          </Button>
-          {statusMessage ? (
-            <AuthStatusMessage variant="error">
-              {statusMessage}
-            </AuthStatusMessage>
+        <form className="mt-6 space-y-5" onSubmit={standardForm.handleSubmit}>
+          <standardForm.form.Field name="displayName">
+            {(field) => (
+              <FormField
+                id="library-contact-name"
+                label="Name"
+                error={standardForm.fieldErrors.displayName}
+              >
+                {(fieldProps) => (
+                  <Input
+                    {...fieldProps}
+                    value={field.state.value}
+                    onChange={(event) =>
+                      standardForm.setValue("displayName", event.target.value)
+                    }
+                    onBlur={field.handleBlur}
+                  />
+                )}
+              </FormField>
+            )}
+          </standardForm.form.Field>
+          <standardForm.form.Field name="type">
+            {(field) => (
+              <FormField
+                id="library-contact-type"
+                label="Type"
+                error={standardForm.fieldErrors.type}
+              >
+                {(fieldProps) => (
+                  <Select
+                    value={field.state.value}
+                    onValueChange={(value) =>
+                      standardForm.setValue(
+                        "type",
+                        value as "person" | "merchant",
+                      )
+                    }
+                  >
+                    <SelectTrigger {...fieldProps} variant="form">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent matchTriggerWidth>
+                      <SelectItem value="person" variant="form">
+                        Person
+                      </SelectItem>
+                      <SelectItem value="merchant" variant="form">
+                        Merchant
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </FormField>
+            )}
+          </standardForm.form.Field>
+          <standardForm.form.Field name="themeColor">
+            {(field) => (
+              <ThemeSelect
+                id="library-contact-theme"
+                value={field.state.value}
+                onValueChange={(value) =>
+                  standardForm.setValue("themeColor", value)
+                }
+              />
+            )}
+          </standardForm.form.Field>
+          <standardForm.form.Field name="notes">
+            {(field) => (
+              <FormField
+                id="library-contact-notes"
+                label="Notes"
+                error={standardForm.fieldErrors.notes}
+              >
+                {(fieldProps) => (
+                  <Textarea
+                    {...fieldProps}
+                    value={field.state.value}
+                    onChange={(event) =>
+                      standardForm.setValue("notes", event.target.value)
+                    }
+                    onBlur={field.handleBlur}
+                    placeholder="Optional details"
+                  />
+                )}
+              </FormField>
+            )}
+          </standardForm.form.Field>
+          {standardForm.status?.message ? (
+            <FormStatusMessage variant={standardForm.status.variant}>
+              {standardForm.status.message}
+            </FormStatusMessage>
           ) : null}
+          <standardForm.form.Subscribe selector={(state) => state.isSubmitting}>
+            {(isSubmitting) => (
+              <Button
+                type="submit"
+                size="finance-submit"
+                disabled={isSubmitting}
+              >
+                {isSubmitting
+                  ? "Saving..."
+                  : counterparty
+                    ? "Save Contact"
+                    : "Add Contact"}
+              </Button>
+            )}
+          </standardForm.form.Subscribe>
         </form>
       </DialogContent>
     </Dialog>
@@ -478,9 +551,9 @@ function DeleteLibraryRecordDialog({
               {isDeleting ? "Deleting..." : `Delete ${recordType}`}
             </AlertDialogAction>
             {statusMessage ? (
-              <AuthStatusMessage variant="error">
+              <FormStatusMessage variant="error">
                 {statusMessage}
-              </AuthStatusMessage>
+              </FormStatusMessage>
             ) : null}
             <AlertDialogCancel
               variant="muted-link"

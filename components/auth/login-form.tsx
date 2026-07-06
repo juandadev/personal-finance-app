@@ -1,43 +1,98 @@
 "use client"
 
-import { useActionState } from "react"
+import { z } from "zod"
 
 import { signInWithEmail } from "@/app/(auth)/login/actions"
 import {
   AuthField,
   AuthPasswordField,
-  AuthStatusMessage,
   AuthSubmitButton,
 } from "@/components/auth/auth-page-shell"
+import { FormStatusMessage } from "@/components/ui/form"
+import { useStandardForm } from "@/lib/forms/use-standard-form"
+
+const loginFormSchema = z.object({
+  email: z.string().trim().email("Enter a valid email address."),
+  password: z.string().min(1, "Enter your password."),
+})
+
+type LoginFormValues = z.input<typeof loginFormSchema>
 
 export function LoginForm() {
-  const [state, formAction, isPending] = useActionState(signInWithEmail, null)
+  const standardForm = useStandardForm({
+    defaultValues: {
+      email: "",
+      password: "",
+    } satisfies LoginFormValues,
+    schema: loginFormSchema,
+    onSubmit: async ({ applyActionResult, value }) => {
+      const formData = new FormData()
+      formData.set("email", value.email)
+      formData.set("password", value.password)
+
+      const result = await signInWithEmail(null, formData)
+
+      if (result) {
+        applyActionResult({
+          ok: false,
+          message: result.message,
+          fieldErrors: result.fieldErrors,
+        })
+      }
+    },
+  })
 
   return (
-    <form className="space-y-4" aria-label="Login form" action={formAction}>
-      <AuthField
-        id="email"
-        name="email"
-        type="email"
-        label="Email"
-        autoComplete="email"
-        disabled={isPending}
-        error={state?.fieldErrors?.email?.[0]}
-      />
-      <AuthPasswordField
-        id="password"
-        name="password"
-        label="Password"
-        autoComplete="current-password"
-        disabled={isPending}
-        error={state?.fieldErrors?.password?.[0]}
-      />
-      {state?.message ? (
-        <AuthStatusMessage variant="error">{state.message}</AuthStatusMessage>
+    <form
+      className="space-y-4"
+      aria-label="Login form"
+      onSubmit={standardForm.handleSubmit}
+    >
+      <standardForm.form.Field name="email">
+        {(field) => (
+          <AuthField
+            id="email"
+            name="email"
+            type="email"
+            label="Email"
+            autoComplete="email"
+            value={field.state.value}
+            onChange={(event) =>
+              standardForm.setValue("email", event.target.value)
+            }
+            onBlur={field.handleBlur}
+            error={standardForm.fieldErrors.email}
+          />
+        )}
+      </standardForm.form.Field>
+      <standardForm.form.Field name="password">
+        {(field) => (
+          <AuthPasswordField
+            id="password"
+            name="password"
+            label="Password"
+            autoComplete="current-password"
+            value={field.state.value}
+            onChange={(event) =>
+              standardForm.setValue("password", event.target.value)
+            }
+            onBlur={field.handleBlur}
+            error={standardForm.fieldErrors.password}
+          />
+        )}
+      </standardForm.form.Field>
+      {standardForm.status?.message ? (
+        <FormStatusMessage variant={standardForm.status.variant}>
+          {standardForm.status.message}
+        </FormStatusMessage>
       ) : null}
-      <AuthSubmitButton disabled={isPending}>
-        {isPending ? "Signing in..." : "Login"}
-      </AuthSubmitButton>
+      <standardForm.form.Subscribe selector={(state) => state.isSubmitting}>
+        {(isSubmitting) => (
+          <AuthSubmitButton disabled={isSubmitting}>
+            {isSubmitting ? "Signing in..." : "Login"}
+          </AuthSubmitButton>
+        )}
+      </standardForm.form.Subscribe>
     </form>
   )
 }

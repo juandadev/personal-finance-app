@@ -1,7 +1,11 @@
 "use client"
 
-import { useMemo, useState, type FormEvent } from "react"
+import { useMemo, useState } from "react"
+import { z } from "zod"
+
+import { ThemeSelect } from "@/components/theme-select"
 import { Button } from "@/components/ui/button"
+import { CurrencyInput } from "@/components/ui/currency-input"
 import {
   Dialog,
   DialogCloseButton,
@@ -11,33 +15,38 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { CurrencyInput } from "@/components/ui/currency-input"
+import { FormField, FormStatusMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { ThemeSelect } from "@/components/theme-select"
-import { AuthStatusMessage } from "@/components/auth/auth-page-shell"
 import { useFinance } from "@/hooks/use-finance"
+import { themeOptions } from "@/lib/finance/form-utils"
 import { isFutureISODate } from "@/lib/finance/pot-due-date"
-import { parseDollarAmount, themeOptions } from "@/lib/finance/form-utils"
-import type { ThemeColor } from "@/lib/theme-colors"
+import {
+  currencyCentsSchema,
+  requiredStringSchema,
+  themeColorSchema,
+} from "@/lib/forms/validation"
+import { useStandardForm } from "@/lib/forms/use-standard-form"
 import { PotDueDatePicker } from "./pot-due-date-picker"
 
 const maxPotNameLength = 30
 
+const dueDateSchema = z
+  .string()
+  .nullable()
+  .refine((value) => !value || isFutureISODate(value), {
+    message: "Choose a future due date.",
+  })
+
+type AddPotFormValues = {
+  dueDate: string | null
+  name: string
+  target: string
+  themeColor: (typeof themeOptions)[number]["value"]
+}
+
 export function AddPotDialog() {
   const { state, actions } = useFinance()
   const [open, setOpen] = useState(false)
-  const [name, setName] = useState("")
-  const [target, setTarget] = useState("")
-  const [dueDate, setDueDate] = useState<string | null>(null)
-  const [themeColor, setThemeColor] = useState<ThemeColor>(
-    themeOptions[0].value,
-  )
-  const [nameError, setNameError] = useState("")
-  const [targetError, setTargetError] = useState("")
-  const [dueDateError, setDueDateError] = useState("")
-  const [statusMessage, setStatusMessage] = useState("")
-  const [isSaving, setIsSaving] = useState(false)
 
   const existingPotNames = useMemo(
     () => new Set(state.pots.map((pot) => pot.name.trim().toLowerCase())),
@@ -47,77 +56,61 @@ export function AddPotDialog() {
     () => new Set(state.pots.map((pot) => pot.theme_color.toLowerCase())),
     [state.pots],
   )
-  const charactersLeft = maxPotNameLength - name.length
+  const addPotFormSchema = useMemo(
+    () =>
+      z.object({
+        name: requiredStringSchema(
+          "Enter a pot name.",
+          maxPotNameLength,
+        ).refine(
+          (value) => !existingPotNames.has(value.toLowerCase()),
+          "A pot with this name already exists.",
+        ),
+        target: currencyCentsSchema("Enter a target greater than $0."),
+        dueDate: dueDateSchema,
+        themeColor: themeColorSchema,
+      }),
+    [existingPotNames],
+  )
+  const defaultValues = useMemo(
+    () =>
+      ({
+        name: "",
+        target: "",
+        dueDate: null,
+        themeColor: themeOptions[0].value,
+      }) satisfies AddPotFormValues,
+    [],
+  )
 
-  const resetForm = () => {
-    setName("")
-    setTarget("")
-    setDueDate(null)
-    setThemeColor(themeOptions[0].value)
-    setNameError("")
-    setTargetError("")
-    setDueDateError("")
-    setStatusMessage("")
-  }
+  const standardForm = useStandardForm({
+    defaultValues,
+    schema: addPotFormSchema,
+    onSubmit: async ({ applyActionResult, resetForm, value }) => {
+      const result = await actions.addPot({
+        id: crypto.randomUUID(),
+        name: value.name,
+        balance_cents: 0,
+        target_cents: value.target,
+        theme_color: value.themeColor,
+        due_date: value.dueDate,
+      })
+
+      if (!applyActionResult(result)) {
+        return
+      }
+
+      setOpen(false)
+      resetForm(defaultValues)
+    },
+  })
 
   const handleOpenChange = (nextOpen: boolean) => {
     setOpen(nextOpen)
 
     if (!nextOpen) {
-      resetForm()
+      standardForm.reset(defaultValues)
     }
-  }
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    setStatusMessage("")
-
-    const trimmedName = name.trim()
-    const target_cents = parseDollarAmount(target)
-    let hasError = false
-
-    if (!trimmedName) {
-      setNameError("Enter a pot name.")
-      hasError = true
-    } else if (existingPotNames.has(trimmedName.toLowerCase())) {
-      setNameError("A pot with this name already exists.")
-      hasError = true
-    }
-
-    if (target_cents === null) {
-      setTargetError("Enter a target greater than $0.")
-      hasError = true
-    }
-
-    if (dueDate && !isFutureISODate(dueDate)) {
-      setDueDateError("Choose a future due date.")
-      hasError = true
-    }
-
-    if (hasError || target_cents === null) {
-      return
-    }
-
-    setIsSaving(true)
-
-    const result = await actions.addPot({
-      id: crypto.randomUUID(),
-      name: trimmedName,
-      balance_cents: 0,
-      target_cents,
-      theme_color: themeColor,
-      due_date: dueDate,
-    })
-
-    setIsSaving(false)
-
-    if (!result.ok) {
-      setStatusMessage(result.message)
-      return
-    }
-
-    setOpen(false)
-    resetForm()
   }
 
   return (
@@ -136,110 +129,106 @@ export function AddPotDialog() {
 
         <DialogCloseButton aria-label="Close add pot dialog" />
 
-        <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
-          <div className="space-y-2">
-            <Label
-              htmlFor="pot-name"
-              className="text-muted-foreground text-xs font-bold"
-            >
-              Pot Name
-            </Label>
-            <Input
-              id="pot-name"
-              value={name}
-              onChange={(event) => {
-                setName(event.target.value)
-                setNameError("")
-              }}
-              maxLength={maxPotNameLength}
-              placeholder="e.g. Rainy Days"
-              aria-invalid={nameError ? "true" : "false"}
-              aria-describedby={
-                nameError ? "pot-name-error" : "pot-name-characters"
-              }
-            />
-            <div className="flex justify-end">
-              {nameError ? (
-                <p id="pot-name-error" className="text-destructive text-xs">
-                  {nameError}
-                </p>
-              ) : (
-                <p
-                  id="pot-name-characters"
-                  className="text-muted-foreground text-xs"
-                  aria-live="polite"
-                >
-                  {charactersLeft} characters left
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label
-              htmlFor="pot-target"
-              className="text-muted-foreground text-xs font-bold"
-            >
-              Target
-            </Label>
-            <CurrencyInput
-              id="pot-target"
-              inputMode="decimal"
-              value={target}
-              onChange={(event) => {
-                setTarget(event.target.value)
-                setTargetError("")
-              }}
-              placeholder="e.g. 2000"
-              aria-invalid={targetError ? "true" : "false"}
-              aria-describedby={targetError ? "pot-target-error" : undefined}
-            />
-            {targetError && (
-              <p id="pot-target-error" className="text-destructive text-xs">
-                {targetError}
-              </p>
+        <form className="mt-6 space-y-5" onSubmit={standardForm.handleSubmit}>
+          <standardForm.form.Field name="name">
+            {(field) => (
+              <FormField
+                id="pot-name"
+                label="Pot Name"
+                error={standardForm.fieldErrors.name}
+                helperAlign="right"
+                helperText={`${maxPotNameLength - field.state.value.length} characters left`}
+              >
+                {(fieldProps) => (
+                  <Input
+                    {...fieldProps}
+                    value={field.state.value}
+                    onChange={(event) =>
+                      standardForm.setValue("name", event.target.value)
+                    }
+                    onBlur={field.handleBlur}
+                    maxLength={maxPotNameLength}
+                    placeholder="e.g. Rainy Days"
+                  />
+                )}
+              </FormField>
             )}
-          </div>
+          </standardForm.form.Field>
 
-          <div className="space-y-2">
-            <Label
-              htmlFor="pot-due-date"
-              className="text-muted-foreground text-xs font-bold"
-            >
-              Due Date
-            </Label>
-            <PotDueDatePicker
-              id="pot-due-date"
-              value={dueDate}
-              onChange={(nextDate) => {
-                setDueDate(nextDate)
-                setDueDateError("")
-              }}
-              hasError={Boolean(dueDateError)}
-              describedBy={dueDateError ? "pot-due-date-error" : undefined}
-            />
-            {dueDateError && (
-              <p id="pot-due-date-error" className="text-destructive text-xs">
-                {dueDateError}
-              </p>
+          <standardForm.form.Field name="target">
+            {(field) => (
+              <FormField
+                id="pot-target"
+                label="Target"
+                error={standardForm.fieldErrors.target}
+              >
+                {(fieldProps) => (
+                  <CurrencyInput
+                    {...fieldProps}
+                    inputMode="decimal"
+                    value={field.state.value}
+                    onChange={(event) =>
+                      standardForm.setValue("target", event.target.value)
+                    }
+                    onBlur={field.handleBlur}
+                    placeholder="e.g. 2000"
+                  />
+                )}
+              </FormField>
             )}
-          </div>
+          </standardForm.form.Field>
 
-          <ThemeSelect
-            id="pot-theme"
-            value={themeColor}
-            onValueChange={setThemeColor}
-            usedThemeColors={usedThemeColors}
-          />
+          <standardForm.form.Field name="dueDate">
+            {(field) => (
+              <FormField
+                id="pot-due-date"
+                label="Due Date"
+                error={standardForm.fieldErrors.dueDate}
+              >
+                {(fieldProps) => (
+                  <PotDueDatePicker
+                    id={fieldProps.id}
+                    value={field.state.value}
+                    onChange={(nextDate) =>
+                      standardForm.setValue("dueDate", nextDate)
+                    }
+                    hasError={fieldProps["aria-invalid"] === "true"}
+                    describedBy={fieldProps["aria-describedby"]}
+                  />
+                )}
+              </FormField>
+            )}
+          </standardForm.form.Field>
 
-          <Button type="submit" size="finance-submit" disabled={isSaving}>
-            {isSaving ? "Saving..." : "Add Pot"}
-          </Button>
-          {statusMessage ? (
-            <AuthStatusMessage variant="error">
-              {statusMessage}
-            </AuthStatusMessage>
+          <standardForm.form.Field name="themeColor">
+            {(field) => (
+              <ThemeSelect
+                id="pot-theme"
+                value={field.state.value}
+                onValueChange={(value) =>
+                  standardForm.setValue("themeColor", value)
+                }
+                usedThemeColors={usedThemeColors}
+              />
+            )}
+          </standardForm.form.Field>
+
+          {standardForm.status?.message ? (
+            <FormStatusMessage variant={standardForm.status.variant}>
+              {standardForm.status.message}
+            </FormStatusMessage>
           ) : null}
+          <standardForm.form.Subscribe selector={(state) => state.isSubmitting}>
+            {(isSubmitting) => (
+              <Button
+                type="submit"
+                size="finance-submit"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Saving..." : "Add Pot"}
+              </Button>
+            )}
+          </standardForm.form.Subscribe>
         </form>
       </DialogContent>
     </Dialog>

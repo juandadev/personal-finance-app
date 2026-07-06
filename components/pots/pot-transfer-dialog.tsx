@@ -1,7 +1,10 @@
 "use client"
 
-import { useMemo, useState, type FormEvent } from "react"
+import { useMemo } from "react"
+import { z } from "zod"
+
 import { Button } from "@/components/ui/button"
+import { CurrencyInput } from "@/components/ui/currency-input"
 import {
   Dialog,
   DialogCloseButton,
@@ -10,12 +13,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { CurrencyInput } from "@/components/ui/currency-input"
-import { Label } from "@/components/ui/label"
-import { AuthStatusMessage } from "@/components/auth/auth-page-shell"
+import { FormField, FormStatusMessage } from "@/components/ui/form"
 import { useFinance } from "@/hooks/use-finance"
-import { formatCurrency } from "@/lib/format"
 import { parseDollarAmount } from "@/lib/finance/form-utils"
+import { formatCurrency } from "@/lib/format"
+import { currencyCentsSchema } from "@/lib/forms/validation"
+import { useStandardForm } from "@/lib/forms/use-standard-form"
 import { themeColorClasses } from "@/lib/theme-colors"
 import type { Pot } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -27,6 +30,10 @@ interface PotTransferDialogProps {
   mode: PotTransferMode
   open: boolean
   onOpenChange: (open: boolean) => void
+}
+
+type PotTransferFormValues = {
+  amount: string
 }
 
 function getPreviewAmount(
@@ -56,24 +63,25 @@ export function PotTransferDialog({
   onOpenChange,
 }: PotTransferDialogProps) {
   const { actions } = useFinance()
-  const [amount, setAmount] = useState("")
-  const [amountError, setAmountError] = useState("")
-  const [statusMessage, setStatusMessage] = useState("")
-  const [isSaving, setIsSaving] = useState(false)
   const isWithdrawal = mode === "withdraw"
-  const previewAmount = getPreviewAmount(pot.amount, amount, mode)
-  const currentPercentage = (pot.amount / pot.target) * 100
-  const previewPercentage = (previewAmount / pot.target) * 100
-  const clampedCurrentPercentage = Math.min(currentPercentage, 100)
-  const clampedPreviewPercentage = Math.min(previewPercentage, 100)
-  const deltaStart = Math.min(
-    clampedCurrentPercentage,
-    clampedPreviewPercentage,
+  const availableCents = Math.round(pot.amount * 100)
+  const defaultValues = useMemo(
+    () =>
+      ({
+        amount: "",
+      }) satisfies PotTransferFormValues,
+    [],
   )
-  const deltaWidth = Math.abs(
-    clampedPreviewPercentage - clampedCurrentPercentage,
+  const transferFormSchema = useMemo(
+    () =>
+      z.object({
+        amount: currencyCentsSchema("Enter an amount greater than $0.").refine(
+          (amountCents) => !isWithdrawal || amountCents <= availableCents,
+          "You cannot withdraw more than this pot contains.",
+        ),
+      }),
+    [availableCents, isWithdrawal],
   )
-
   const copy = useMemo(
     () =>
       isWithdrawal
@@ -94,51 +102,29 @@ export function PotTransferDialog({
     [isWithdrawal, pot.name],
   )
 
-  const resetForm = () => {
-    setAmount("")
-    setAmountError("")
-    setStatusMessage("")
-  }
+  const standardForm = useStandardForm({
+    defaultValues,
+    schema: transferFormSchema,
+    onSubmit: async ({ applyActionResult, resetForm, value }) => {
+      const result = isWithdrawal
+        ? await actions.withdrawFromPot(pot.id, value.amount)
+        : await actions.depositToPot(pot.id, value.amount)
+
+      if (!applyActionResult(result)) {
+        return
+      }
+
+      onOpenChange(false)
+      resetForm(defaultValues)
+    },
+  })
 
   const handleOpenChange = (nextOpen: boolean) => {
     onOpenChange(nextOpen)
 
     if (!nextOpen) {
-      resetForm()
+      standardForm.reset(defaultValues)
     }
-  }
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    setStatusMessage("")
-
-    const amount_cents = parseDollarAmount(amount)
-
-    if (amount_cents === null) {
-      setAmountError("Enter an amount greater than $0.")
-      return
-    }
-
-    if (isWithdrawal && amount_cents > Math.round(pot.amount * 100)) {
-      setAmountError("You cannot withdraw more than this pot contains.")
-      return
-    }
-
-    setIsSaving(true)
-
-    const result = isWithdrawal
-      ? await actions.withdrawFromPot(pot.id, amount_cents)
-      : await actions.depositToPot(pot.id, amount_cents)
-
-    setIsSaving(false)
-
-    if (!result.ok) {
-      setStatusMessage(result.message)
-      return
-    }
-
-    onOpenChange(false)
-    resetForm()
   }
 
   return (
@@ -153,97 +139,120 @@ export function PotTransferDialog({
 
         <DialogCloseButton aria-label={`Close ${copy.title} dialog`} />
 
-        <form className="mt-8" onSubmit={handleSubmit}>
-          <div className="flex items-center justify-between gap-4">
-            <p className="text-muted-foreground text-sm">New Amount</p>
-            <p className="text-foreground text-3xl leading-tight font-bold tracking-tight">
-              {formatCurrency(previewAmount, { forceDecimals: true })}
-            </p>
-          </div>
-
-          <div className="mt-4">
-            <div className="bg-background relative h-2 w-full overflow-hidden rounded-full">
-              <div
-                className="bg-foreground absolute inset-y-0 left-0 rounded-full"
-                style={{
-                  width: `${isWithdrawal ? clampedPreviewPercentage : clampedCurrentPercentage}%`,
-                }}
-              />
-              <div
-                className={cn(
-                  "absolute inset-y-0 rounded-full",
-                  isWithdrawal
-                    ? "bg-destructive"
-                    : themeColorClasses[pot.color].bg,
-                )}
-                style={{
-                  left: `${deltaStart}%`,
-                  width: `${deltaWidth}%`,
-                }}
-              />
-            </div>
-            <div className="mt-3 flex items-center justify-between text-xs">
-              <span
-                className={cn(
-                  isWithdrawal
-                    ? "text-destructive"
-                    : ["font-bold", themeColorClasses[pot.color].text],
-                )}
-              >
-                {previewPercentage.toFixed(previewPercentage < 10 ? 2 : 1)}%
-              </span>
-              <span className="text-muted-foreground">
-                Target of {formatCurrency(pot.target)}
-              </span>
-            </div>
-          </div>
-
-          <div className="mt-8 space-y-2">
-            <Label
-              htmlFor={`${mode}-pot-amount-${pot.id}`}
-              className="text-muted-foreground text-xs font-bold"
-            >
-              {copy.label}
-            </Label>
-            <CurrencyInput
-              id={`${mode}-pot-amount-${pot.id}`}
-              inputMode="decimal"
-              value={amount}
-              onChange={(event) => {
-                setAmount(event.target.value)
-                setAmountError("")
-              }}
-              placeholder={isWithdrawal ? "e.g. 20" : "e.g. 400"}
-              aria-invalid={amountError ? "true" : "false"}
-              aria-describedby={
-                amountError ? `${mode}-pot-amount-error-${pot.id}` : undefined
-              }
-            />
-            {amountError && (
-              <p
-                id={`${mode}-pot-amount-error-${pot.id}`}
-                className="text-destructive text-xs"
-              >
-                {amountError}
-              </p>
-            )}
-          </div>
-
-          <Button
-            type="submit"
-            size="finance-submit"
-            className="mt-5"
-            disabled={isSaving}
+        <form className="mt-8" onSubmit={standardForm.handleSubmit}>
+          <standardForm.form.Subscribe
+            selector={(state) => state.values.amount}
           >
-            {isSaving ? "Saving..." : copy.button}
-          </Button>
-          {statusMessage ? (
-            <div className="mt-4">
-              <AuthStatusMessage variant="error">
-                {statusMessage}
-              </AuthStatusMessage>
+            {(amount) => {
+              const previewAmount = getPreviewAmount(pot.amount, amount, mode)
+              const currentPercentage = (pot.amount / pot.target) * 100
+              const previewPercentage = (previewAmount / pot.target) * 100
+              const clampedCurrentPercentage = Math.min(currentPercentage, 100)
+              const clampedPreviewPercentage = Math.min(previewPercentage, 100)
+              const deltaStart = Math.min(
+                clampedCurrentPercentage,
+                clampedPreviewPercentage,
+              )
+              const deltaWidth = Math.abs(
+                clampedPreviewPercentage - clampedCurrentPercentage,
+              )
+
+              return (
+                <>
+                  <div className="flex items-center justify-between gap-4">
+                    <p className="text-muted-foreground text-sm">New Amount</p>
+                    <p className="text-foreground text-3xl leading-tight font-bold tracking-tight">
+                      {formatCurrency(previewAmount, { forceDecimals: true })}
+                    </p>
+                  </div>
+
+                  <div className="mt-4">
+                    <div className="bg-background relative h-2 w-full overflow-hidden rounded-full">
+                      <div
+                        className="bg-foreground absolute inset-y-0 left-0 rounded-full"
+                        style={{
+                          width: `${isWithdrawal ? clampedPreviewPercentage : clampedCurrentPercentage}%`,
+                        }}
+                      />
+                      <div
+                        className={cn(
+                          "absolute inset-y-0 rounded-full",
+                          isWithdrawal
+                            ? "bg-destructive"
+                            : themeColorClasses[pot.color].bg,
+                        )}
+                        style={{
+                          left: `${deltaStart}%`,
+                          width: `${deltaWidth}%`,
+                        }}
+                      />
+                    </div>
+                    <div className="mt-3 flex items-center justify-between text-xs">
+                      <span
+                        className={cn(
+                          isWithdrawal
+                            ? "text-destructive"
+                            : ["font-bold", themeColorClasses[pot.color].text],
+                        )}
+                      >
+                        {previewPercentage.toFixed(
+                          previewPercentage < 10 ? 2 : 1,
+                        )}
+                        %
+                      </span>
+                      <span className="text-muted-foreground">
+                        Target of {formatCurrency(pot.target)}
+                      </span>
+                    </div>
+                  </div>
+                </>
+              )
+            }}
+          </standardForm.form.Subscribe>
+
+          <standardForm.form.Field name="amount">
+            {(field) => (
+              <FormField
+                id={`${mode}-pot-amount-${pot.id}`}
+                label={copy.label}
+                className="mt-8"
+                error={standardForm.fieldErrors.amount}
+              >
+                {(fieldProps) => (
+                  <CurrencyInput
+                    {...fieldProps}
+                    inputMode="decimal"
+                    value={field.state.value}
+                    onChange={(event) =>
+                      standardForm.setValue("amount", event.target.value)
+                    }
+                    onBlur={field.handleBlur}
+                    placeholder={isWithdrawal ? "e.g. 20" : "e.g. 400"}
+                  />
+                )}
+              </FormField>
+            )}
+          </standardForm.form.Field>
+
+          {standardForm.status?.message ? (
+            <div className="mt-5">
+              <FormStatusMessage variant={standardForm.status.variant}>
+                {standardForm.status.message}
+              </FormStatusMessage>
             </div>
           ) : null}
+          <standardForm.form.Subscribe selector={(state) => state.isSubmitting}>
+            {(isSubmitting) => (
+              <Button
+                type="submit"
+                size="finance-submit"
+                className="mt-5"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Saving..." : copy.button}
+              </Button>
+            )}
+          </standardForm.form.Subscribe>
         </form>
       </DialogContent>
     </Dialog>

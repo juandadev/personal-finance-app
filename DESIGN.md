@@ -230,9 +230,22 @@ Finance data must stay readable on mobile.
 
 - Use shadcn dialog, alert dialog, select, input, label, and form primitives
   unless a product-specific wrapper already exists.
+- TanStack Form is the standard client form engine for data-entry forms.
+- Zod is the standard validation schema layer. Client schemas should prevent
+  known invalid input before submit, while server-side schemas remain the final
+  authority for persisted data.
 - Use `AlertDialog` for destructive confirmations.
 - Labels are required for every input.
 - Helper text should be muted and specific.
+- Field validation errors replace or sit alongside helper text in a destructive
+  helper style. Every invalid field must include `aria-invalid`, an associated
+  helper/error message, and tokenized destructive styling.
+- Forms validate on submit first. After the first failed submit attempt,
+  validation updates live as users edit fields.
+- Every submit attempt clears stale form and field errors before validating the
+  current values again.
+- Form-level validation and submit errors appear below the main form fields and
+  above the primary submit button.
 - Primary submit actions should be full-width on auth forms and right-aligned or
   grouped in dialogs.
 - Destructive actions must use destructive color and explicit labels like
@@ -240,7 +253,8 @@ Finance data must stay readable on mobile.
 - Auth and API-backed forms should show inline status messages near the submit
   action. Use destructive styling for errors, muted/foreground copy for
   progress, and concise success copy when the view does not immediately
-  redirect or close.
+  redirect or close. Error messages should use sentence case, explain what to
+  fix, and avoid vague copy.
 - A Server Action call must never leave the user without feedback. Resolve
   every action with a `{ ok, message }` result (see
   `lib/finance/reducer.ts#runFinanceAction`) instead of letting the call

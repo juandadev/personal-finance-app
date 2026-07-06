@@ -5,6 +5,7 @@ import { Eye, EyeOff } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { FormStatusMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Logo } from "@/components/sidebar/logo"
@@ -223,17 +224,5 @@ export function AuthStatusMessage({
   children,
   variant = "info",
 }: AuthStatusMessageProps) {
-  return (
-    <p
-      role={variant === "error" ? "alert" : "status"}
-      className={cn(
-        "rounded-lg border px-4 py-3 text-sm leading-normal",
-        variant === "error" && "border-destructive/20 text-destructive",
-        variant === "success" && "border-accent/20 text-foreground",
-        variant === "info" && "border-border text-muted-foreground",
-      )}
-    >
-      {children}
-    </p>
-  )
+  return <FormStatusMessage variant={variant}>{children}</FormStatusMessage>
 }
