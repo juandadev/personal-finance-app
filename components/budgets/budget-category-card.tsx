@@ -16,7 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { formatCurrency } from "@/lib/format"
+import { formatCurrency, formatBudgetPercentage } from "@/lib/format"
 import { themeColorClasses } from "@/lib/theme-colors"
 import type { Budget, Transaction } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -90,6 +90,15 @@ export function BudgetCategoryCard({
           maximum={budget.maximum}
           color={budget.color}
         />
+      </div>
+
+      <div className="text-muted-foreground mt-3 flex items-center justify-between text-xs">
+        <span>
+          <strong>
+            {formatBudgetPercentage(budget.spent, budget.maximum)}
+          </strong>{" "}
+          spent
+        </span>
       </div>
 
       <div className="mt-4 flex">

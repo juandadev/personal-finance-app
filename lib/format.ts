@@ -57,3 +57,16 @@ export function formatSignedAmount(
   }).format(absolute)
   return `${sign}${formatted}`
 }
+
+export function transactionAmountClassName(amount: number): string {
+  return amount > 0 ? "text-accent" : "text-destructive"
+}
+
+export function formatBudgetPercentage(spent: number, maximum: number): string {
+  if (maximum <= 0) {
+    return "0%"
+  }
+
+  const percentage = (spent / maximum) * 100
+  return `${percentage.toFixed(percentage < 10 ? 2 : 1)}%`
+}

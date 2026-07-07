@@ -1,6 +1,6 @@
 import { ContactAvatar } from "@/components/contact-avatar"
 import { cn } from "@/lib/utils"
-import { formatSignedAmount } from "@/lib/format"
+import { formatSignedAmount, transactionAmountClassName } from "@/lib/format"
 import type { Transaction } from "@/lib/types"
 
 interface TransactionItemProps {
@@ -8,8 +8,6 @@ interface TransactionItemProps {
 }
 
 export function TransactionItem({ transaction }: TransactionItemProps) {
-  const isPositive = transaction.amount > 0
-
   return (
     <li className="flex items-center gap-4 py-5 first:pt-0 last:pb-0">
       <ContactAvatar
@@ -25,7 +23,7 @@ export function TransactionItem({ transaction }: TransactionItemProps) {
         <p
           className={cn(
             "text-sm font-bold",
-            isPositive ? "text-accent" : "text-foreground",
+            transactionAmountClassName(transaction.amount),
           )}
         >
           {formatSignedAmount(transaction.amount)}

@@ -1,6 +1,6 @@
 "use client"
 
-import { formatCurrency } from "@/lib/format"
+import { formatCurrency, formatBudgetPercentage } from "@/lib/format"
 import { themeColorClasses } from "@/lib/theme-colors"
 import type { Budget } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -24,12 +24,20 @@ export function SpendingSummaryItem({ budget }: SpendingSummaryItemProps) {
           {budget.category}
         </span>
       </div>
-      <div className="flex items-baseline gap-2">
-        <span className="text-foreground text-sm font-bold">
-          {formatCurrency(budget.spent, { forceDecimals: true })}
-        </span>
+      <div className="flex flex-col items-end gap-0.5">
+        <div className="flex items-baseline gap-2">
+          <span className="text-foreground text-sm font-bold">
+            {formatCurrency(budget.spent, { forceDecimals: true })}
+          </span>
+          <span className="text-muted-foreground text-xs">
+            of {formatCurrency(budget.maximum, { forceDecimals: true })}
+          </span>
+        </div>
         <span className="text-muted-foreground text-xs">
-          of {formatCurrency(budget.maximum, { forceDecimals: true })}
+          <strong>
+            {formatBudgetPercentage(budget.spent, budget.maximum)}
+          </strong>{" "}
+          spent
         </span>
       </div>
     </li>

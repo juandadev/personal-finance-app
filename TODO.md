@@ -21,3 +21,5 @@
       page. e.g from the budgets page, the user clicks to see all the transactions that belongs to a target budget, to it
       niavigates through the URL and the transactions page will quickly apply the filters
 - [ ] let the user select their pinned pots & budgets shown in the "Overview" page. Only when it exceeds 4 items
+- [ ] We are storing private and sensitive data, we should come to a performant and clever solution to "encode" the data
+      such as transaction amounts and all that stuff, it could be easily hacked and check the details if intercepted

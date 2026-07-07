@@ -1,7 +1,8 @@
-import Image from "next/image"
+import { ContactAvatar } from "@/components/contact-avatar"
 import { Badge } from "@/components/ui/badge"
-import { formatCurrency } from "@/lib/format"
+import { formatSignedAmount, transactionAmountClassName } from "@/lib/format"
 import type { Transaction } from "@/lib/types"
+import { cn } from "@/lib/utils"
 
 interface LatestSpendingItemProps {
   transaction: Transaction
@@ -11,12 +12,12 @@ export function LatestSpendingItem({ transaction }: LatestSpendingItemProps) {
   return (
     <li className="flex items-center justify-between gap-1 py-3 first:pt-0 last:pb-0">
       <div className="flex flex-1 items-center gap-3">
-        <Image
-          src={transaction.avatarUrl}
-          alt=""
-          width={32}
-          height={32}
-          className="size-8 rounded-full object-cover"
+        <ContactAvatar
+          name={transaction.name}
+          initials={transaction.contactInitials}
+          color={transaction.contactColor}
+          avatarUrl={transaction.avatarUrl}
+          className="size-8"
         />
         <span className="flex min-w-0 flex-col gap-1">
           <span className="text-foreground truncate text-sm font-bold">
@@ -28,8 +29,13 @@ export function LatestSpendingItem({ transaction }: LatestSpendingItemProps) {
         </span>
       </div>
       <div className="flex flex-col items-end">
-        <span className="text-foreground text-sm font-bold">
-          {formatCurrency(transaction.amount, { forceDecimals: true })}
+        <span
+          className={cn(
+            "text-sm font-bold",
+            transactionAmountClassName(transaction.amount),
+          )}
+        >
+          {formatSignedAmount(transaction.amount)}
         </span>
         <span className="text-muted-foreground text-xs">
           {transaction.date}

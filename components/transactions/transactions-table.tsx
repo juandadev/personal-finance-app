@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select"
 import { useFinance } from "@/hooks/use-finance"
 import { cn } from "@/lib/utils"
-import { formatSignedAmount } from "@/lib/format"
+import { formatSignedAmount, transactionAmountClassName } from "@/lib/format"
 import type { Budget, Transaction } from "@/lib/types"
 import {
   Table,
@@ -118,8 +118,6 @@ function MobileTransactionItem({
   isPending,
   onBudgetChange,
 }: TransactionItemProps) {
-  const isPositive = transaction.amount > 0
-
   return (
     <li className="flex flex-col gap-3 py-3">
       <div className="flex items-center justify-between gap-3">
@@ -151,7 +149,7 @@ function MobileTransactionItem({
           <span
             className={cn(
               "text-sm font-bold",
-              isPositive ? "text-accent" : "text-foreground",
+              transactionAmountClassName(transaction.amount),
             )}
           >
             {formatSignedAmount(transaction.amount)}
@@ -184,8 +182,6 @@ function TransactionRow({
   isPending,
   onBudgetChange,
 }: TransactionItemProps) {
-  const isPositive = transaction.amount > 0
-
   return (
     <TableRow>
       <TableCell>
@@ -224,7 +220,7 @@ function TransactionRow({
       <TableCell
         className={cn(
           "text-right font-bold",
-          isPositive ? "text-accent" : "text-foreground",
+          transactionAmountClassName(transaction.amount),
         )}
       >
         {formatSignedAmount(transaction.amount)}

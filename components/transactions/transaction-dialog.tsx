@@ -1,9 +1,17 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react"
 import { z } from "zod"
 
 import { ThemeSelect } from "@/components/theme-select"
+import { ContactAvatar } from "@/components/contact-avatar"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { CurrencyInput } from "@/components/ui/currency-input"
@@ -39,6 +47,8 @@ import {
 } from "@/lib/forms/validation"
 import { useStandardForm } from "@/lib/forms/use-standard-form"
 import type { Transaction } from "@/lib/types"
+import type { ThemeColor } from "@/lib/theme-colors"
+import { getInitials } from "@/lib/utils"
 
 const noBudgetValue = "none"
 const createCategoryValue = "__create-category"
@@ -81,6 +91,16 @@ const quickContactSchema = z.object({
 type TransactionFormValues = z.input<typeof transactionFormSchema>
 type QuickCategoryValues = z.input<typeof quickCategorySchema>
 type QuickContactValues = z.input<typeof quickContactSchema>
+type SelectOption = {
+  value: string
+  label: string
+  contactAvatar?: {
+    name: string
+    initials: string
+    color: ThemeColor
+    avatarUrl?: string
+  }
+}
 
 function todayIsoDate() {
   return new Date().toISOString().slice(0, 10)
@@ -120,6 +140,16 @@ function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
   const [showQuickContactForm, setShowQuickContactForm] = useState(false)
   const [deleteStatusMessage, setDeleteStatusMessage] = useState("")
   const [isDeleting, setIsDeleting] = useState(false)
+  const [createdCategoryOption, setCreatedCategoryOption] =
+    useState<SelectOption | null>(null)
+  const [createdContactOption, setCreatedContactOption] =
+    useState<SelectOption | null>(null)
+  const [pendingCategorySelectionId, setPendingCategorySelectionId] = useState<
+    string | null
+  >(null)
+  const [pendingContactSelectionId, setPendingContactSelectionId] = useState<
+    string | null
+  >(null)
 
   const mainDefaultValues = useMemo(
     () =>
@@ -161,12 +191,44 @@ function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
       }) satisfies QuickContactValues,
     [],
   )
+  const categoryOptions = useMemo(
+    () =>
+      withFallbackOption(
+        state.categories.map((category) => ({
+          value: category.id,
+          label: category.name,
+        })),
+        createdCategoryOption,
+      ),
+    [createdCategoryOption, state.categories],
+  )
+  const contactOptions = useMemo(
+    () =>
+      withFallbackOption(
+        state.counterparties.map((counterparty) => ({
+          value: counterparty.id,
+          label: counterparty.display_name,
+          contactAvatar: {
+            name: counterparty.display_name,
+            initials: getInitials(counterparty.display_name),
+            color: counterparty.theme_color,
+            avatarUrl: counterparty.avatar_url ?? undefined,
+          },
+        })),
+        createdContactOption,
+      ),
+    [createdContactOption, state.counterparties],
+  )
 
   const mainForm = useStandardForm({
     defaultValues: mainDefaultValues,
     schema: transactionFormSchema,
     onSubmit: async ({ applyActionResult, resetForm, value }) => {
       const accountId = transaction?.accountId ?? state.accounts[0]?.id ?? ""
+      const selectedCategoryId =
+        createdCategoryOption?.value ?? value.categoryId
+      const selectedCounterpartyId =
+        createdContactOption?.value ?? value.counterpartyId
 
       if (!accountId) {
         applyActionResult({
@@ -178,7 +240,7 @@ function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
 
       const matchingBudgets = getMatchingBudgets({
         budgets: state.budgets,
-        categoryId: value.categoryId,
+        categoryId: selectedCategoryId,
         postedAt: value.postedAt,
         transactionType: value.transactionType,
       })
@@ -194,8 +256,8 @@ function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
       const payload: NewTransactionRecord = {
         id: transaction?.id ?? crypto.randomUUID(),
         account_id: accountId,
-        counterparty_id: value.counterpartyId,
-        category_id: value.categoryId,
+        counterparty_id: selectedCounterpartyId,
+        category_id: selectedCategoryId,
         concept: value.concept,
         amount_cents: signedAmount,
         is_voucher_expense: isVoucherExpense,
@@ -238,7 +300,8 @@ function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
         return
       }
 
-      mainForm.setValue("categoryId", id)
+      setCreatedCategoryOption({ value: id, label: value.name.trim() })
+      setPendingCategorySelectionId(id)
       setShowQuickCategoryForm(false)
       resetForm(quickCategoryDefaultValues)
     },
@@ -260,11 +323,46 @@ function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
         return
       }
 
-      mainForm.setValue("counterpartyId", id)
+      setCreatedContactOption({
+        value: id,
+        label: value.displayName.trim(),
+        contactAvatar: {
+          name: value.displayName.trim(),
+          initials: getInitials(value.displayName.trim()),
+          color: value.themeColor,
+        },
+      })
+      setPendingContactSelectionId(id)
       setShowQuickContactForm(false)
       resetForm(quickContactDefaultValues)
     },
   })
+
+  useEffect(() => {
+    if (!pendingCategorySelectionId) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      mainForm.setValue("categoryId", pendingCategorySelectionId)
+      setPendingCategorySelectionId(null)
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [mainForm, pendingCategorySelectionId])
+
+  useEffect(() => {
+    if (!pendingContactSelectionId) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      mainForm.setValue("counterpartyId", pendingContactSelectionId)
+      setPendingContactSelectionId(null)
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [mainForm, pendingContactSelectionId])
 
   const handleOpenChange = (nextOpen: boolean) => {
     setOpen(nextOpen)
@@ -275,6 +373,10 @@ function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
       quickContactForm.reset(quickContactDefaultValues)
       setShowQuickCategoryForm(false)
       setShowQuickContactForm(false)
+      setCreatedCategoryOption(null)
+      setCreatedContactOption(null)
+      setPendingCategorySelectionId(null)
+      setPendingContactSelectionId(null)
       setDeleteStatusMessage("")
       return
     }
@@ -287,6 +389,10 @@ function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
     quickContactForm.reset(quickContactDefaultValues)
     setShowQuickCategoryForm(false)
     setShowQuickContactForm(false)
+    setCreatedCategoryOption(null)
+    setCreatedContactOption(null)
+    setPendingCategorySelectionId(null)
+    setPendingContactSelectionId(null)
     setDeleteStatusMessage("")
   }
 
@@ -485,15 +591,18 @@ function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
               <FormSelect
                 id="transaction-category"
                 label="Category"
-                value={field.state.value}
+                value={
+                  pendingCategorySelectionId ??
+                  createdCategoryOption?.value ??
+                  field.state.value
+                }
                 onValueChange={(value) => {
+                  setCreatedCategoryOption(null)
+                  setPendingCategorySelectionId(null)
                   mainForm.setValue("categoryId", value)
                   setShowQuickCategoryForm(false)
                 }}
-                options={state.categories.map((category) => ({
-                  value: category.id,
-                  label: category.name,
-                }))}
+                options={categoryOptions}
                 placeholder="Select a category"
                 createItem={{
                   value: createCategoryValue,
@@ -517,15 +626,18 @@ function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
               <FormSelect
                 id="transaction-contact"
                 label="Contact"
-                value={field.state.value}
+                value={
+                  pendingContactSelectionId ??
+                  createdContactOption?.value ??
+                  field.state.value
+                }
                 onValueChange={(value) => {
+                  setCreatedContactOption(null)
+                  setPendingContactSelectionId(null)
                   mainForm.setValue("counterpartyId", value)
                   setShowQuickContactForm(false)
                 }}
-                options={state.counterparties.map((counterparty) => ({
-                  value: counterparty.id,
-                  label: counterparty.display_name,
-                }))}
+                options={contactOptions}
                 placeholder="Select a contact"
                 createItem={{
                   value: createContactValue,
@@ -681,9 +793,7 @@ function QuickCategoryPanel({
 }) {
   const nameInputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    nameInputRef.current?.focus()
-  }, [])
+  useDeferredInputFocus(nameInputRef)
 
   return (
     <div className="bg-background space-y-3 rounded-lg p-3">
@@ -760,9 +870,7 @@ function QuickContactPanel({
 }) {
   const nameInputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    nameInputRef.current?.focus()
-  }, [])
+  useDeferredInputFocus(nameInputRef)
 
   return (
     <div className="bg-background space-y-3 rounded-lg p-3">
@@ -863,6 +971,39 @@ function QuickContactPanel({
   )
 }
 
+function withFallbackOption(
+  options: SelectOption[],
+  fallbackOption: SelectOption | null,
+) {
+  if (
+    !fallbackOption ||
+    options.some((option) => option.value === fallbackOption.value)
+  ) {
+    return options
+  }
+
+  return [...options, fallbackOption]
+}
+
+function SelectOptionLabel({ option }: { option: SelectOption }) {
+  if (!option.contactAvatar) {
+    return option.label
+  }
+
+  return (
+    <span className="flex items-center gap-3">
+      <ContactAvatar
+        className="size-8"
+        name={option.contactAvatar.name}
+        initials={option.contactAvatar.initials}
+        color={option.contactAvatar.color}
+        avatarUrl={option.contactAvatar.avatarUrl}
+      />
+      <span>{option.label}</span>
+    </span>
+  )
+}
+
 function FormSelect({
   createItem,
   error,
@@ -878,12 +1019,16 @@ function FormSelect({
   id: string
   label: string
   onValueChange: (value: string) => void
-  options: { value: string; label: string }[]
+  options: SelectOption[]
   placeholder?: string
   value: string
 }) {
+  const [selectKey, setSelectKey] = useState(0)
+  const selectedOption = options.find((option) => option.value === value)
+
   const handleValueChange = (nextValue: string) => {
     if (createItem && nextValue === createItem.value) {
+      setSelectKey((currentKey) => currentKey + 1)
       createItem.onSelect()
       return
     }
@@ -894,9 +1039,13 @@ function FormSelect({
   return (
     <FormField id={id} label={label} error={error}>
       {(fieldProps) => (
-        <Select value={value} onValueChange={handleValueChange}>
+        <Select key={selectKey} value={value} onValueChange={handleValueChange}>
           <SelectTrigger {...fieldProps} variant="form">
-            <SelectValue placeholder={placeholder} />
+            <SelectValue placeholder={placeholder}>
+              {selectedOption ? (
+                <SelectOptionLabel option={selectedOption} />
+              ) : null}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent className="max-h-107.5" matchTriggerWidth>
             {options.map((option) => (
@@ -905,7 +1054,7 @@ function FormSelect({
                 value={option.value}
                 variant="form"
               >
-                {option.label}
+                <SelectOptionLabel option={option} />
               </SelectItem>
             ))}
             {createItem ? (
@@ -918,6 +1067,26 @@ function FormSelect({
       )}
     </FormField>
   )
+}
+
+function useDeferredInputFocus(inputRef: RefObject<HTMLInputElement | null>) {
+  useEffect(() => {
+    let timeoutId: number | undefined
+    const frameId = window.requestAnimationFrame(() => {
+      timeoutId = window.setTimeout(() => {
+        inputRef.current?.focus({ preventScroll: true })
+        inputRef.current?.select()
+      }, 0)
+    })
+
+    return () => {
+      window.cancelAnimationFrame(frameId)
+
+      if (timeoutId !== undefined) {
+        window.clearTimeout(timeoutId)
+      }
+    }
+  }, [inputRef])
 }
 
 function getMatchingBudgets({

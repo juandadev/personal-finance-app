@@ -46,7 +46,7 @@ import {
 import { useStandardForm } from "@/lib/forms/use-standard-form"
 import type { CategoryRecord, CounterpartyRecord } from "@/lib/finance/types"
 import { themeColorClasses } from "@/lib/theme-colors"
-import { cn } from "@/lib/utils"
+import { cn, getInitials } from "@/lib/utils"
 
 const categoryDialogSchema = z.object({
   name: requiredStringSchema("Enter a category name.", 40),
@@ -567,15 +567,4 @@ function DeleteLibraryRecordDialog({
       </AlertDialog>
     </>
   )
-}
-
-function getInitials(name: string) {
-  const initials = name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("")
-
-  return initials || "?"
 }

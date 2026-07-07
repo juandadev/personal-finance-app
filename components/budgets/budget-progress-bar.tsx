@@ -1,3 +1,4 @@
+import { formatBudgetPercentage } from "@/lib/format"
 import { themeColorClasses, type ThemeColor } from "@/lib/theme-colors"
 import { cn } from "@/lib/utils"
 
@@ -12,7 +13,8 @@ export function BudgetProgressBar({
   maximum,
   color,
 }: BudgetProgressBarProps) {
-  const percentage = Math.min((spent / maximum) * 100, 100)
+  const percentage = maximum > 0 ? (spent / maximum) * 100 : 0
+  const barPercentage = Math.min(percentage, 100)
 
   return (
     <div
@@ -22,13 +24,14 @@ export function BudgetProgressBar({
       aria-valuemin={0}
       aria-valuemax={maximum}
       aria-valuenow={Math.min(spent, maximum)}
+      aria-valuetext={formatBudgetPercentage(spent, maximum)}
     >
       <div
         className={cn(
           "h-full rounded-sm transition-all duration-300",
           themeColorClasses[color].bg,
         )}
-        style={{ width: `${percentage}%` }}
+        style={{ width: `${barPercentage}%` }}
       />
     </div>
   )
