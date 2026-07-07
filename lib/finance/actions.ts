@@ -142,7 +142,20 @@ const potUpdateSchema = z.object({
 
 const idSchema = recordIdSchema
 const amountSchema = z.number().int().positive()
-const transactionSchema = z.object({
+function validateVoucherExpense(
+  transaction: { amount_cents: number; is_voucher_expense: boolean },
+  context: z.RefinementCtx,
+) {
+  if (transaction.is_voucher_expense && transaction.amount_cents > 0) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Voucher payments can only be used for expenses.",
+      path: ["is_voucher_expense"],
+    })
+  }
+}
+
+const transactionBaseSchema = z.object({
   id: recordIdSchema,
   user_id: z.string().min(1),
   account_id: recordIdSchema,
@@ -155,6 +168,7 @@ const transactionSchema = z.object({
     .refine((value) => value !== 0, {
       message: "Enter a transaction amount greater than $0.",
     }),
+  is_voucher_expense: z.boolean().default(false),
   posted_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   description: z
     .string()
@@ -163,11 +177,16 @@ const transactionSchema = z.object({
     .transform((value) => (value ? value : null))
     .nullable(),
 })
+const transactionSchema = transactionBaseSchema.superRefine(
+  validateVoucherExpense,
+)
 
-const transactionUpdateSchema = transactionSchema.omit({
-  id: true,
-  user_id: true,
-})
+const transactionUpdateSchema = transactionBaseSchema
+  .omit({
+    id: true,
+    user_id: true,
+  })
+  .superRefine(validateVoucherExpense)
 const optionalBudgetIdSchema = recordIdSchema.nullable()
 
 type TransactionMutationData = {

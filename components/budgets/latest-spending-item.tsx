@@ -1,4 +1,5 @@
 import Image from "next/image"
+import { Badge } from "@/components/ui/badge"
 import { formatCurrency } from "@/lib/format"
 import type { Transaction } from "@/lib/types"
 
@@ -17,8 +18,13 @@ export function LatestSpendingItem({ transaction }: LatestSpendingItemProps) {
           height={32}
           className="size-8 rounded-full object-cover"
         />
-        <span className="text-foreground truncate text-sm font-bold">
-          {transaction.name}
+        <span className="flex min-w-0 flex-col gap-1">
+          <span className="text-foreground truncate text-sm font-bold">
+            {transaction.name}
+          </span>
+          {transaction.isVoucherExpense ? (
+            <Badge variant="secondary">Voucher</Badge>
+          ) : null}
         </span>
       </div>
       <div className="flex flex-col items-end">

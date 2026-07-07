@@ -105,6 +105,7 @@ function selectTransactions(
       concept: transaction.concept,
       date: formatDisplayDate(transaction.posted_at),
       postedAt: transaction.posted_at,
+      isVoucherExpense: transaction.is_voucher_expense,
       category: category.name,
       description: transaction.description ?? undefined,
       budgetId: assignment?.budget_id,

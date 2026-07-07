@@ -84,6 +84,18 @@ const budgetColumns = [
   "limit_cents",
   "theme_color",
 ]
+const transactionSelectColumns = [
+  "user_id",
+  "id",
+  "account_id",
+  "counterparty_id",
+  "category_id",
+  "concept",
+  "amount_cents",
+  "is_voucher_expense",
+  "posted_at::text AS posted_at",
+  "description",
+]
 const budgetSummaryColumns = ["user_id", "budget_id", "spent_cents"]
 const budgetAssignmentColumns = [
   "user_id",
@@ -184,7 +196,7 @@ export async function loadFinanceState(
       [userId],
     )
     const transactions = await client.query<TransactionRecord>(
-      `SELECT user_id, id, account_id, counterparty_id, category_id, concept, amount_cents, posted_at::text, description FROM transactions WHERE user_id = $1 ORDER BY posted_at DESC, id`,
+      `SELECT ${transactionSelectColumns.join(", ")} FROM transactions WHERE user_id = $1 ORDER BY posted_at DESC, id`,
       [userId],
     )
     const budgets = await client.query<BudgetRecord>(
@@ -306,6 +318,19 @@ async function applyTransactionEffects(
     account: accountResult.rows[0],
     accountSummary: summaryResult.rows[0],
   }
+}
+
+async function applyAccountEffectsIfNeeded(
+  client: PoolClient,
+  userId: string,
+  transaction: TransactionRecord,
+  direction: 1 | -1,
+) {
+  if (transaction.is_voucher_expense) {
+    return null
+  }
+
+  return applyTransactionEffects(client, userId, transaction, direction)
 }
 
 async function syncBudgetAssignment(
@@ -595,11 +620,12 @@ export async function insertTransaction(
           category_id,
           concept,
           amount_cents,
+          is_voucher_expense,
           posted_at,
           description
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-        RETURNING user_id, id, account_id, counterparty_id, category_id, concept, amount_cents, posted_at::text, description
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        RETURNING ${transactionSelectColumns.join(", ")}
       `,
       [
         userId,
@@ -609,12 +635,13 @@ export async function insertTransaction(
         transaction.category_id,
         transaction.concept,
         transaction.amount_cents,
+        transaction.is_voucher_expense,
         transaction.posted_at,
         transaction.description,
       ],
     )
     const savedTransaction = transactionResult.rows[0]
-    const effects = await applyTransactionEffects(
+    const effects = await applyAccountEffectsIfNeeded(
       client,
       userId,
       savedTransaction,
@@ -629,8 +656,8 @@ export async function insertTransaction(
 
     return {
       transaction: savedTransaction,
-      accounts: [effects.account],
-      accountSummaries: [effects.accountSummary],
+      accounts: effects ? [effects.account] : [],
+      accountSummaries: effects ? [effects.accountSummary] : [],
       budgetAssignment,
     }
   })
@@ -645,7 +672,7 @@ export async function updateTransaction(
   return withFinanceTransaction(userId, async (client) => {
     const existingResult = await client.query<TransactionRecord>(
       `
-        SELECT user_id, id, account_id, counterparty_id, category_id, concept, amount_cents, posted_at::text, description
+        SELECT ${transactionSelectColumns.join(", ")}
         FROM transactions
         WHERE user_id = $1 AND id = $2
       `,
@@ -678,7 +705,7 @@ export async function updateTransaction(
       "Contact",
     )
 
-    const reversedEffects = await applyTransactionEffects(
+    const reversedEffects = await applyAccountEffectsIfNeeded(
       client,
       userId,
       existingResult.rows[0],
@@ -693,10 +720,11 @@ export async function updateTransaction(
           category_id = $4,
           concept = $5,
           amount_cents = $6,
-          posted_at = $7,
-          description = $8
-        WHERE user_id = $1 AND id = $9
-        RETURNING user_id, id, account_id, counterparty_id, category_id, concept, amount_cents, posted_at::text, description
+          is_voucher_expense = $7,
+          posted_at = $8,
+          description = $9
+        WHERE user_id = $1 AND id = $10
+        RETURNING ${transactionSelectColumns.join(", ")}
       `,
       [
         userId,
@@ -705,13 +733,14 @@ export async function updateTransaction(
         updates.category_id,
         updates.concept,
         updates.amount_cents,
+        updates.is_voucher_expense,
         updates.posted_at,
         updates.description,
         id,
       ],
     )
     const savedTransaction = transactionResult.rows[0]
-    const appliedEffects = await applyTransactionEffects(
+    const appliedEffects = await applyAccountEffectsIfNeeded(
       client,
       userId,
       savedTransaction,
@@ -726,10 +755,13 @@ export async function updateTransaction(
 
     return {
       transaction: savedTransaction,
-      accounts: [reversedEffects.account, appliedEffects.account],
+      accounts: [
+        ...(reversedEffects ? [reversedEffects.account] : []),
+        ...(appliedEffects ? [appliedEffects.account] : []),
+      ],
       accountSummaries: [
-        reversedEffects.accountSummary,
-        appliedEffects.accountSummary,
+        ...(reversedEffects ? [reversedEffects.accountSummary] : []),
+        ...(appliedEffects ? [appliedEffects.accountSummary] : []),
       ],
       budgetAssignment,
     }
@@ -740,7 +772,7 @@ export async function deleteTransaction(userId: string, id: string) {
   return withFinanceTransaction(userId, async (client) => {
     const existingResult = await client.query<TransactionRecord>(
       `
-        SELECT user_id, id, account_id, counterparty_id, category_id, concept, amount_cents, posted_at::text, description
+        SELECT ${transactionSelectColumns.join(", ")}
         FROM transactions
         WHERE user_id = $1 AND id = $2
       `,
@@ -751,7 +783,7 @@ export async function deleteTransaction(userId: string, id: string) {
       throw new Error("Transaction not found.")
     }
 
-    const effects = await applyTransactionEffects(
+    const effects = await applyAccountEffectsIfNeeded(
       client,
       userId,
       existingResult.rows[0],
@@ -770,8 +802,8 @@ export async function deleteTransaction(userId: string, id: string) {
 
     return {
       id,
-      accounts: [effects.account],
-      accountSummaries: [effects.accountSummary],
+      accounts: effects ? [effects.account] : [],
+      accountSummaries: effects ? [effects.accountSummary] : [],
     }
   })
 }

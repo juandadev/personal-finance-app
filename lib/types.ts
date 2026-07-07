@@ -52,6 +52,7 @@ export interface Transaction {
   concept: string
   date: string
   postedAt: string
+  isVoucherExpense: boolean
   category: TransactionCategory
   description?: string
   budgetId?: string

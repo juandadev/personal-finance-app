@@ -24,7 +24,7 @@ if (!connectionString) {
 
 const pool = new Pool({ connectionString, max: 1 })
 
-type SeedRow = Record<string, string | number | null>
+type SeedRow = Record<string, boolean | number | string | null>
 
 const categoryThemeColors = [
   "chart-1",
@@ -68,6 +68,7 @@ const transactionsSeedRows: SeedRow[] = transactionsSeed.map((transaction) => {
   return {
     ...transaction,
     concept: transaction.description ?? fallbackConcept ?? "Manual transaction",
+    is_voucher_expense: false,
   }
 })
 
@@ -89,7 +90,7 @@ async function insertRows(
     return
   }
 
-  const values: Array<string | number | null> = []
+  const values: Array<boolean | number | string | null> = []
   const placeholders = rows
     .map((row, rowIndex) => {
       const offset = rowIndex * columns.length
@@ -189,6 +190,7 @@ async function seedDemoData(client: PoolClient) {
       "category_id",
       "concept",
       "amount_cents",
+      "is_voucher_expense",
       "posted_at",
       "description",
     ],
@@ -200,6 +202,7 @@ async function seedDemoData(client: PoolClient) {
       "category_id",
       "concept",
       "amount_cents",
+      "is_voucher_expense",
       "posted_at",
       "description",
     ],

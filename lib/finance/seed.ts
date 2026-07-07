@@ -53,6 +53,7 @@ const transactionsSeedRows = transactionsSeed.map((transaction) => {
       category?.name ??
       counterparty?.display_name ??
       "Manual transaction",
+    is_voucher_expense: false,
   }
 })
 const potsSeedRows = potsSeed.map((pot) => ({

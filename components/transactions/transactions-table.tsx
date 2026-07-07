@@ -5,6 +5,7 @@ import { useState } from "react"
 import { AuthStatusMessage } from "@/components/auth/auth-page-shell"
 import { ContactAvatar } from "@/components/contact-avatar"
 import { EditTransactionDialog } from "@/components/transactions/transaction-dialog"
+import { Badge } from "@/components/ui/badge"
 import {
   Select,
   SelectContent,
@@ -139,6 +140,11 @@ function MobileTransactionItem({
             <span className="text-muted-foreground text-xs">
               {transaction.category}
             </span>
+            {transaction.isVoucherExpense ? (
+              <Badge variant="secondary" className="mt-1">
+                Voucher
+              </Badge>
+            ) : null}
           </div>
         </div>
         <div className="flex flex-col items-end">
@@ -194,7 +200,12 @@ function TransactionRow({
         </div>
       </TableCell>
       <TableCell className="text-muted-foreground max-w-44">
-        {transaction.concept}
+        <div className="flex flex-col items-start gap-1">
+          <span>{transaction.concept}</span>
+          {transaction.isVoucherExpense ? (
+            <Badge variant="secondary">Voucher</Badge>
+          ) : null}
+        </div>
       </TableCell>
       <TableCell className="text-muted-foreground">
         {transaction.category}

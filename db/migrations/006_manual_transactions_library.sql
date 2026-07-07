@@ -7,6 +7,7 @@ ALTER TABLE categories
   DROP CONSTRAINT IF EXISTS categories_name_check,
   DROP CONSTRAINT IF EXISTS categories_name_key,
   DROP CONSTRAINT IF EXISTS categories_slug_key,
+  DROP CONSTRAINT IF EXISTS categories_slug_check,
   DROP CONSTRAINT IF EXISTS categories_theme_color_check;
 
 ALTER TABLE categories

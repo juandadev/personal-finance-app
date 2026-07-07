@@ -5,6 +5,7 @@ import { z } from "zod"
 
 import { ThemeSelect } from "@/components/theme-select"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { CurrencyInput } from "@/components/ui/currency-input"
 import {
   Dialog,
@@ -17,6 +18,7 @@ import {
 } from "@/components/ui/dialog"
 import { FormField, FormStatusMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -42,16 +44,27 @@ const noBudgetValue = "none"
 const createCategoryValue = "__create-category"
 const createContactValue = "__create-contact"
 
-const transactionFormSchema = z.object({
-  transactionType: z.enum(["expense", "income"]),
-  amount: currencyCentsSchema("Enter an amount greater than $0."),
-  postedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid date."),
-  concept: requiredStringSchema("Enter a transaction concept.", 80),
-  categoryId: requiredSelectSchema("Choose a category."),
-  counterpartyId: requiredSelectSchema("Choose a contact."),
-  description: optionalTrimmedStringSchema(240),
-  budgetId: z.string(),
-})
+const transactionFormSchema = z
+  .object({
+    transactionType: z.enum(["expense", "income"]),
+    amount: currencyCentsSchema("Enter an amount greater than $0."),
+    postedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid date."),
+    concept: requiredStringSchema("Enter a transaction concept.", 80),
+    categoryId: requiredSelectSchema("Choose a category."),
+    counterpartyId: requiredSelectSchema("Choose a contact."),
+    isVoucherExpense: z.boolean().default(false),
+    description: optionalTrimmedStringSchema(240),
+    budgetId: z.string(),
+  })
+  .superRefine((value, context) => {
+    if (value.transactionType === "income" && value.isVoucherExpense) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Voucher payments can only be used for expenses.",
+        path: ["isVoucherExpense"],
+      })
+    }
+  })
 
 const quickCategorySchema = z.object({
   name: requiredStringSchema("Enter a category name.", 40),
@@ -121,6 +134,10 @@ function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
         categoryId: transaction?.categoryId ?? state.categories[0]?.id ?? "",
         counterpartyId:
           transaction?.counterpartyId ?? state.counterparties[0]?.id ?? "",
+        isVoucherExpense:
+          transaction && transaction.amount < 0
+            ? transaction.isVoucherExpense
+            : false,
         description: transaction?.description ?? "",
         budgetId: transaction?.budgetId ?? noBudgetValue,
       }) satisfies TransactionFormValues,
@@ -172,6 +189,8 @@ function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
         : noBudgetValue
       const signedAmount =
         value.transactionType === "income" ? value.amount : value.amount * -1
+      const isVoucherExpense =
+        value.transactionType === "expense" ? value.isVoucherExpense : false
       const payload: NewTransactionRecord = {
         id: transaction?.id ?? crypto.randomUUID(),
         account_id: accountId,
@@ -179,6 +198,7 @@ function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
         category_id: value.categoryId,
         concept: value.concept,
         amount_cents: signedAmount,
+        is_voucher_expense: isVoucherExpense,
         posted_at: value.postedAt,
         description: value.description || null,
       }
@@ -314,12 +334,15 @@ function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
                   id="transaction-type"
                   label="Type"
                   value={field.state.value}
-                  onValueChange={(value) =>
-                    mainForm.setValue(
-                      "transactionType",
-                      value as "expense" | "income",
-                    )
-                  }
+                  onValueChange={(value) => {
+                    const nextType = value as "expense" | "income"
+
+                    mainForm.setValue("transactionType", nextType)
+
+                    if (nextType === "income") {
+                      mainForm.setValue("isVoucherExpense", false)
+                    }
+                  }}
                   options={[
                     { value: "expense", label: "Expense" },
                     { value: "income", label: "Income" },
@@ -351,6 +374,67 @@ function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
               )}
             </mainForm.form.Field>
           </div>
+
+          <mainForm.form.Subscribe
+            selector={(formState) => ({
+              isVoucherExpense: formState.values.isVoucherExpense,
+              transactionType: formState.values.transactionType,
+            })}
+          >
+            {({ isVoucherExpense, transactionType }) => {
+              if (transactionType !== "expense") {
+                return null
+              }
+
+              const helperId = "voucher-expense-helper"
+              const error = mainForm.fieldErrors.isVoucherExpense
+
+              return (
+                <div className="border-border bg-background rounded-lg border p-3">
+                  <div className="flex items-start gap-3">
+                    <mainForm.form.Field name="isVoucherExpense">
+                      {(field) => (
+                        <Checkbox
+                          id="voucher-expense"
+                          className="mt-0.5"
+                          checked={isVoucherExpense}
+                          aria-invalid={error ? "true" : "false"}
+                          aria-describedby={helperId}
+                          onCheckedChange={(checked) =>
+                            mainForm.setValue(
+                              "isVoucherExpense",
+                              checked === true,
+                            )
+                          }
+                          onBlur={field.handleBlur}
+                        />
+                      )}
+                    </mainForm.form.Field>
+                    <div className="space-y-1">
+                      <Label
+                        htmlFor="voucher-expense"
+                        className="text-foreground text-sm font-bold"
+                      >
+                        Paid with voucher
+                      </Label>
+                      <p
+                        id={helperId}
+                        className="text-muted-foreground text-xs leading-normal"
+                      >
+                        Voucher expenses reduce budgets but do not change your
+                        account balance.
+                      </p>
+                      {error ? (
+                        <p className="text-destructive text-xs leading-normal">
+                          {error}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              )
+            }}
+          </mainForm.form.Subscribe>
 
           <mainForm.form.Field name="postedAt">
             {(field) => (

@@ -67,6 +67,7 @@ export interface TransactionRecord {
   category_id: FinanceRecordId
   concept: string
   amount_cents: number
+  is_voucher_expense: boolean
   posted_at: string
   description: string | null
 }
