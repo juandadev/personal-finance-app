@@ -5,6 +5,7 @@ import { z } from "zod"
 import { auth } from "@/lib/auth/server"
 import {
   assignTransactionToBudget,
+  closeZeroBalanceCreditCardStatement,
   deleteBudget,
   deleteCategory,
   deleteCounterparty,
@@ -13,13 +14,16 @@ import {
   insertBudget,
   insertCategory,
   insertCounterparty,
+  insertCreditCard,
   insertPot,
   insertTransaction,
+  payCreditCardStatement,
   transferPotBalance,
   unassignTransactionFromBudget,
   updateBudget,
   updateCategory,
   updateCounterparty,
+  updateCreditCard,
   updatePot,
   updateTransaction,
 } from "@/lib/finance/queries"
@@ -32,9 +36,13 @@ import type {
   BudgetTransactionAssignmentRecord,
   CategoryRecord,
   CounterpartyRecord,
+  CreditCardPaymentRecord,
+  CreditCardRecord,
+  CreditCardStatementRecord,
   NewBudgetRecord,
   NewCategoryRecord,
   NewCounterpartyRecord,
+  NewCreditCardRecord,
   NewPotRecord,
   NewTransactionRecord,
   PotRecord,
@@ -116,6 +124,49 @@ const counterpartyUpdateSchema = z.object({
   notes: optionalNotesSchema.optional(),
 })
 
+const cardTextSchema = z.string().trim().min(1).max(40)
+const creditCardSchema = z.object({
+  id: recordIdSchema,
+  nickname: cardTextSchema,
+  issuer: cardTextSchema,
+  network: z.enum(["Visa", "Master Card", "American Express"]),
+  last_four: z.string().regex(/^\d{4}$/, "Enter the last 4 digits only."),
+  expiration_month: z.number().int().min(1).max(12),
+  expiration_year: z
+    .number()
+    .int()
+    .min(new Date().getFullYear(), "Choose a current or future year.")
+    .max(2100),
+  credit_limit_cents: z.number().int().positive(),
+  closing_day_of_month: z.number().int().min(1).max(31),
+  payment_due_day_of_month: z.number().int().min(1).max(31),
+  theme_color: themeColorSchema,
+  archived_at: z.string().nullable(),
+})
+const creditCardUpdateSchema = creditCardSchema
+  .omit({
+    id: true,
+  })
+  .partial()
+  .superRefine((value, context) => {
+    const textValues = [value.nickname, value.issuer, value.network].filter(
+      (field): field is string => typeof field === "string",
+    )
+
+    for (const fieldValue of textValues) {
+      if (/\b\d{12,19}\b/.test(fieldValue.replace(/\s+/g, ""))) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Do not enter full card numbers.",
+        })
+      }
+    }
+  })
+const statementPaymentSchema = z.object({
+  statementId: recordIdSchema,
+  paidAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid date."),
+})
+
 const potDueDateSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid due date.")
@@ -143,14 +194,33 @@ const potUpdateSchema = z.object({
 const idSchema = recordIdSchema
 const amountSchema = z.number().int().positive()
 function validateVoucherExpense(
-  transaction: { amount_cents: number; is_voucher_expense: boolean },
+  transaction: {
+    amount_cents: number
+    is_voucher_expense: boolean
+    payment_method: string
+  },
   context: z.RefinementCtx,
 ) {
-  if (transaction.is_voucher_expense && transaction.amount_cents > 0) {
+  if (
+    (transaction.is_voucher_expense ||
+      transaction.payment_method === "voucher") &&
+    transaction.amount_cents > 0
+  ) {
     context.addIssue({
       code: z.ZodIssueCode.custom,
       message: "Voucher payments can only be used for expenses.",
       path: ["is_voucher_expense"],
+    })
+  }
+
+  if (
+    transaction.payment_method === "credit_card" &&
+    transaction.amount_cents > 0
+  ) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Credit card purchases can only be used for expenses.",
+      path: ["payment_method"],
     })
   }
 }
@@ -169,6 +239,11 @@ const transactionBaseSchema = z.object({
       message: "Enter a transaction amount greater than $0.",
     }),
   is_voucher_expense: z.boolean().default(false),
+  payment_method: z
+    .enum(["bank_account", "credit_card", "voucher", "credit_card_payment"])
+    .default("bank_account"),
+  credit_card_id: recordIdSchema.nullable().default(null),
+  credit_card_statement_id: recordIdSchema.nullable().default(null),
   posted_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   description: z
     .string()
@@ -193,6 +268,7 @@ type TransactionMutationData = {
   transaction: TransactionRecord
   accounts: AccountRecord[]
   accountSummaries: AccountSummaryRecord[]
+  creditCardStatements: CreditCardStatementRecord[]
   budgetAssignment: BudgetTransactionAssignmentRecord | null
 }
 
@@ -229,6 +305,8 @@ const uniqueConstraintMessages: Record<string, string> = {
   categories_user_slug_unique: "A category with this name already exists.",
   counterparties_user_display_name_unique:
     "A contact with this name already exists.",
+  credit_cards_user_nickname_unique:
+    "A credit card with this nickname already exists.",
 }
 
 function slugify(value: string) {
@@ -419,6 +497,121 @@ export async function deleteCounterpartyAction(
   }
 }
 
+export async function createCreditCardAction(
+  creditCard: NewCreditCardRecord,
+): Promise<FinanceActionResult<CreditCardRecord>> {
+  try {
+    const userId = await getUserId()
+    const parsedCreditCard = creditCardSchema.parse({
+      ...creditCard,
+      archived_at: null,
+    })
+    const data = await insertCreditCard(userId, {
+      ...parsedCreditCard,
+      archived_at: null,
+    })
+
+    return {
+      ok: true,
+      message: "Credit card created.",
+      data,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function updateCreditCardAction(
+  id: string,
+  updates: Partial<Omit<CreditCardRecord, "id" | "user_id">>,
+): Promise<FinanceActionResult<CreditCardRecord>> {
+  try {
+    const userId = await getUserId()
+    const parsedId = idSchema.parse(id)
+    const parsedUpdates = creditCardUpdateSchema.parse(updates)
+    const data = await updateCreditCard(userId, parsedId, parsedUpdates)
+
+    return {
+      ok: true,
+      message: "Credit card updated.",
+      data,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function archiveCreditCardAction(
+  id: string,
+): Promise<FinanceActionResult<CreditCardRecord>> {
+  try {
+    const userId = await getUserId()
+    const parsedId = idSchema.parse(id)
+    const data = await updateCreditCard(userId, parsedId, {
+      archived_at: new Date().toISOString(),
+    })
+
+    return {
+      ok: true,
+      message: "Credit card archived.",
+      data,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function payCreditCardStatementAction(
+  statementId: string,
+  paidAt: string,
+): Promise<
+  FinanceActionResult<{
+    payment: CreditCardPaymentRecord
+    transaction: TransactionRecord
+    accounts: AccountRecord[]
+    statement: CreditCardStatementRecord
+  }>
+> {
+  try {
+    const userId = await getUserId()
+    const parsed = statementPaymentSchema.parse({ statementId, paidAt })
+    const data = await payCreditCardStatement(
+      userId,
+      parsed.statementId,
+      parsed.paidAt,
+    )
+
+    return {
+      ok: true,
+      message: "Credit card statement paid.",
+      data,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function closeCreditCardStatementAction(
+  statementId: string,
+): Promise<FinanceActionResult<CreditCardStatementRecord>> {
+  try {
+    const userId = await getUserId()
+    const parsedStatementId = idSchema.parse(statementId)
+    const data = await closeZeroBalanceCreditCardStatement(
+      userId,
+      parsedStatementId,
+    )
+
+    return {
+      ok: true,
+      message: "Statement closed.",
+      data,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
 export async function createTransactionAction(
   transaction: NewTransactionRecord,
   budgetId: string | null,
@@ -478,6 +671,7 @@ export async function deleteTransactionAction(id: string): Promise<
     id: string
     accounts: AccountRecord[]
     accountSummaries: AccountSummaryRecord[]
+    creditCardStatements: CreditCardStatementRecord[]
   }>
 > {
   try {

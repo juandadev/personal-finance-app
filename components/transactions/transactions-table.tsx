@@ -138,9 +138,9 @@ function MobileTransactionItem({
             <span className="text-muted-foreground text-xs">
               {transaction.category}
             </span>
-            {transaction.isVoucherExpense ? (
+            {transaction.paymentMethod !== "bank_account" ? (
               <Badge variant="secondary" className="mt-1">
-                Voucher
+                {transaction.paymentMethodLabel}
               </Badge>
             ) : null}
           </div>
@@ -198,8 +198,8 @@ function TransactionRow({
       <TableCell className="text-muted-foreground max-w-44">
         <div className="flex flex-col items-start gap-1">
           <span>{transaction.concept}</span>
-          {transaction.isVoucherExpense ? (
-            <Badge variant="secondary">Voucher</Badge>
+          {transaction.paymentMethod !== "bank_account" ? (
+            <Badge variant="secondary">{transaction.paymentMethodLabel}</Badge>
           ) : null}
         </div>
       </TableCell>

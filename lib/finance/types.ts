@@ -1,5 +1,7 @@
 import type {
   Budget,
+  CreditCard,
+  CreditCardSummary,
   Pot,
   RecurringBill,
   RecurringBillSummary,
@@ -13,6 +15,9 @@ export type CurrencyCode = "USD" | "MXN"
 export type AccountType = "checking" | "savings" | "credit"
 export type CounterpartyType = "person" | "merchant"
 export type BillFrequency = "monthly"
+export type TransactionPaymentMethod =
+  "bank_account" | "credit_card" | "voucher" | "credit_card_payment"
+export type CreditCardStatementLifecycleStatus = "open" | "closed" | "paid"
 
 export type FinanceUserId = string
 export type FinanceRecordId = string
@@ -68,6 +73,9 @@ export interface TransactionRecord {
   concept: string
   amount_cents: number
   is_voucher_expense: boolean
+  payment_method: TransactionPaymentMethod
+  credit_card_id: FinanceRecordId | null
+  credit_card_statement_id: FinanceRecordId | null
   posted_at: string
   description: string | null
 }
@@ -145,11 +153,51 @@ export interface RecurringBillRecord {
   status: RecurringBill["status"]
 }
 
+export interface CreditCardRecord {
+  id: FinanceRecordId
+  user_id: FinanceUserId
+  nickname: string
+  issuer: string
+  network: string
+  last_four: string
+  expiration_month: number
+  expiration_year: number
+  credit_limit_cents: number
+  closing_day_of_month: number
+  payment_due_day_of_month: number
+  theme_color: ThemeColor
+  archived_at: string | null
+}
+
+export interface CreditCardStatementRecord {
+  id: FinanceRecordId
+  user_id: FinanceUserId
+  credit_card_id: FinanceRecordId
+  period_start: string
+  period_end: string
+  payment_due_date: string
+  statement_amount_cents: number
+  lifecycle_status: CreditCardStatementLifecycleStatus
+  paid_at: string | null
+}
+
+export interface CreditCardPaymentRecord {
+  id: FinanceRecordId
+  user_id: FinanceUserId
+  credit_card_id: FinanceRecordId
+  statement_id: FinanceRecordId
+  source_account_id: FinanceRecordId
+  cashflow_transaction_id: FinanceRecordId
+  amount_cents: number
+  paid_at: string
+}
+
 export type NewBudgetRecord = Omit<BudgetRecord, "user_id">
 export type NewPotRecord = Omit<PotRecord, "user_id">
 export type NewCategoryRecord = Omit<CategoryRecord, "user_id">
 export type NewCounterpartyRecord = Omit<CounterpartyRecord, "user_id">
 export type NewTransactionRecord = Omit<TransactionRecord, "user_id">
+export type NewCreditCardRecord = Omit<CreditCardRecord, "user_id">
 
 export interface FinanceState {
   preferences: UserPreferencesRecord
@@ -163,6 +211,9 @@ export interface FinanceState {
   budgetTransactionAssignments: BudgetTransactionAssignmentRecord[]
   pots: PotRecord[]
   recurringBills: RecurringBillRecord[]
+  creditCards: CreditCardRecord[]
+  creditCardStatements: CreditCardStatementRecord[]
+  creditCardPayments: CreditCardPaymentRecord[]
 }
 
 export interface FinanceViewModel {
@@ -177,4 +228,7 @@ export interface FinanceViewModel {
   recurringBills: RecurringBill[]
   recurringBillsSummary: RecurringBillSummary[]
   totalBillsAmount: number
+  creditCards: CreditCard[]
+  creditCardSummary: CreditCardSummary[]
+  totalCreditCardStatementBalance: number
 }

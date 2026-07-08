@@ -69,6 +69,9 @@ const transactionsSeedRows: SeedRow[] = transactionsSeed.map((transaction) => {
     ...transaction,
     concept: transaction.description ?? fallbackConcept ?? "Manual transaction",
     is_voucher_expense: false,
+    payment_method: "bank_account",
+    credit_card_id: null,
+    credit_card_statement_id: null,
   }
 })
 
@@ -191,6 +194,9 @@ async function seedDemoData(client: PoolClient) {
       "concept",
       "amount_cents",
       "is_voucher_expense",
+      "payment_method",
+      "credit_card_id",
+      "credit_card_statement_id",
       "posted_at",
       "description",
     ],
@@ -203,6 +209,9 @@ async function seedDemoData(client: PoolClient) {
       "concept",
       "amount_cents",
       "is_voucher_expense",
+      "payment_method",
+      "credit_card_id",
+      "credit_card_statement_id",
       "posted_at",
       "description",
     ],

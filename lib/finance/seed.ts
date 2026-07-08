@@ -54,6 +54,9 @@ const transactionsSeedRows = transactionsSeed.map((transaction) => {
       counterparty?.display_name ??
       "Manual transaction",
     is_voucher_expense: false,
+    payment_method: "bank_account",
+    credit_card_id: null,
+    credit_card_statement_id: null,
   }
 })
 const potsSeedRows = potsSeed.map((pot) => ({
@@ -78,6 +81,9 @@ export const financeSeed: FinanceState = {
   budgetTransactionAssignments: [],
   pots: potsSeedRows,
   recurringBills: recurringBillsSeed,
+  creditCards: [],
+  creditCardStatements: [],
+  creditCardPayments: [],
 } as FinanceState
 
 export function createInitialFinanceState(): FinanceState {
@@ -103,5 +109,12 @@ export function createInitialFinanceState(): FinanceState {
     ),
     pots: financeSeed.pots.map((pot) => ({ ...pot })),
     recurringBills: financeSeed.recurringBills.map((bill) => ({ ...bill })),
+    creditCards: financeSeed.creditCards.map((card) => ({ ...card })),
+    creditCardStatements: financeSeed.creditCardStatements.map((statement) => ({
+      ...statement,
+    })),
+    creditCardPayments: financeSeed.creditCardPayments.map((payment) => ({
+      ...payment,
+    })),
   }
 }

@@ -53,6 +53,11 @@ export interface Transaction {
   date: string
   postedAt: string
   isVoucherExpense: boolean
+  paymentMethod:
+    "bank_account" | "credit_card" | "voucher" | "credit_card_payment"
+  creditCardId?: string
+  creditCardStatementId?: string
+  paymentMethodLabel: string
   category: TransactionCategory
   description?: string
   budgetId?: string
@@ -77,4 +82,58 @@ export interface RecurringBill {
   amount: number
   dueDay: number
   status: BillStatus
+}
+
+export type CreditCardDueStatus =
+  "upcoming" | "due-soon" | "due-today" | "overdue" | "paid"
+
+export interface CreditCardSummary {
+  label: string
+  amount: number
+  count: number
+  color: ThemeColor
+}
+
+export interface CreditCardStatement {
+  id: string
+  creditCardId: string
+  periodStart: string
+  periodEnd: string
+  paymentDueDate: string
+  amount: number
+  lifecycleStatus: "open" | "closed" | "paid"
+  dueStatus: CreditCardDueStatus
+  paidAt?: string
+}
+
+export interface CreditCardPayment {
+  id: string
+  creditCardId: string
+  statementId: string
+  sourceAccountId: string
+  cashflowTransactionId: string
+  amount: number
+  paidAt: string
+}
+
+export interface CreditCard {
+  id: string
+  nickname: string
+  issuer: string
+  network: string
+  lastFour: string
+  expirationMonth: number
+  expirationYear: number
+  creditLimit: number
+  closingDay: number
+  paymentDueDay: number
+  color: ThemeColor
+  initials: string
+  archivedAt?: string
+  currentStatement?: CreditCardStatement
+  statements: CreditCardStatement[]
+  payments: CreditCardPayment[]
+  currentStatementAmount: number
+  availableCredit: number
+  dueStatus: CreditCardDueStatus
 }

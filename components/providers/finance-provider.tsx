@@ -10,9 +10,12 @@ import {
 } from "@/lib/finance/reducer"
 import {
   assignTransactionToBudgetAction,
+  archiveCreditCardAction,
+  closeCreditCardStatementAction,
   createBudgetAction,
   createCategoryAction,
   createCounterpartyAction,
+  createCreditCardAction,
   createPotAction,
   createTransactionAction,
   deleteBudgetAction,
@@ -25,18 +28,22 @@ import {
   updateBudgetAction,
   updateCategoryAction,
   updateCounterpartyAction,
+  updateCreditCardAction,
   updatePotAction,
   updateTransactionAction,
+  payCreditCardStatementAction,
 } from "@/lib/finance/actions"
 import { createInitialFinanceState } from "@/lib/finance/seed"
 import { selectFinanceViewModel } from "@/lib/finance/selectors"
 import type {
   BudgetRecord,
+  CreditCardRecord,
   FinanceState,
   FinanceViewModel,
   NewBudgetRecord,
   NewCategoryRecord,
   NewCounterpartyRecord,
+  NewCreditCardRecord,
   NewPotRecord,
   NewTransactionRecord,
   PotRecord,
@@ -104,6 +111,7 @@ export function FinanceProvider({
                 id,
                 accounts: result.data.accounts,
                 accountSummaries: result.data.accountSummaries,
+                creditCardStatements: result.data.creditCardStatements,
               })
             }
 
@@ -353,6 +361,94 @@ export function FinanceProvider({
       ) => dispatch({ type: "recurring-bill/update", id, updates }),
       deleteRecurringBill: (id: string) =>
         dispatch({ type: "recurring-bill/delete", id }),
+      addCreditCard: (creditCard: NewCreditCardRecord) =>
+        runFinanceAction(() =>
+          createCreditCardAction(creditCard).then((result) => {
+            if (result.ok) {
+              dispatch({
+                type: "credit-card/add",
+                creditCard: result.data,
+              })
+            }
+
+            return result
+          }),
+        ),
+      updateCreditCard: (
+        id: string,
+        updates: Partial<Omit<CreditCardRecord, "id" | "user_id">>,
+      ) =>
+        runFinanceAction(() =>
+          updateCreditCardAction(id, updates).then((result) => {
+            if (result.ok) {
+              dispatch({
+                type: "credit-card/update",
+                id,
+                updates: {
+                  nickname: result.data.nickname,
+                  issuer: result.data.issuer,
+                  network: result.data.network,
+                  last_four: result.data.last_four,
+                  expiration_month: result.data.expiration_month,
+                  expiration_year: result.data.expiration_year,
+                  credit_limit_cents: result.data.credit_limit_cents,
+                  closing_day_of_month: result.data.closing_day_of_month,
+                  payment_due_day_of_month:
+                    result.data.payment_due_day_of_month,
+                  theme_color: result.data.theme_color,
+                  archived_at: result.data.archived_at,
+                },
+              })
+            }
+
+            return result
+          }),
+        ),
+      archiveCreditCard: (id: string) =>
+        runFinanceAction(() =>
+          archiveCreditCardAction(id).then((result) => {
+            if (result.ok) {
+              dispatch({
+                type: "credit-card/update",
+                id,
+                updates: {
+                  archived_at: result.data.archived_at,
+                },
+              })
+            }
+
+            return result
+          }),
+        ),
+      payCreditCardStatement: (statementId: string, paidAt: string) =>
+        runFinanceAction(() =>
+          payCreditCardStatementAction(statementId, paidAt).then((result) => {
+            if (result.ok) {
+              dispatch({
+                type: "credit-card/payment",
+                payment: result.data.payment,
+                transaction: result.data.transaction,
+                accounts: result.data.accounts,
+                statement: result.data.statement,
+              })
+            }
+
+            return result
+          }),
+        ),
+      closeCreditCardStatement: (statementId: string) =>
+        runFinanceAction(() =>
+          closeCreditCardStatementAction(statementId).then((result) => {
+            if (result.ok) {
+              dispatch({
+                type: "credit-card/statement-upsert",
+                statements: [result.data],
+              })
+            }
+
+            return result
+          }),
+        ),
     }),
     [dispatch],
   )

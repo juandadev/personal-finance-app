@@ -1,3 +1,5 @@
+import { format as formatDateFns } from "date-fns"
+
 import type { CurrencyCode } from "@/lib/finance/types"
 
 interface CurrencyFormatOptions {
@@ -69,4 +71,24 @@ export function formatBudgetPercentage(spent: number, maximum: number): string {
 
   const percentage = (spent / maximum) * 100
   return `${percentage.toFixed(percentage < 10 ? 2 : 1)}%`
+}
+
+function parseIsoDateAsLocalDate(isoDate: string): Date {
+  const [year = 0, month = 1, day = 1] = isoDate.split("-").map(Number)
+
+  return new Date(year, month - 1, day)
+}
+
+export function formatDisplayDate(
+  isoDate: string,
+  dateFormat = "MMM d, yyyy",
+): string {
+  return formatDateFns(parseIsoDateAsLocalDate(isoDate), dateFormat)
+}
+
+export function formatDisplayDateRange(
+  startIsoDate: string,
+  endIsoDate: string,
+) {
+  return `${formatDisplayDate(startIsoDate)} to ${formatDisplayDate(endIsoDate)}`
 }

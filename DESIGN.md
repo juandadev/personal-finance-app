@@ -345,6 +345,8 @@ Button labels should be action-specific: `Add Money`, `Create Budget`,
 ## Finance Data Rules
 
 - Use formatting helpers from `lib/format` for currency and signed amounts.
+- Use `date-fns` through shared helpers in `lib/format` for all user-facing date
+  text. Do not render raw ISO dates outside form controls that require them.
 - Positive amounts use a plus sign and `text-accent`.
 - Negative or outgoing amounts use normal foreground text unless representing an
   error or destructive state.

@@ -2,6 +2,7 @@ import { SummaryCards } from "@/components/overview/summary-cards"
 import { PageHeading } from "@/components/overview/page-heading"
 import { PotsCard } from "@/components/overview/pots/pots-card"
 import { BudgetsCard } from "@/components/overview/budgets/budgets-card"
+import { CreditCardsCard } from "@/components/overview/credit-cards/credit-cards-card"
 import { TransactionsCard } from "@/components/overview/transactions/transactions-card"
 import { RecurringBillsCard } from "@/components/overview/recurring-bills/recurring-bills-card"
 
@@ -17,6 +18,7 @@ export default function OverviewPage() {
         </div>
         <div className="flex flex-col gap-4">
           <BudgetsCard />
+          <CreditCardsCard />
           <RecurringBillsCard />
         </div>
       </div>

@@ -10,10 +10,10 @@ import {
 } from "react"
 import { z } from "zod"
 
+import { CreditCardBadge } from "@/components/credit-cards/credit-card-badge"
 import { ThemeSelect } from "@/components/theme-select"
 import { ContactAvatar } from "@/components/contact-avatar"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import { CurrencyInput } from "@/components/ui/currency-input"
 import {
   Dialog,
@@ -26,7 +26,6 @@ import {
 } from "@/components/ui/dialog"
 import { FormField, FormStatusMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -63,15 +62,32 @@ const transactionFormSchema = z
     categoryId: requiredSelectSchema("Choose a category."),
     counterpartyId: requiredSelectSchema("Choose a contact."),
     isVoucherExpense: z.boolean().default(false),
+    paymentMethod: z.enum(["bank_account", "credit_card", "voucher"]),
+    creditCardId: z.string(),
     description: optionalTrimmedStringSchema(240),
     budgetId: z.string(),
   })
   .superRefine((value, context) => {
-    if (value.transactionType === "income" && value.isVoucherExpense) {
+    if (
+      value.transactionType === "income" &&
+      (value.isVoucherExpense || value.paymentMethod !== "bank_account")
+    ) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Voucher payments can only be used for expenses.",
-        path: ["isVoucherExpense"],
+        message: "Alternate payment methods can only be used for expenses.",
+        path: ["paymentMethod"],
+      })
+    }
+
+    if (
+      value.transactionType === "expense" &&
+      value.paymentMethod === "credit_card" &&
+      !value.creditCardId
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Choose a credit card.",
+        path: ["creditCardId"],
       })
     }
   })
@@ -99,6 +115,11 @@ type SelectOption = {
     initials: string
     color: ThemeColor
     avatarUrl?: string
+  }
+  creditCardAvatar?: {
+    nickname: string
+    initials: string
+    color: ThemeColor
   }
 }
 
@@ -168,10 +189,20 @@ function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
           transaction && transaction.amount < 0
             ? transaction.isVoucherExpense
             : false,
+        paymentMethod:
+          transaction && transaction.amount < 0
+            ? transaction.paymentMethod === "credit_card_payment"
+              ? "bank_account"
+              : transaction.paymentMethod
+            : "bank_account",
+        creditCardId:
+          transaction?.creditCardId ??
+          state.creditCards.find((card) => !card.archived_at)?.id ??
+          "",
         description: transaction?.description ?? "",
         budgetId: transaction?.budgetId ?? noBudgetValue,
       }) satisfies TransactionFormValues,
-    [state.categories, state.counterparties, transaction],
+    [state.categories, state.counterparties, state.creditCards, transaction],
   )
   const quickCategoryDefaultValues = useMemo(
     () =>
@@ -251,8 +282,11 @@ function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
         : noBudgetValue
       const signedAmount =
         value.transactionType === "income" ? value.amount : value.amount * -1
-      const isVoucherExpense =
-        value.transactionType === "expense" ? value.isVoucherExpense : false
+      const paymentMethod =
+        value.transactionType === "expense"
+          ? value.paymentMethod
+          : "bank_account"
+      const isVoucherExpense = paymentMethod === "voucher"
       const payload: NewTransactionRecord = {
         id: transaction?.id ?? crypto.randomUUID(),
         account_id: accountId,
@@ -261,6 +295,10 @@ function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
         concept: value.concept,
         amount_cents: signedAmount,
         is_voucher_expense: isVoucherExpense,
+        payment_method: paymentMethod,
+        credit_card_id:
+          paymentMethod === "credit_card" ? value.creditCardId : null,
+        credit_card_statement_id: null,
         posted_at: value.postedAt,
         description: value.description || null,
       }
@@ -447,6 +485,7 @@ function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
 
                     if (nextType === "income") {
                       mainForm.setValue("isVoucherExpense", false)
+                      mainForm.setValue("paymentMethod", "bank_account")
                     }
                   }}
                   options={[
@@ -483,60 +522,76 @@ function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
 
           <mainForm.form.Subscribe
             selector={(formState) => ({
-              isVoucherExpense: formState.values.isVoucherExpense,
+              paymentMethod: formState.values.paymentMethod,
               transactionType: formState.values.transactionType,
             })}
           >
-            {({ isVoucherExpense, transactionType }) => {
+            {({ paymentMethod, transactionType }) => {
               if (transactionType !== "expense") {
                 return null
               }
 
-              const helperId = "voucher-expense-helper"
-              const error = mainForm.fieldErrors.isVoucherExpense
-
               return (
-                <div className="border-border bg-background rounded-lg border p-3">
-                  <div className="flex items-start gap-3">
-                    <mainForm.form.Field name="isVoucherExpense">
+                <div className="bg-background space-y-3 rounded-lg p-3">
+                  <mainForm.form.Field name="paymentMethod">
+                    {(field) => (
+                      <FormSelect
+                        id="transaction-payment-method"
+                        label="Payment Source"
+                        value={field.state.value}
+                        onValueChange={(value) => {
+                          const nextMethod = value as
+                            "bank_account" | "credit_card" | "voucher"
+
+                          mainForm.setValue("paymentMethod", nextMethod)
+                          mainForm.setValue(
+                            "isVoucherExpense",
+                            nextMethod === "voucher",
+                          )
+                        }}
+                        options={[
+                          { value: "bank_account", label: "Bank Account" },
+                          { value: "credit_card", label: "Credit Card" },
+                          { value: "voucher", label: "Voucher" },
+                        ]}
+                        error={mainForm.fieldErrors.paymentMethod}
+                      />
+                    )}
+                  </mainForm.form.Field>
+                  {paymentMethod === "credit_card" ? (
+                    <mainForm.form.Field name="creditCardId">
                       {(field) => (
-                        <Checkbox
-                          id="voucher-expense"
-                          className="mt-0.5"
-                          checked={isVoucherExpense}
-                          aria-invalid={error ? "true" : "false"}
-                          aria-describedby={helperId}
-                          onCheckedChange={(checked) =>
-                            mainForm.setValue(
-                              "isVoucherExpense",
-                              checked === true,
-                            )
+                        <FormSelect
+                          id="transaction-credit-card"
+                          label="Credit Card"
+                          value={field.state.value}
+                          onValueChange={(value) =>
+                            mainForm.setValue("creditCardId", value)
                           }
-                          onBlur={field.handleBlur}
+                          options={state.creditCards
+                            .filter((card) => !card.archived_at)
+                            .map((card) => ({
+                              value: card.id,
+                              label: `${card.nickname} •••• ${card.last_four}`,
+                              creditCardAvatar: {
+                                nickname: card.nickname,
+                                initials: getInitials(card.nickname),
+                                color: card.theme_color,
+                              },
+                            }))}
+                          placeholder="Select a card"
+                          error={mainForm.fieldErrors.creditCardId}
                         />
                       )}
                     </mainForm.form.Field>
-                    <div className="space-y-1">
-                      <Label
-                        htmlFor="voucher-expense"
-                        className="text-foreground text-sm font-bold"
-                      >
-                        Paid with voucher
-                      </Label>
-                      <p
-                        id={helperId}
-                        className="text-muted-foreground text-xs leading-normal"
-                      >
-                        Voucher expenses reduce budgets but do not change your
-                        account balance.
-                      </p>
-                      {error ? (
-                        <p className="text-destructive text-xs leading-normal">
-                          {error}
-                        </p>
-                      ) : null}
-                    </div>
-                  </div>
+                  ) : null}
+                  <p className="text-muted-foreground text-xs leading-normal">
+                    {paymentMethod === "credit_card"
+                      ? "Card purchases update budgets now and reduce your bank balance when the statement is paid."
+                      : paymentMethod === "voucher"
+                        ? "Voucher expenses reduce budgets but do not change your account balance."
+                        : "Bank expenses update your current balance immediately."}
+                  </p>
                 </div>
               )
             }}
@@ -986,6 +1041,20 @@ function withFallbackOption(
 }
 
 function SelectOptionLabel({ option }: { option: SelectOption }) {
+  if (option.creditCardAvatar) {
+    return (
+      <span className="flex items-center gap-3">
+        <CreditCardBadge
+          className="size-8 rounded-lg text-[10px]"
+          nickname={option.creditCardAvatar.nickname}
+          initials={option.creditCardAvatar.initials}
+          color={option.creditCardAvatar.color}
+        />
+        <span>{option.label}</span>
+      </span>
+    )
+  }
+
   if (!option.contactAvatar) {
     return option.label
   }

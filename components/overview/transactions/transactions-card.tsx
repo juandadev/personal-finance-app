@@ -19,7 +19,7 @@ export function TransactionsCard() {
   const hasTransactions = transactions.length > 0
 
   return (
-    <Card asChild className="flex-1">
+    <Card asChild>
       <section>
         <CardHeader>
           <CardTitle>

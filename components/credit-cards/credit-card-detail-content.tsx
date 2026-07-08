@@ -1,0 +1,260 @@
+"use client"
+
+import Link from "next/link"
+import { ArrowLeft, LockKeyhole } from "lucide-react"
+
+import { CloseCreditCardStatementDialog } from "@/components/credit-cards/close-credit-card-statement-dialog"
+import { CreditCardBadge } from "@/components/credit-cards/credit-card-badge"
+import { PayCreditCardStatementDialog } from "@/components/credit-cards/pay-credit-card-statement-dialog"
+import { EmptyDataCard } from "@/components/empty-data-card"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { useFinance } from "@/hooks/use-finance"
+import {
+  formatCurrency,
+  formatDisplayDate,
+  formatDisplayDateRange,
+  formatSignedAmount,
+} from "@/lib/format"
+import type { CreditCard, CreditCardDueStatus } from "@/lib/types"
+import { cn } from "@/lib/utils"
+
+const statusLabels: Record<CreditCardDueStatus, string> = {
+  upcoming: "Upcoming",
+  "due-soon": "Due Soon",
+  "due-today": "Due Today",
+  overdue: "Overdue",
+  paid: "Paid",
+}
+
+function statusClassName(status: CreditCardDueStatus) {
+  return status === "overdue" || status === "due-today"
+    ? "text-destructive"
+    : status === "paid"
+      ? "text-accent"
+      : "text-muted-foreground"
+}
+
+export function CreditCardDetailContent({
+  creditCardId,
+}: {
+  creditCardId: string
+}) {
+  const { creditCards, transactions } = useFinance()
+  const creditCard = creditCards.find((card) => card.id === creditCardId)
+
+  if (!creditCard) {
+    return (
+      <EmptyDataCard
+        className="mt-6 min-h-90"
+        icon={<LockKeyhole className="size-5" aria-hidden />}
+        title="Credit Card Not Found"
+        description="This card may have been archived or removed."
+      />
+    )
+  }
+
+  const cardTransactions = transactions.filter(
+    (transaction) => transaction.creditCardId === creditCard.id,
+  )
+
+  return (
+    <div className="mt-6 space-y-6">
+      <Button asChild variant="ghost" size="sm" className="w-fit">
+        <Link href="/credit-cards">
+          <ArrowLeft className="size-4" aria-hidden />
+          Back to Credit Cards
+        </Link>
+      </Button>
+
+      <Card className="space-y-6" padding="fixed">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-center gap-3">
+            <CreditCardBadge
+              nickname={creditCard.nickname}
+              initials={creditCard.initials}
+              color={creditCard.color}
+            />
+            <div>
+              <h2 className="text-xl font-bold tracking-tight">
+                {creditCard.nickname}
+              </h2>
+              <p className="text-muted-foreground text-sm">
+                {creditCard.issuer} {creditCard.network} ••••{" "}
+                {creditCard.lastFour}
+              </p>
+            </div>
+          </div>
+          <PayCreditCardStatementDialog creditCard={creditCard} />
+          <CloseCreditCardStatementDialog creditCard={creditCard} />
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-3">
+          <Metric
+            label="Current Statement"
+            value={formatCurrency(creditCard.currentStatementAmount, {
+              forceDecimals: true,
+            })}
+          />
+          <Metric
+            label="Available Credit"
+            value={formatCurrency(creditCard.availableCredit, {
+              forceDecimals: true,
+            })}
+          />
+          <Metric
+            label="Credit Limit"
+            value={formatCurrency(creditCard.creditLimit, {
+              forceDecimals: true,
+            })}
+          />
+        </div>
+      </Card>
+
+      <StatementsCard creditCard={creditCard} />
+      <TransactionsCard
+        creditCard={creditCard}
+        transactions={cardTransactions}
+      />
+      <PaymentsCard creditCard={creditCard} />
+    </div>
+  )
+}
+
+function StatementsCard({ creditCard }: { creditCard: CreditCard }) {
+  return (
+    <Card padding="fixed">
+      <h2 className="text-xl font-bold tracking-tight">Statements</h2>
+      {creditCard.statements.length > 0 ? (
+        <div className="divide-muted-foreground/10 mt-4 divide-y">
+          {creditCard.statements.map((statement) => (
+            <div
+              key={statement.id}
+              className="flex flex-col gap-2 py-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div>
+                <p className="text-sm font-bold">
+                  {formatDisplayDateRange(
+                    statement.periodStart,
+                    statement.periodEnd,
+                  )}
+                </p>
+                <p className="text-muted-foreground text-xs">
+                  Due {formatDisplayDate(statement.paymentDueDate)}
+                </p>
+              </div>
+              <div className="flex flex-col items-start gap-2 sm:items-end">
+                <p className="text-sm font-bold">
+                  {formatCurrency(statement.amount, { forceDecimals: true })}
+                </p>
+                <p
+                  className={cn(
+                    "text-xs font-bold",
+                    statusClassName(statement.dueStatus),
+                  )}
+                >
+                  {statement.lifecycleStatus === "paid" ? (
+                    <LockKeyhole className="mr-1 inline size-3" aria-hidden />
+                  ) : null}
+                  {statusLabels[statement.dueStatus]}
+                </p>
+                <PayCreditCardStatementDialog
+                  creditCard={creditCard}
+                  statement={statement}
+                />
+                <CloseCreditCardStatementDialog
+                  creditCard={creditCard}
+                  statement={statement}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-muted-foreground mt-4 text-sm">
+          No statements yet. Credit-card purchases will create statement
+          activity.
+        </p>
+      )}
+    </Card>
+  )
+}
+
+function TransactionsCard({
+  creditCard,
+  transactions,
+}: {
+  creditCard: CreditCard
+  transactions: ReturnType<typeof useFinance>["transactions"]
+}) {
+  return (
+    <Card padding="fixed">
+      <h2 className="text-xl font-bold tracking-tight">Card Transactions</h2>
+      {transactions.length > 0 ? (
+        <div className="divide-muted-foreground/10 mt-4 divide-y">
+          {transactions.map((transaction) => (
+            <div
+              key={transaction.id}
+              className="flex items-center justify-between gap-4 py-4"
+            >
+              <div>
+                <p className="text-sm font-bold">{transaction.concept}</p>
+                <p className="text-muted-foreground text-xs">
+                  {transaction.name} · {transaction.date}
+                </p>
+              </div>
+              <p className="text-sm font-bold">
+                {formatSignedAmount(transaction.amount)}
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-muted-foreground mt-4 text-sm">
+          No transactions have been assigned to {creditCard.nickname} yet.
+        </p>
+      )}
+    </Card>
+  )
+}
+
+function PaymentsCard({ creditCard }: { creditCard: CreditCard }) {
+  return (
+    <Card padding="fixed">
+      <h2 className="text-xl font-bold tracking-tight">Payment History</h2>
+      {creditCard.payments.length > 0 ? (
+        <div className="divide-muted-foreground/10 mt-4 divide-y">
+          {creditCard.payments.map((payment) => (
+            <div
+              key={payment.id}
+              className="flex items-center justify-between gap-4 py-4"
+            >
+              <div>
+                <p className="text-sm font-bold">Statement Payment</p>
+                <p className="text-muted-foreground text-xs">
+                  {formatDisplayDate(payment.paidAt)}
+                </p>
+              </div>
+              <p className="text-sm font-bold">
+                {formatCurrency(payment.amount, { forceDecimals: true })}
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-muted-foreground mt-4 text-sm">
+          No statement payments have been recorded yet.
+        </p>
+      )}
+    </Card>
+  )
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="bg-background rounded-lg p-3">
+      <p className="text-muted-foreground text-xs">{label}</p>
+      <p className="text-foreground mt-1 text-sm font-bold">{value}</p>
+    </div>
+  )
+}

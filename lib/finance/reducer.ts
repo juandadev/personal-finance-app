@@ -5,10 +5,14 @@ import type {
   BudgetTransactionAssignmentRecord,
   CategoryRecord,
   CounterpartyRecord,
+  CreditCardPaymentRecord,
+  CreditCardRecord,
+  CreditCardStatementRecord,
   FinanceState,
   NewBudgetRecord,
   NewCategoryRecord,
   NewCounterpartyRecord,
+  NewCreditCardRecord,
   NewPotRecord,
   NewTransactionRecord,
   PotRecord,
@@ -20,6 +24,7 @@ interface TransactionMutationPayload {
   transaction: TransactionRecord
   accounts: AccountRecord[]
   accountSummaries: AccountSummaryRecord[]
+  creditCardStatements: CreditCardStatementRecord[]
   budgetAssignment: BudgetTransactionAssignmentRecord | null
 }
 
@@ -36,6 +41,7 @@ export type FinanceAction =
       id: string
       accounts?: AccountRecord[]
       accountSummaries?: AccountSummaryRecord[]
+      creditCardStatements?: CreditCardStatementRecord[]
     }
   | { type: "category/add"; category: CategoryRecord }
   | { type: "category/update"; category: CategoryRecord }
@@ -72,6 +78,23 @@ export type FinanceAction =
       updates: Partial<Omit<RecurringBillRecord, "id" | "user_id">>
     }
   | { type: "recurring-bill/delete"; id: string }
+  | { type: "credit-card/add"; creditCard: CreditCardRecord }
+  | {
+      type: "credit-card/update"
+      id: string
+      updates: Partial<Omit<CreditCardRecord, "id" | "user_id">>
+    }
+  | {
+      type: "credit-card/statement-upsert"
+      statements: CreditCardStatementRecord[]
+    }
+  | {
+      type: "credit-card/payment"
+      payment: CreditCardPaymentRecord
+      transaction: TransactionRecord
+      accounts: AccountRecord[]
+      statement: CreditCardStatementRecord
+    }
 
 export interface FinanceActions {
   addTransaction: (
@@ -137,6 +160,21 @@ export interface FinanceActions {
     updates: Partial<Omit<RecurringBillRecord, "id" | "user_id">>,
   ) => void
   deleteRecurringBill: (id: string) => void
+  addCreditCard: (
+    creditCard: NewCreditCardRecord,
+  ) => Promise<FinanceMutationResult>
+  updateCreditCard: (
+    id: string,
+    updates: Partial<Omit<CreditCardRecord, "id" | "user_id">>,
+  ) => Promise<FinanceMutationResult>
+  archiveCreditCard: (id: string) => Promise<FinanceMutationResult>
+  payCreditCardStatement: (
+    statementId: string,
+    paidAt: string,
+  ) => Promise<FinanceMutationResult>
+  closeCreditCardStatement: (
+    statementId: string,
+  ) => Promise<FinanceMutationResult>
 }
 
 export type FinanceMutationResult =
@@ -279,6 +317,10 @@ export function financeReducer(
           state.accountSummaries,
           action.payload.accountSummaries,
         ),
+        creditCardStatements: upsertManyById(
+          state.creditCardStatements,
+          action.payload.creditCardStatements,
+        ),
         budgetTransactionAssignments: action.payload.budgetAssignment
           ? upsertBudgetAssignment(
               state.budgetTransactionAssignments,
@@ -307,6 +349,12 @@ export function financeReducer(
               action.accountSummaries,
             )
           : state.accountSummaries,
+        creditCardStatements: action.creditCardStatements
+          ? upsertManyById(
+              state.creditCardStatements,
+              action.creditCardStatements,
+            )
+          : state.creditCardStatements,
         budgetTransactionAssignments: state.budgetTransactionAssignments.filter(
           (assignment) => assignment.transaction_id !== action.id,
         ),
@@ -461,6 +509,46 @@ export function financeReducer(
       return {
         ...state,
         recurringBills: removeById(state.recurringBills, action.id),
+      }
+    case "credit-card/add":
+      return {
+        ...state,
+        creditCards: [...state.creditCards, action.creditCard].sort((a, b) =>
+          a.nickname.localeCompare(b.nickname),
+        ),
+      }
+    case "credit-card/update":
+      return {
+        ...state,
+        creditCards: updateById(
+          state.creditCards,
+          action.id,
+          action.updates,
+        ).sort((a, b) => a.nickname.localeCompare(b.nickname)),
+      }
+    case "credit-card/statement-upsert":
+      return {
+        ...state,
+        creditCardStatements: upsertManyById(
+          state.creditCardStatements,
+          action.statements,
+        ),
+      }
+    case "credit-card/payment":
+      return {
+        ...state,
+        creditCardPayments: upsertById(
+          state.creditCardPayments,
+          action.payment,
+        ),
+        transactions: upsertById(state.transactions, action.transaction).sort(
+          (a, b) => b.posted_at.localeCompare(a.posted_at),
+        ),
+        accounts: upsertManyById(state.accounts, action.accounts),
+        creditCardStatements: upsertById(
+          state.creditCardStatements,
+          action.statement,
+        ),
       }
     default:
       return state
