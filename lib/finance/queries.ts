@@ -1198,6 +1198,49 @@ export async function updateCreditCard(
   updates: Partial<Omit<CreditCardRecord, "id" | "user_id">>,
 ) {
   return withFinanceTransaction(userId, async (client) => {
+    const existingResult = await client.query<CreditCardRecord>(
+      `
+        SELECT ${creditCardColumns.join(", ")}
+        FROM credit_cards
+        WHERE user_id = $1 AND id = $2
+        FOR UPDATE
+      `,
+      [userId, id],
+    )
+
+    if (!existingResult.rowCount) {
+      throw new Error("Credit card not found.")
+    }
+
+    const existingCard = existingResult.rows[0]
+    const nextClosingDay =
+      updates.closing_day_of_month ?? existingCard.closing_day_of_month
+    const nextPaymentDueDay =
+      updates.payment_due_day_of_month ?? existingCard.payment_due_day_of_month
+    const isChangingCycleDays =
+      nextClosingDay !== existingCard.closing_day_of_month ||
+      nextPaymentDueDay !== existingCard.payment_due_day_of_month
+
+    if (isChangingCycleDays) {
+      const unpaidStatementResult = await client.query(
+        `
+          SELECT 1
+          FROM credit_card_statements
+          WHERE user_id = $1
+            AND credit_card_id = $2
+            AND lifecycle_status <> 'paid'
+          LIMIT 1
+        `,
+        [userId, id],
+      )
+
+      if (unpaidStatementResult.rowCount) {
+        throw new Error(
+          "Finish or close this card's current statement before changing its billing cycle or payment due day. This keeps existing purchases and statement history from being recalculated.",
+        )
+      }
+    }
+
     const result = await client.query<CreditCardRecord>(
       `
         UPDATE credit_cards

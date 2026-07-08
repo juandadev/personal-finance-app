@@ -102,9 +102,16 @@ export function EditCreditCardDialog({
 }
 
 function CreditCardDialog({ creditCard, trigger }: CreditCardDialogProps) {
-  const { actions } = useFinance()
+  const { actions, state } = useFinance()
   const [open, setOpen] = useState(false)
   const isEditing = Boolean(creditCard)
+  const hasUnpaidStatement = creditCard
+    ? state.creditCardStatements.some(
+        (statement) =>
+          statement.credit_card_id === creditCard.id &&
+          statement.lifecycle_status !== "paid",
+      )
+    : false
   const defaultValues = useMemo<CreditCardFormValues>(
     () =>
       ({
@@ -249,14 +256,23 @@ function CreditCardDialog({ creditCard, trigger }: CreditCardDialogProps) {
               name="closingDay"
               id="card-closing-day"
               label="Billing Cycle End Day"
+              disabled={hasUnpaidStatement}
             />
             <FormNumberField
               form={form}
               name="paymentDueDay"
               id="card-payment-due-day"
               label="Payment Due Day"
+              disabled={hasUnpaidStatement}
             />
           </div>
+          {hasUnpaidStatement ? (
+            <FormStatusMessage>
+              Finish, pay, or close this card&apos;s current statement before
+              changing its billing cycle or payment due day. This keeps existing
+              purchases and statement history from being recalculated.
+            </FormStatusMessage>
+          ) : null}
           <form.form.Field name="themeColor">
             {(field) => (
               <ThemeSelect
@@ -405,11 +421,13 @@ function FormNetworkSelect({
 }
 
 function FormNumberField({
+  disabled,
   form,
   id,
   label,
   name,
 }: {
+  disabled?: boolean
   form: ReturnType<
     typeof useStandardForm<
       CreditCardFormValues,
@@ -427,6 +445,7 @@ function FormNumberField({
           {(fieldProps) => (
             <Input
               {...fieldProps}
+              disabled={disabled}
               type="number"
               min={1}
               value={String(field.state.value)}
