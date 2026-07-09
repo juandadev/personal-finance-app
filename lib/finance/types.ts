@@ -14,7 +14,8 @@ import type { ThemeColor } from "@/lib/theme-colors"
 export type CurrencyCode = "USD" | "MXN"
 export type AccountType = "checking" | "savings" | "credit"
 export type CounterpartyType = "person" | "merchant"
-export type BillFrequency = "monthly"
+export type BillFrequency = "monthly" | "yearly"
+export type RecurringBillPaymentStatus = "paid" | "skipped"
 export type TransactionPaymentMethod =
   "bank_account" | "credit_card" | "voucher" | "credit_card_payment"
 export type CreditCardStatementLifecycleStatus = "open" | "closed" | "paid"
@@ -146,11 +147,29 @@ export interface RecurringBillRecord {
   id: FinanceRecordId
   user_id: FinanceUserId
   counterparty_id: FinanceRecordId
+  concept: string
   amount_cents: number
   currency: CurrencyCode
   frequency: BillFrequency
-  due_day_of_month: number
-  status: RecurringBill["status"]
+  first_due_date: string
+  total_payments: number | null
+  credit_card_id: FinanceRecordId | null
+  category_id: FinanceRecordId
+  archived_at: string | null
+}
+
+export type RecurringBillPaymentSource =
+  { type: "bank_account" } | { type: "credit_card"; creditCardId: string }
+
+export interface RecurringBillPaymentRecord {
+  id: FinanceRecordId
+  user_id: FinanceUserId
+  recurring_bill_id: FinanceRecordId
+  due_date: string
+  amount_cents: number
+  status: RecurringBillPaymentStatus
+  transaction_id: FinanceRecordId | null
+  paid_at: string
 }
 
 export interface CreditCardRecord {
@@ -198,6 +217,7 @@ export type NewCategoryRecord = Omit<CategoryRecord, "user_id">
 export type NewCounterpartyRecord = Omit<CounterpartyRecord, "user_id">
 export type NewTransactionRecord = Omit<TransactionRecord, "user_id">
 export type NewCreditCardRecord = Omit<CreditCardRecord, "user_id">
+export type NewRecurringBillRecord = Omit<RecurringBillRecord, "user_id">
 
 export interface FinanceState {
   preferences: UserPreferencesRecord
@@ -211,6 +231,7 @@ export interface FinanceState {
   budgetTransactionAssignments: BudgetTransactionAssignmentRecord[]
   pots: PotRecord[]
   recurringBills: RecurringBillRecord[]
+  recurringBillPayments: RecurringBillPaymentRecord[]
   creditCards: CreditCardRecord[]
   creditCardStatements: CreditCardStatementRecord[]
   creditCardPayments: CreditCardPaymentRecord[]

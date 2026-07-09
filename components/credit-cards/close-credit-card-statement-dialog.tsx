@@ -33,7 +33,9 @@ export function CloseCreditCardStatementDialog({
   const [statusMessage, setStatusMessage] = useState("")
   const [isClosing, setIsClosing] = useState(false)
   const canClose =
-    statement && statement.lifecycleStatus !== "paid" && statement.amount === 0
+    statement &&
+    statement.lifecycleStatus !== "paid" &&
+    statement.totalAmount === 0
 
   if (!canClose || !statement) {
     return null

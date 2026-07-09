@@ -3,80 +3,112 @@
     "id": "35cba45f-30b0-4b60-baab-2fd41338aabe",
     "user_id": "2f7eae77-e33d-4678-95ac-cb83180314d1",
     "counterparty_id": "7b7ab1e8-bffb-41cc-ade6-d91702119f13",
+    "concept": "Spark Electric Solutions",
     "amount_cents": 10000,
     "currency": "USD",
     "frequency": "monthly",
-    "due_day_of_month": 2,
-    "status": "paid"
+    "first_due_date": "2026-08-02",
+    "total_payments": null,
+    "credit_card_id": null,
+    "category_id": "26695de1-68fc-487d-86fa-b9195ecf9464",
+    "archived_at": null
   },
   {
     "id": "5dc72838-f6fa-4851-9873-e68ed67eb7a6",
     "user_id": "2f7eae77-e33d-4678-95ac-cb83180314d1",
     "counterparty_id": "7208f156-9653-4f00-a759-bc63eb1e0e53",
+    "concept": "Serenity Spa & Wellness",
     "amount_cents": 3000,
     "currency": "USD",
     "frequency": "monthly",
-    "due_day_of_month": 3,
-    "status": "paid"
+    "first_due_date": "2026-08-03",
+    "total_payments": null,
+    "credit_card_id": null,
+    "category_id": "0ccd5e8d-3765-4a1f-936f-31ec37f329a8",
+    "archived_at": null
   },
   {
     "id": "a7cd0728-5e28-468e-ad17-862471bfccb9",
     "user_id": "2f7eae77-e33d-4678-95ac-cb83180314d1",
     "counterparty_id": "682ae94e-c735-4a4f-8098-c2d354b3731b",
+    "concept": "Elevate Education",
     "amount_cents": 5000,
     "currency": "USD",
     "frequency": "monthly",
-    "due_day_of_month": 4,
-    "status": "paid"
+    "first_due_date": "2026-07-04",
+    "total_payments": 12,
+    "credit_card_id": null,
+    "category_id": "c0670339-0f1f-49eb-b365-b4917e78b576",
+    "archived_at": null
   },
   {
     "id": "49c6626b-7cbe-46e1-a840-92c7fbdea50f",
     "user_id": "2f7eae77-e33d-4678-95ac-cb83180314d1",
     "counterparty_id": "caa73568-9473-43c3-85a1-23054138c5ae",
+    "concept": "Pixel Playground",
     "amount_cents": 1000,
     "currency": "USD",
     "frequency": "monthly",
-    "due_day_of_month": 11,
-    "status": "paid"
+    "first_due_date": "2026-08-11",
+    "total_payments": null,
+    "credit_card_id": null,
+    "category_id": "89b0a107-abc7-43e8-9504-f628917cafeb",
+    "archived_at": null
   },
   {
     "id": "f65305ec-987e-4fd5-babf-02dc18075769",
     "user_id": "2f7eae77-e33d-4678-95ac-cb83180314d1",
     "counterparty_id": "fd381068-a206-4945-9c39-e699b8925ee0",
+    "concept": "Nimbus Data Storage",
     "amount_cents": 999,
     "currency": "USD",
     "frequency": "monthly",
-    "due_day_of_month": 21,
-    "status": "due-soon"
+    "first_due_date": "2026-07-21",
+    "total_payments": null,
+    "credit_card_id": null,
+    "category_id": "26695de1-68fc-487d-86fa-b9195ecf9464",
+    "archived_at": null
   },
   {
     "id": "9d876506-1147-4dc9-8324-d1213995e3e1",
     "user_id": "2f7eae77-e33d-4678-95ac-cb83180314d1",
     "counterparty_id": "4fb6e7ab-f9b7-44a1-b167-c5960fb73709",
+    "concept": "ByteWise",
     "amount_cents": 4999,
     "currency": "USD",
-    "frequency": "monthly",
-    "due_day_of_month": 23,
-    "status": "due-soon"
+    "frequency": "yearly",
+    "first_due_date": "2026-07-23",
+    "total_payments": null,
+    "credit_card_id": null,
+    "category_id": "26695de1-68fc-487d-86fa-b9195ecf9464",
+    "archived_at": null
   },
   {
     "id": "c46ea8e3-53bc-4b57-9ae1-a2395f168288",
     "user_id": "2f7eae77-e33d-4678-95ac-cb83180314d1",
     "counterparty_id": "2b2f2fad-35b0-4f2d-af98-5b59c3f7f78e",
+    "concept": "EcoFuel Energy",
     "amount_cents": 3500,
     "currency": "USD",
     "frequency": "monthly",
-    "due_day_of_month": 29,
-    "status": "upcoming"
+    "first_due_date": "2026-07-29",
+    "total_payments": null,
+    "credit_card_id": null,
+    "category_id": "26695de1-68fc-487d-86fa-b9195ecf9464",
+    "archived_at": null
   },
   {
     "id": "a7baca7b-4f59-4077-bc66-489a50bab68b",
     "user_id": "2f7eae77-e33d-4678-95ac-cb83180314d1",
     "counterparty_id": "0910f4d6-04d3-427f-b45d-8cf681b5d901",
+    "concept": "Aqua Flow Utilities",
     "amount_cents": 10000,
     "currency": "USD",
     "frequency": "monthly",
-    "due_day_of_month": 30,
-    "status": "upcoming"
+    "first_due_date": "2026-07-30",
+    "total_payments": null,
+    "credit_card_id": null,
+    "category_id": "26695de1-68fc-487d-86fa-b9195ecf9464",
+    "archived_at": null
   }
 ]

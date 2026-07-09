@@ -14,8 +14,11 @@ import type {
   NewCounterpartyRecord,
   NewCreditCardRecord,
   NewPotRecord,
+  NewRecurringBillRecord,
   NewTransactionRecord,
   PotRecord,
+  RecurringBillPaymentRecord,
+  RecurringBillPaymentSource,
   RecurringBillRecord,
   TransactionRecord,
 } from "./types"
@@ -72,12 +75,16 @@ export type FinanceAction =
   | { type: "pot/deposit"; id: string; amount_cents: number }
   | { type: "pot/withdraw"; id: string; amount_cents: number }
   | { type: "recurring-bill/add"; bill: RecurringBillRecord }
-  | {
-      type: "recurring-bill/update"
-      id: string
-      updates: Partial<Omit<RecurringBillRecord, "id" | "user_id">>
-    }
+  | { type: "recurring-bill/update"; bill: RecurringBillRecord }
   | { type: "recurring-bill/delete"; id: string }
+  | {
+      type: "recurring-bill/settle"
+      billPayment: RecurringBillPaymentRecord
+      transaction?: TransactionRecord
+      accounts?: AccountRecord[]
+      accountSummaries?: AccountSummaryRecord[]
+      creditCardStatements?: CreditCardStatementRecord[]
+    }
   | { type: "credit-card/add"; creditCard: CreditCardRecord }
   | {
       type: "credit-card/update"
@@ -92,8 +99,12 @@ export type FinanceAction =
       type: "credit-card/payment"
       payment: CreditCardPaymentRecord
       transaction: TransactionRecord
+      counterparty?: CounterpartyRecord
       accounts: AccountRecord[]
+      accountSummaries?: AccountSummaryRecord[]
       statement: CreditCardStatementRecord
+      billTransactions?: TransactionRecord[]
+      recurringBillPayments?: RecurringBillPaymentRecord[]
     }
 
 export interface FinanceActions {
@@ -154,12 +165,27 @@ export interface FinanceActions {
     id: string,
     amount_cents: number,
   ) => Promise<FinanceMutationResult>
-  addRecurringBill: (bill: RecurringBillRecord) => void
+  addRecurringBill: (
+    bill: Omit<NewRecurringBillRecord, "archived_at">,
+  ) => Promise<FinanceMutationResult>
   updateRecurringBill: (
     id: string,
-    updates: Partial<Omit<RecurringBillRecord, "id" | "user_id">>,
-  ) => void
-  deleteRecurringBill: (id: string) => void
+    updates: Partial<
+      Omit<RecurringBillRecord, "id" | "user_id" | "archived_at">
+    >,
+  ) => Promise<FinanceMutationResult>
+  archiveRecurringBill: (id: string) => Promise<FinanceMutationResult>
+  deleteRecurringBill: (id: string) => Promise<FinanceMutationResult>
+  payRecurringBillOccurrence: (
+    billId: string,
+    dueDate: string,
+    source: RecurringBillPaymentSource,
+    paidAt: string,
+  ) => Promise<FinanceMutationResult>
+  skipRecurringBillOccurrence: (
+    billId: string,
+    dueDate: string,
+  ) => Promise<FinanceMutationResult>
   addCreditCard: (
     creditCard: NewCreditCardRecord,
   ) => Promise<FinanceMutationResult>
@@ -170,6 +196,11 @@ export interface FinanceActions {
   archiveCreditCard: (id: string) => Promise<FinanceMutationResult>
   payCreditCardStatement: (
     statementId: string,
+    paidAt: string,
+  ) => Promise<FinanceMutationResult>
+  payCreditCardCycle: (
+    creditCardId: string,
+    referenceDate: string,
     paidAt: string,
   ) => Promise<FinanceMutationResult>
   closeCreditCardStatement: (
@@ -494,21 +525,49 @@ export function financeReducer(
     case "recurring-bill/add":
       return {
         ...state,
-        recurringBills: [...state.recurringBills, action.bill],
+        recurringBills: [...state.recurringBills, action.bill].sort((a, b) =>
+          a.first_due_date.localeCompare(b.first_due_date),
+        ),
       }
     case "recurring-bill/update":
       return {
         ...state,
-        recurringBills: updateById(
-          state.recurringBills,
-          action.id,
-          action.updates,
+        recurringBills: upsertById(state.recurringBills, action.bill).sort(
+          (a, b) => a.first_due_date.localeCompare(b.first_due_date),
         ),
       }
     case "recurring-bill/delete":
       return {
         ...state,
         recurringBills: removeById(state.recurringBills, action.id),
+      }
+    case "recurring-bill/settle":
+      return {
+        ...state,
+        recurringBillPayments: upsertById(
+          state.recurringBillPayments,
+          action.billPayment,
+        ),
+        transactions: action.transaction
+          ? upsertById(state.transactions, action.transaction).sort((a, b) =>
+              b.posted_at.localeCompare(a.posted_at),
+            )
+          : state.transactions,
+        accounts: action.accounts
+          ? upsertManyById(state.accounts, action.accounts)
+          : state.accounts,
+        accountSummaries: action.accountSummaries
+          ? upsertAccountSummaries(
+              state.accountSummaries,
+              action.accountSummaries,
+            )
+          : state.accountSummaries,
+        creditCardStatements: action.creditCardStatements
+          ? upsertManyById(
+              state.creditCardStatements,
+              action.creditCardStatements,
+            )
+          : state.creditCardStatements,
       }
     case "credit-card/add":
       return {
@@ -541,14 +600,32 @@ export function financeReducer(
           state.creditCardPayments,
           action.payment,
         ),
-        transactions: upsertById(state.transactions, action.transaction).sort(
-          (a, b) => b.posted_at.localeCompare(a.posted_at),
-        ),
+        counterparties: action.counterparty
+          ? upsertById(state.counterparties, action.counterparty).sort((a, b) =>
+              a.display_name.localeCompare(b.display_name),
+            )
+          : state.counterparties,
+        transactions: upsertManyById(state.transactions, [
+          ...(action.billTransactions ?? []),
+          action.transaction,
+        ]).sort((a, b) => b.posted_at.localeCompare(a.posted_at)),
         accounts: upsertManyById(state.accounts, action.accounts),
+        accountSummaries: action.accountSummaries
+          ? upsertAccountSummaries(
+              state.accountSummaries,
+              action.accountSummaries,
+            )
+          : state.accountSummaries,
         creditCardStatements: upsertById(
           state.creditCardStatements,
           action.statement,
         ),
+        recurringBillPayments: action.recurringBillPayments
+          ? upsertManyById(
+              state.recurringBillPayments,
+              action.recurringBillPayments,
+            )
+          : state.recurringBillPayments,
       }
     default:
       return state

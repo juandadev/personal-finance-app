@@ -4,20 +4,26 @@ import { z } from "zod"
 
 import { auth } from "@/lib/auth/server"
 import {
+  archiveRecurringBill,
   assignTransactionToBudget,
   closeZeroBalanceCreditCardStatement,
   deleteBudget,
   deleteCategory,
   deleteCounterparty,
   deletePot,
+  deleteRecurringBill,
   deleteTransaction,
   insertBudget,
   insertCategory,
   insertCounterparty,
   insertCreditCard,
   insertPot,
+  insertRecurringBill,
   insertTransaction,
+  payCreditCardCycle,
   payCreditCardStatement,
+  payRecurringBillOccurrence,
+  skipRecurringBillOccurrence,
   transferPotBalance,
   unassignTransactionFromBudget,
   updateBudget,
@@ -25,6 +31,7 @@ import {
   updateCounterparty,
   updateCreditCard,
   updatePot,
+  updateRecurringBill,
   updateTransaction,
 } from "@/lib/finance/queries"
 import { isFutureISODate } from "@/lib/finance/pot-due-date"
@@ -44,8 +51,12 @@ import type {
   NewCounterpartyRecord,
   NewCreditCardRecord,
   NewPotRecord,
+  NewRecurringBillRecord,
   NewTransactionRecord,
   PotRecord,
+  RecurringBillPaymentRecord,
+  RecurringBillPaymentSource,
+  RecurringBillRecord,
   TransactionRecord,
 } from "@/lib/finance/types"
 import { themeColorClasses } from "@/lib/theme-colors"
@@ -165,6 +176,33 @@ const creditCardUpdateSchema = creditCardSchema
 const statementPaymentSchema = z.object({
   statementId: recordIdSchema,
   paidAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid date."),
+})
+
+const isoDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid date.")
+const recurringBillSchema = z.object({
+  id: recordIdSchema,
+  counterparty_id: recordIdSchema,
+  concept: z.string().trim().min(1).max(80),
+  amount_cents: z.number().int().positive(),
+  currency: z.enum(["USD", "MXN"]),
+  frequency: z.enum(["monthly", "yearly"]),
+  first_due_date: isoDateSchema,
+  total_payments: z.number().int().positive().nullable(),
+  credit_card_id: recordIdSchema.nullable(),
+  category_id: recordIdSchema,
+})
+const recurringBillUpdateSchema = recurringBillSchema
+  .omit({ id: true })
+  .partial()
+const recurringBillPaymentSourceSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("bank_account") }),
+  z.object({ type: z.literal("credit_card"), creditCardId: recordIdSchema }),
+])
+const recurringBillOccurrenceSchema = z.object({
+  billId: recordIdSchema,
+  dueDate: isoDateSchema,
 })
 
 const potDueDateSchema = z
@@ -568,8 +606,12 @@ export async function payCreditCardStatementAction(
   FinanceActionResult<{
     payment: CreditCardPaymentRecord
     transaction: TransactionRecord
+    counterparty: CounterpartyRecord
     accounts: AccountRecord[]
+    accountSummaries: AccountSummaryRecord[]
     statement: CreditCardStatementRecord
+    billTransactions: TransactionRecord[]
+    recurringBillPayments: RecurringBillPaymentRecord[]
   }>
 > {
   try {
@@ -579,6 +621,44 @@ export async function payCreditCardStatementAction(
       userId,
       parsed.statementId,
       parsed.paidAt,
+    )
+
+    return {
+      ok: true,
+      message: "Credit card statement paid.",
+      data,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function payCreditCardCycleAction(
+  creditCardId: string,
+  referenceDate: string,
+  paidAt: string,
+): Promise<
+  FinanceActionResult<{
+    payment: CreditCardPaymentRecord
+    transaction: TransactionRecord
+    counterparty: CounterpartyRecord
+    accounts: AccountRecord[]
+    accountSummaries: AccountSummaryRecord[]
+    statement: CreditCardStatementRecord
+    billTransactions: TransactionRecord[]
+    recurringBillPayments: RecurringBillPaymentRecord[]
+  }>
+> {
+  try {
+    const userId = await getUserId()
+    const parsedCreditCardId = idSchema.parse(creditCardId)
+    const parsedReferenceDate = isoDateSchema.parse(referenceDate)
+    const parsedPaidAt = isoDateSchema.parse(paidAt)
+    const data = await payCreditCardCycle(
+      userId,
+      parsedCreditCardId,
+      parsedReferenceDate,
+      parsedPaidAt,
     )
 
     return {
@@ -605,6 +685,149 @@ export async function closeCreditCardStatementAction(
     return {
       ok: true,
       message: "Statement closed.",
+      data,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function createRecurringBillAction(
+  bill: Omit<NewRecurringBillRecord, "archived_at">,
+): Promise<FinanceActionResult<RecurringBillRecord>> {
+  try {
+    const userId = await getUserId()
+    const parsedBill = recurringBillSchema.parse(bill)
+    const data = await insertRecurringBill(userId, {
+      ...parsedBill,
+      archived_at: null,
+    })
+
+    return {
+      ok: true,
+      message: "Recurring bill created.",
+      data,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function updateRecurringBillAction(
+  id: string,
+  updates: Partial<Omit<RecurringBillRecord, "id" | "user_id" | "archived_at">>,
+): Promise<FinanceActionResult<RecurringBillRecord>> {
+  try {
+    const userId = await getUserId()
+    const parsedId = idSchema.parse(id)
+    const parsedUpdates = recurringBillUpdateSchema.parse(updates)
+    const data = await updateRecurringBill(userId, parsedId, parsedUpdates)
+
+    return {
+      ok: true,
+      message: "Recurring bill updated.",
+      data,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function archiveRecurringBillAction(
+  id: string,
+): Promise<FinanceActionResult<RecurringBillRecord>> {
+  try {
+    const userId = await getUserId()
+    const parsedId = idSchema.parse(id)
+    const data = await archiveRecurringBill(userId, parsedId)
+
+    return {
+      ok: true,
+      message: "Recurring bill archived.",
+      data,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function deleteRecurringBillAction(
+  id: string,
+): Promise<FinanceActionResult<{ id: string }>> {
+  try {
+    const userId = await getUserId()
+    const parsedId = idSchema.parse(id)
+    const data = await deleteRecurringBill(userId, parsedId)
+
+    return {
+      ok: true,
+      message: "Recurring bill deleted.",
+      data,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function payRecurringBillOccurrenceAction(
+  billId: string,
+  dueDate: string,
+  source: RecurringBillPaymentSource,
+  paidAt: string,
+): Promise<
+  FinanceActionResult<{
+    billPayment: RecurringBillPaymentRecord
+    transaction: TransactionRecord
+    accounts: AccountRecord[]
+    accountSummaries: AccountSummaryRecord[]
+    creditCardStatements: CreditCardStatementRecord[]
+  }>
+> {
+  try {
+    const userId = await getUserId()
+    const parsedOccurrence = recurringBillOccurrenceSchema.parse({
+      billId,
+      dueDate,
+    })
+    const parsedSource = recurringBillPaymentSourceSchema.parse(source)
+    const parsedPaidAt = isoDateSchema.parse(paidAt)
+    const data = await payRecurringBillOccurrence(
+      userId,
+      parsedOccurrence.billId,
+      parsedOccurrence.dueDate,
+      parsedSource,
+      parsedPaidAt,
+    )
+
+    return {
+      ok: true,
+      message: "Bill paid.",
+      data,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function skipRecurringBillOccurrenceAction(
+  billId: string,
+  dueDate: string,
+): Promise<FinanceActionResult<RecurringBillPaymentRecord>> {
+  try {
+    const userId = await getUserId()
+    const parsedOccurrence = recurringBillOccurrenceSchema.parse({
+      billId,
+      dueDate,
+    })
+    const data = await skipRecurringBillOccurrence(
+      userId,
+      parsedOccurrence.billId,
+      parsedOccurrence.dueDate,
+    )
+
+    return {
+      ok: true,
+      message: "Bill occurrence skipped.",
       data,
     }
   } catch (error) {

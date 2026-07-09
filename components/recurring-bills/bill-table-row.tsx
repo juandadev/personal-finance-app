@@ -1,128 +1,201 @@
-import Image from "next/image"
-import { CircleCheck, CircleAlert } from "lucide-react"
-import { formatCurrency } from "@/lib/format"
-import type { RecurringBill } from "@/lib/types"
-import { cn } from "@/lib/utils"
+"use client"
+
+import { CircleAlert, CircleCheck, CreditCard, MinusCircle } from "lucide-react"
+
+import { ContactAvatar } from "@/components/contact-avatar"
+import { ArchiveBillDialog } from "@/components/recurring-bills/archive-bill-dialog"
+import { EditBillDialog } from "@/components/recurring-bills/bill-dialog"
+import { PayBillDialog } from "@/components/recurring-bills/pay-bill-dialog"
+import { SkipBillOccurrenceDialog } from "@/components/recurring-bills/skip-bill-occurrence-dialog"
 import { TableCell, TableRow } from "@/components/ui/table"
+import { formatCurrency, formatDisplayDate } from "@/lib/format"
+import type { BillStatus, RecurringBill } from "@/lib/types"
+import { cn } from "@/lib/utils"
 
 interface BillTableRowProps {
   bill: RecurringBill
 }
 
-function getDaySuffix(day: number): string {
-  if (day >= 11 && day <= 13) return "th"
-  switch (day % 10) {
-    case 1:
-      return "st"
-    case 2:
-      return "nd"
-    case 3:
-      return "rd"
-    default:
-      return "th"
-  }
+const statusLabels: Record<BillStatus, string> = {
+  paid: "Paid",
+  skipped: "Skipped",
+  upcoming: "Upcoming",
+  "due-soon": "Due Soon",
+  "due-today": "Due Today",
+  overdue: "Overdue",
 }
 
-function formatDueDate(day: number): string {
-  return `Monthly -${day}${getDaySuffix(day)}`
+const urgentStatuses: BillStatus[] = ["due-soon", "due-today", "overdue"]
+
+function isUrgent(status: BillStatus) {
+  return urgentStatuses.includes(status)
+}
+
+function scheduleLabel(bill: RecurringBill) {
+  if (bill.totalPayments && bill.currentOccurrence) {
+    return `Payment ${bill.currentOccurrence.sequence} of ${bill.totalPayments}`
+  }
+
+  return bill.frequency === "yearly" ? "Yearly" : "Monthly"
+}
+
+function StatusIndicator({
+  bill,
+  iconClassName,
+}: {
+  bill: RecurringBill
+  iconClassName?: string
+}) {
+  const occurrence = bill.currentOccurrence
+  const status = bill.status
+
+  return (
+    <span className="flex items-center gap-1.5">
+      <span
+        className={cn(
+          "text-sm",
+          status === "paid"
+            ? "text-accent"
+            : isUrgent(status)
+              ? "text-destructive"
+              : "text-muted-foreground",
+        )}
+      >
+        {occurrence ? formatDisplayDate(occurrence.dueDate) : "—"} ·{" "}
+        {statusLabels[status]}
+      </span>
+      {status === "paid" ? (
+        <CircleCheck
+          className={cn("text-accent size-4", iconClassName)}
+          aria-hidden
+        />
+      ) : null}
+      {status === "skipped" ? (
+        <MinusCircle
+          className={cn("text-muted-foreground size-4", iconClassName)}
+          aria-hidden
+        />
+      ) : null}
+      {isUrgent(status) ? (
+        <CircleAlert
+          className={cn("text-destructive size-4", iconClassName)}
+          aria-hidden
+        />
+      ) : null}
+    </span>
+  )
+}
+
+function BillIdentity({ bill }: { bill: RecurringBill }) {
+  return (
+    <div className="flex items-center gap-3">
+      <ContactAvatar
+        name={bill.name}
+        initials={bill.contactInitials}
+        color={bill.contactColor}
+        avatarUrl={bill.avatarUrl || undefined}
+        className={cn(bill.archivedAt && "opacity-60")}
+      />
+      <div className="flex flex-col">
+        <span
+          className={cn(
+            "font-bold",
+            bill.archivedAt ? "text-muted-foreground" : "text-foreground",
+          )}
+        >
+          {bill.concept}
+        </span>
+        <span className="text-muted-foreground flex items-center gap-1 text-xs">
+          {scheduleLabel(bill)}
+          {bill.creditCardId ? (
+            <CreditCard className="size-3" aria-label="Charges to a card" />
+          ) : null}
+        </span>
+        <span className="text-muted-foreground text-xs font-semibold">
+          {bill.name}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function BillActions({ bill }: { bill: RecurringBill }) {
+  const occurrence = bill.currentOccurrence
+  const isActionable =
+    !bill.archivedAt &&
+    occurrence &&
+    occurrence.status !== "paid" &&
+    occurrence.status !== "skipped"
+  // Card-assigned bills settle through the card's statement payment.
+  const canSettleManually = isActionable && !bill.creditCardId
+
+  return (
+    <div className="flex items-center justify-end gap-1">
+      {canSettleManually && occurrence ? (
+        <>
+          <SkipBillOccurrenceDialog bill={bill} occurrence={occurrence} />
+          <PayBillDialog bill={bill} occurrence={occurrence} />
+        </>
+      ) : null}
+      {bill.archivedAt ? null : <EditBillDialog bill={bill} />}
+      {!bill.archivedAt && bill.hasPayments ? (
+        <ArchiveBillDialog bill={bill} />
+      ) : null}
+    </div>
+  )
 }
 
 export function BillTableRow({ bill }: BillTableRowProps) {
-  const isPaid = bill.status === "paid"
-  const isDueSoon = bill.status === "due-soon"
-
   return (
-    <TableRow>
+    <TableRow className={cn(bill.archivedAt && "opacity-70")}>
       <TableCell>
-        <div className="flex items-center gap-3">
-          <Image
-            src={bill.avatarUrl}
-            alt=""
-            width={40}
-            height={40}
-            className="size-10 rounded-full object-cover"
-          />
-          <span className="text-foreground font-bold">{bill.name}</span>
-        </div>
+        <BillIdentity bill={bill} />
       </TableCell>
       <TableCell>
-        <div className="flex items-center gap-2">
-          <span
-            className={cn(
-              "text-sm",
-              isPaid ? "text-accent" : "text-muted-foreground",
-            )}
-          >
-            {formatDueDate(bill.dueDay)}
-          </span>
-          {isPaid && (
-            <CircleCheck className="text-accent size-4" aria-label="Paid" />
-          )}
-          {isDueSoon && (
-            <CircleAlert
-              className="text-destructive size-4"
-              aria-label="Due soon"
-            />
-          )}
-        </div>
+        <StatusIndicator bill={bill} />
       </TableCell>
       <TableCell
         className={cn(
           "text-right font-bold",
-          isDueSoon ? "text-destructive" : "text-foreground",
+          isUrgent(bill.status) ? "text-destructive" : "text-foreground",
         )}
       >
-        {formatCurrency(bill.amount, { forceDecimals: true })}
+        {formatCurrency(bill.currentOccurrence?.amount ?? bill.amount, {
+          forceDecimals: true,
+        })}
+      </TableCell>
+      <TableCell className="text-right">
+        <BillActions bill={bill} />
       </TableCell>
     </TableRow>
   )
 }
 
 export function MobileBillRow({ bill }: BillTableRowProps) {
-  const isPaid = bill.status === "paid"
-  const isDueSoon = bill.status === "due-soon"
-
   return (
-    <li className="flex items-center justify-between py-4">
-      <div className="flex items-center gap-3">
-        <Image
-          src={bill.avatarUrl}
-          alt=""
-          width={40}
-          height={40}
-          className="size-10 rounded-full object-cover"
-        />
-        <div className="flex flex-col">
-          <span className="text-foreground text-sm font-bold">{bill.name}</span>
-          <div className="mt-0.5 flex items-center gap-1">
-            <span
-              className={cn(
-                "text-xs",
-                isPaid ? "text-accent" : "text-muted-foreground",
-              )}
-            >
-              {formatDueDate(bill.dueDay)}
-            </span>
-            {isPaid && (
-              <CircleCheck className="text-accent size-3" aria-label="Paid" />
-            )}
-            {isDueSoon && (
-              <CircleAlert
-                className="text-destructive size-3"
-                aria-label="Due soon"
-              />
-            )}
-          </div>
-        </div>
+    <li
+      className={cn(
+        "flex flex-col gap-3 py-4",
+        bill.archivedAt && "opacity-70",
+      )}
+    >
+      <div className="flex items-center justify-between">
+        <BillIdentity bill={bill} />
+        <span
+          className={cn(
+            "text-sm font-bold",
+            isUrgent(bill.status) ? "text-destructive" : "text-foreground",
+          )}
+        >
+          {formatCurrency(bill.currentOccurrence?.amount ?? bill.amount, {
+            forceDecimals: true,
+          })}
+        </span>
       </div>
-      <span
-        className={cn(
-          "text-sm font-bold",
-          isDueSoon ? "text-destructive" : "text-foreground",
-        )}
-      >
-        {formatCurrency(bill.amount, { forceDecimals: true })}
-      </span>
+      <div className="flex items-center justify-between gap-2">
+        <StatusIndicator bill={bill} iconClassName="size-3" />
+        <BillActions bill={bill} />
+      </div>
     </li>
   )
 }

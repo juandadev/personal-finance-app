@@ -44,7 +44,9 @@ export function PayCreditCardStatementDialog({
   const [statusMessage, setStatusMessage] = useState("")
   const [isPaying, setIsPaying] = useState(false)
   const canPay =
-    statement && statement.lifecycleStatus !== "paid" && statement.amount > 0
+    statement &&
+    statement.lifecycleStatus !== "paid" &&
+    statement.totalAmount > 0
 
   if (!canPay || !statement) {
     return null
@@ -54,7 +56,15 @@ export function PayCreditCardStatementDialog({
     setIsPaying(true)
     setStatusMessage("")
 
-    const result = await actions.payCreditCardStatement(statement.id, paidAt)
+    // Virtual statements have no row yet (pending bills only); the cycle pay
+    // action creates the statement before paying it.
+    const result = statement.isVirtual
+      ? await actions.payCreditCardCycle(
+          creditCard.id,
+          statement.periodEnd,
+          paidAt,
+        )
+      : await actions.payCreditCardStatement(statement.id, paidAt)
 
     setIsPaying(false)
 
@@ -101,15 +111,43 @@ export function PayCreditCardStatementDialog({
                 {formatDisplayDate(statement.paymentDueDate)}
               </dd>
             </div>
+            {statement.pendingBillsAmount > 0 ? (
+              <>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-muted-foreground">Purchases</dt>
+                  <dd className="text-right">
+                    {formatCurrency(statement.amount, {
+                      forceDecimals: true,
+                    })}
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-muted-foreground">
+                    Recurring Bills ({statement.pendingBills.length})
+                  </dt>
+                  <dd className="text-right">
+                    {formatCurrency(statement.pendingBillsAmount, {
+                      forceDecimals: true,
+                    })}
+                  </dd>
+                </div>
+              </>
+            ) : null}
             <div className="flex justify-between gap-4">
               <dt className="text-muted-foreground">Amount</dt>
               <dd className="text-right font-bold">
-                {formatCurrency(statement.amount, {
+                {formatCurrency(statement.totalAmount, {
                   forceDecimals: true,
                 })}
               </dd>
             </div>
           </dl>
+          {statement.pendingBillsAmount > 0 ? (
+            <p className="text-muted-foreground text-xs leading-normal">
+              Paying this statement also records the due recurring bills as card
+              transactions and marks them as paid.
+            </p>
+          ) : null}
           <div className="space-y-2">
             <Label htmlFor="credit-card-paid-at">Payment Date</Label>
             <Input

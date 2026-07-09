@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react"
 import { ArrowUpDown, CalendarClock } from "lucide-react"
 import { EmptyDataCard } from "@/components/empty-data-card"
+import { AddBillDialog } from "@/components/recurring-bills/bill-dialog"
 import { Card } from "@/components/ui/card"
 import type { RecurringBill, SortOption } from "@/lib/types"
 import { SearchInput } from "../transactions/search-input"
@@ -22,6 +23,10 @@ const sortOptions: { value: SortOption; label: string }[] = [
   { value: "lowest", label: "Lowest" },
 ]
 
+function nextDueDate(bill: RecurringBill) {
+  return bill.currentOccurrence?.dueDate ?? bill.firstDueDate
+}
+
 export function BillsContent({ bills }: BillsContentProps) {
   const [search, setSearch] = useState("")
   const [sortBy, setSortBy] = useState<SortOption>("latest")
@@ -38,10 +43,10 @@ export function BillsContent({ bills }: BillsContentProps) {
 
     switch (sortBy) {
       case "latest":
-        result.sort((a, b) => a.dueDay - b.dueDay)
+        result.sort((a, b) => nextDueDate(a).localeCompare(nextDueDate(b)))
         break
       case "oldest":
-        result.sort((a, b) => b.dueDay - a.dueDay)
+        result.sort((a, b) => nextDueDate(b).localeCompare(nextDueDate(a)))
         break
       case "a-z":
         result.sort((a, b) => a.name.localeCompare(b.name))
@@ -59,6 +64,10 @@ export function BillsContent({ bills }: BillsContentProps) {
 
     return result
   }, [bills, search, sortBy])
+  const activeBills = filteredAndSortedBills.filter((bill) => !bill.archivedAt)
+  const archivedBills = filteredAndSortedBills.filter((bill) =>
+    Boolean(bill.archivedAt),
+  )
   const hasBills = bills.length > 0
   const hasVisibleBills = filteredAndSortedBills.length > 0
 
@@ -79,10 +88,23 @@ export function BillsContent({ bills }: BillsContentProps) {
           onChange={setSortBy}
           icon={<ArrowUpDown className="size-5" aria-hidden />}
         />
+        <div className="ml-auto">
+          <AddBillDialog />
+        </div>
       </div>
 
       {hasVisibleBills ? (
-        <BillsTable bills={filteredAndSortedBills} />
+        <div className="space-y-8">
+          {activeBills.length > 0 ? <BillsTable bills={activeBills} /> : null}
+          {archivedBills.length > 0 ? (
+            <div>
+              <h3 className="text-muted-foreground text-sm font-bold">
+                Archived
+              </h3>
+              <BillsTable bills={archivedBills} />
+            </div>
+          ) : null}
+        </div>
       ) : (
         <EmptyDataCard
           className="min-h-90"
@@ -91,7 +113,7 @@ export function BillsContent({ bills }: BillsContentProps) {
           description={
             hasBills
               ? "Try a different search term to find another scheduled bill."
-              : "Recurring payments will appear here once they are added, with due dates and payment status grouped for quick review."
+              : "Add a recurring bill to track subscriptions, financing, and other scheduled payments with due dates and payment status."
           }
         />
       )}

@@ -28,6 +28,9 @@ export function BillsTable({ bills }: BillsTableProps) {
               <TableHead>Bill Title</TableHead>
               <TableHead>Due Date</TableHead>
               <TableHead className="text-right">Amount</TableHead>
+              <TableHead className="text-right">
+                <span className="sr-only">Actions</span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

@@ -70,18 +70,44 @@ export type SortOption =
 export interface RecurringBillSummary {
   label: string
   amount: number
+  count: number
   color: ThemeColor
 }
 
-export type BillStatus = "paid" | "upcoming" | "due-soon"
+export type BillStatus =
+  "paid" | "skipped" | "upcoming" | "due-soon" | "due-today" | "overdue"
+
+export interface RecurringBillOccurrence {
+  dueDate: string
+  sequence: number
+  amount: number
+  status: BillStatus
+  paymentId?: string
+  transactionId?: string
+  paidAt?: string
+}
 
 export interface RecurringBill {
   id: string
   name: string
+  concept: string
   avatarUrl: string
+  contactColor: ThemeColor
+  contactInitials: string
+  counterpartyId: string
   amount: number
-  dueDay: number
+  frequency: "monthly" | "yearly"
+  firstDueDate: string
+  totalPayments?: number
+  settledCount: number
+  creditCardId?: string
+  categoryId: string
+  category: TransactionCategory
+  archivedAt?: string
+  occurrences: RecurringBillOccurrence[]
+  currentOccurrence?: RecurringBillOccurrence
   status: BillStatus
+  hasPayments: boolean
 }
 
 export type CreditCardDueStatus =
@@ -94,6 +120,17 @@ export interface CreditCardSummary {
   color: ThemeColor
 }
 
+export interface CreditCardPendingBillLine {
+  billId: string
+  name: string
+  avatarUrl: string
+  contactColor: ThemeColor
+  contactInitials: string
+  dueDate: string
+  amount: number
+  category: TransactionCategory
+}
+
 export interface CreditCardStatement {
   id: string
   creditCardId: string
@@ -101,9 +138,18 @@ export interface CreditCardStatement {
   periodEnd: string
   paymentDueDate: string
   amount: number
+  pendingBills: CreditCardPendingBillLine[]
+  pendingBillsAmount: number
+  totalAmount: number
   lifecycleStatus: "open" | "closed" | "paid"
   dueStatus: CreditCardDueStatus
   paidAt?: string
+  /**
+   * True when the cycle has pending bills but no statement row exists yet
+   * (e.g. a subscription-only card with no purchases). Paying it creates the
+   * row first.
+   */
+  isVirtual?: boolean
 }
 
 export interface CreditCardPayment {

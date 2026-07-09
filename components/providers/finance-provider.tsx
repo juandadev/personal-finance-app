@@ -11,18 +11,23 @@ import {
 import {
   assignTransactionToBudgetAction,
   archiveCreditCardAction,
+  archiveRecurringBillAction,
   closeCreditCardStatementAction,
   createBudgetAction,
   createCategoryAction,
   createCounterpartyAction,
   createCreditCardAction,
   createPotAction,
+  createRecurringBillAction,
   createTransactionAction,
   deleteBudgetAction,
   deleteCategoryAction,
   deleteCounterpartyAction,
   deletePotAction,
+  deleteRecurringBillAction,
   deleteTransactionAction,
+  payRecurringBillOccurrenceAction,
+  skipRecurringBillOccurrenceAction,
   transferPotAction,
   unassignTransactionFromBudgetAction,
   updateBudgetAction,
@@ -30,7 +35,9 @@ import {
   updateCounterpartyAction,
   updateCreditCardAction,
   updatePotAction,
+  updateRecurringBillAction,
   updateTransactionAction,
+  payCreditCardCycleAction,
   payCreditCardStatementAction,
 } from "@/lib/finance/actions"
 import { createInitialFinanceState } from "@/lib/finance/seed"
@@ -45,8 +52,10 @@ import type {
   NewCounterpartyRecord,
   NewCreditCardRecord,
   NewPotRecord,
+  NewRecurringBillRecord,
   NewTransactionRecord,
   PotRecord,
+  RecurringBillPaymentSource,
   RecurringBillRecord,
 } from "@/lib/finance/types"
 import { SidebarProvider } from "@/components/ui/sidebar"
@@ -353,14 +362,91 @@ export function FinanceProvider({
             return result
           }),
         ),
-      addRecurringBill: (bill: RecurringBillRecord) =>
-        dispatch({ type: "recurring-bill/add", bill }),
+      addRecurringBill: (bill: Omit<NewRecurringBillRecord, "archived_at">) =>
+        runFinanceAction(() =>
+          createRecurringBillAction(bill).then((result) => {
+            if (result.ok) {
+              dispatch({ type: "recurring-bill/add", bill: result.data })
+            }
+
+            return result
+          }),
+        ),
       updateRecurringBill: (
         id: string,
-        updates: Partial<Omit<RecurringBillRecord, "id">>,
-      ) => dispatch({ type: "recurring-bill/update", id, updates }),
+        updates: Partial<
+          Omit<RecurringBillRecord, "id" | "user_id" | "archived_at">
+        >,
+      ) =>
+        runFinanceAction(() =>
+          updateRecurringBillAction(id, updates).then((result) => {
+            if (result.ok) {
+              dispatch({ type: "recurring-bill/update", bill: result.data })
+            }
+
+            return result
+          }),
+        ),
+      archiveRecurringBill: (id: string) =>
+        runFinanceAction(() =>
+          archiveRecurringBillAction(id).then((result) => {
+            if (result.ok) {
+              dispatch({ type: "recurring-bill/update", bill: result.data })
+            }
+
+            return result
+          }),
+        ),
       deleteRecurringBill: (id: string) =>
-        dispatch({ type: "recurring-bill/delete", id }),
+        runFinanceAction(() =>
+          deleteRecurringBillAction(id).then((result) => {
+            if (result.ok) {
+              dispatch({ type: "recurring-bill/delete", id })
+            }
+
+            return result
+          }),
+        ),
+      payRecurringBillOccurrence: (
+        billId: string,
+        dueDate: string,
+        source: RecurringBillPaymentSource,
+        paidAt: string,
+      ) =>
+        runFinanceAction(() =>
+          payRecurringBillOccurrenceAction(
+            billId,
+            dueDate,
+            source,
+            paidAt,
+          ).then((result) => {
+            if (result.ok) {
+              dispatch({
+                type: "recurring-bill/settle",
+                billPayment: result.data.billPayment,
+                transaction: result.data.transaction,
+                accounts: result.data.accounts,
+                accountSummaries: result.data.accountSummaries,
+                creditCardStatements: result.data.creditCardStatements,
+              })
+            }
+
+            return result
+          }),
+        ),
+      skipRecurringBillOccurrence: (billId: string, dueDate: string) =>
+        runFinanceAction(() =>
+          skipRecurringBillOccurrenceAction(billId, dueDate).then((result) => {
+            if (result.ok) {
+              dispatch({
+                type: "recurring-bill/settle",
+                billPayment: result.data,
+              })
+            }
+
+            return result
+          }),
+        ),
       addCreditCard: (creditCard: NewCreditCardRecord) =>
         runFinanceAction(() =>
           createCreditCardAction(creditCard).then((result) => {
@@ -428,13 +514,43 @@ export function FinanceProvider({
                 type: "credit-card/payment",
                 payment: result.data.payment,
                 transaction: result.data.transaction,
+                counterparty: result.data.counterparty,
                 accounts: result.data.accounts,
+                accountSummaries: result.data.accountSummaries,
                 statement: result.data.statement,
+                billTransactions: result.data.billTransactions,
+                recurringBillPayments: result.data.recurringBillPayments,
               })
             }
 
             return result
           }),
+        ),
+      payCreditCardCycle: (
+        creditCardId: string,
+        referenceDate: string,
+        paidAt: string,
+      ) =>
+        runFinanceAction(() =>
+          payCreditCardCycleAction(creditCardId, referenceDate, paidAt).then(
+            (result) => {
+              if (result.ok) {
+                dispatch({
+                  type: "credit-card/payment",
+                  payment: result.data.payment,
+                  transaction: result.data.transaction,
+                  counterparty: result.data.counterparty,
+                  accounts: result.data.accounts,
+                  accountSummaries: result.data.accountSummaries,
+                  statement: result.data.statement,
+                  billTransactions: result.data.billTransactions,
+                  recurringBillPayments: result.data.recurringBillPayments,
+                })
+              }
+
+              return result
+            },
+          ),
         ),
       closeCreditCardStatement: (statementId: string) =>
         runFinanceAction(() =>

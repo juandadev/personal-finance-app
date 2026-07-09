@@ -145,7 +145,18 @@ function StatementsCard({ creditCard }: { creditCard: CreditCard }) {
               </div>
               <div className="flex flex-col items-start gap-2 sm:items-end">
                 <p className="text-sm font-bold">
-                  {formatCurrency(statement.amount, { forceDecimals: true })}
+                  {formatCurrency(statement.totalAmount, {
+                    forceDecimals: true,
+                  })}
+                  {statement.pendingBillsAmount > 0 ? (
+                    <span className="text-muted-foreground ml-1 text-xs font-normal">
+                      incl.{" "}
+                      {formatCurrency(statement.pendingBillsAmount, {
+                        forceDecimals: true,
+                      })}{" "}
+                      pending bills
+                    </span>
+                  ) : null}
                 </p>
                 <p
                   className={cn(
@@ -187,11 +198,40 @@ function TransactionsCard({
   creditCard: CreditCard
   transactions: ReturnType<typeof useFinance>["transactions"]
 }) {
+  const pendingBillLines = creditCard.statements
+    .filter((statement) => statement.lifecycleStatus !== "paid")
+    .flatMap((statement) => statement.pendingBills)
+    .sort((a, b) => b.dueDate.localeCompare(a.dueDate))
+  const hasActivity = transactions.length > 0 || pendingBillLines.length > 0
+
   return (
     <Card padding="fixed">
       <h2 className="text-xl font-bold tracking-tight">Card Transactions</h2>
-      {transactions.length > 0 ? (
+      {hasActivity ? (
         <div className="divide-muted-foreground/10 mt-4 divide-y">
+          {pendingBillLines.map((line) => (
+            <div
+              key={`${line.billId}-${line.dueDate}`}
+              className="flex items-center justify-between gap-4 py-4 opacity-70"
+            >
+              <div>
+                <p className="text-muted-foreground text-sm font-bold">
+                  {line.name}
+                </p>
+                <p className="text-muted-foreground text-xs">
+                  Recurring bill · Due {formatDisplayDate(line.dueDate)}
+                </p>
+              </div>
+              <div className="flex flex-col items-end gap-1">
+                <p className="text-muted-foreground text-sm font-bold">
+                  {formatSignedAmount(line.amount * -1)}
+                </p>
+                <p className="text-muted-foreground text-xs font-bold">
+                  Pending
+                </p>
+              </div>
+            </div>
+          ))}
           {transactions.map((transaction) => (
             <div
               key={transaction.id}

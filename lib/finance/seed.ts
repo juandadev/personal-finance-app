@@ -81,6 +81,7 @@ export const financeSeed: FinanceState = {
   budgetTransactionAssignments: [],
   pots: potsSeedRows,
   recurringBills: recurringBillsSeed,
+  recurringBillPayments: [],
   creditCards: [],
   creditCardStatements: [],
   creditCardPayments: [],
@@ -109,6 +110,9 @@ export function createInitialFinanceState(): FinanceState {
     ),
     pots: financeSeed.pots.map((pot) => ({ ...pot })),
     recurringBills: financeSeed.recurringBills.map((bill) => ({ ...bill })),
+    recurringBillPayments: financeSeed.recurringBillPayments.map((payment) => ({
+      ...payment,
+    })),
     creditCards: financeSeed.creditCards.map((card) => ({ ...card })),
     creditCardStatements: financeSeed.creditCardStatements.map((statement) => ({
       ...statement,

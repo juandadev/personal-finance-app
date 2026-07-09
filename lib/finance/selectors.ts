@@ -1,11 +1,20 @@
 import { getCreditCardDueStatus } from "@/lib/finance/credit-card-cycle"
+import {
+  getBillOccurrenceStatementCycle,
+  resolveRecurringBillOccurrences,
+  selectCurrentOccurrence,
+  todayIsoDate,
+  type RecurringBillOccurrenceState,
+} from "@/lib/finance/recurring-bill-schedule"
 import { formatDisplayDate } from "@/lib/format"
 import type {
   Budget,
   CreditCard,
   CreditCardPayment,
+  CreditCardPendingBillLine,
   CreditCardStatement,
   RecurringBill,
+  RecurringBillOccurrence,
   TransactionCategory,
 } from "@/lib/types"
 import type {
@@ -17,6 +26,7 @@ import type {
   CreditCardStatementRecord,
   FinanceState,
   FinanceViewModel,
+  RecurringBillPaymentRecord,
   RecurringBillRecord,
   TransactionRecord,
 } from "./types"
@@ -182,9 +192,42 @@ function selectBudgetAssignmentsForCurrentBudgets(
   )
 }
 
+function groupPaymentsByBillId(payments: RecurringBillPaymentRecord[]) {
+  const paymentsByBillId = new Map<string, RecurringBillPaymentRecord[]>()
+
+  for (const payment of payments) {
+    const billPayments = paymentsByBillId.get(payment.recurring_bill_id)
+
+    if (billPayments) {
+      billPayments.push(payment)
+    } else {
+      paymentsByBillId.set(payment.recurring_bill_id, [payment])
+    }
+  }
+
+  return paymentsByBillId
+}
+
+function toOccurrenceView(
+  occurrence: RecurringBillOccurrenceState,
+): RecurringBillOccurrence {
+  return {
+    dueDate: occurrence.dueDate,
+    sequence: occurrence.sequence,
+    amount: centsToDollars(occurrence.amountCents),
+    status: occurrence.status,
+    paymentId: occurrence.paymentId,
+    transactionId: occurrence.transactionId,
+    paidAt: occurrence.paidAt,
+  }
+}
+
 function selectRecurringBills(
   recurringBills: RecurringBillRecord[],
+  paymentsByBillId: Map<string, RecurringBillPaymentRecord[]>,
   counterparties: Map<string, CounterpartyRecord>,
+  categories: Map<string, CategoryRecord>,
+  today: string,
 ): RecurringBill[] {
   return recurringBills.map((bill) => {
     const counterparty = getRequired(
@@ -192,56 +235,269 @@ function selectRecurringBills(
       bill.counterparty_id,
       "counterparty",
     )
+    const category = getRequired(categories, bill.category_id, "category")
+    const payments = paymentsByBillId.get(bill.id) ?? []
+    const occurrenceStates = resolveRecurringBillOccurrences(
+      bill,
+      payments,
+      today,
+    )
+    const currentOccurrence = selectCurrentOccurrence(occurrenceStates)
 
     return {
       id: bill.id,
       name: counterparty.display_name,
+      concept: bill.concept,
       avatarUrl: counterparty.avatar_url ?? "",
+      contactColor: counterparty.theme_color,
+      contactInitials: getInitials(counterparty.display_name),
+      counterpartyId: bill.counterparty_id,
       amount: centsToDollars(bill.amount_cents),
-      dueDay: bill.due_day_of_month,
-      status: bill.status,
+      frequency: bill.frequency,
+      firstDueDate: bill.first_due_date,
+      totalPayments: bill.total_payments ?? undefined,
+      settledCount: payments.length,
+      creditCardId: bill.credit_card_id ?? undefined,
+      categoryId: bill.category_id,
+      category: category.name,
+      archivedAt: bill.archived_at ?? undefined,
+      occurrences: occurrenceStates.map(toOccurrenceView),
+      currentOccurrence: currentOccurrence
+        ? toOccurrenceView(currentOccurrence)
+        : undefined,
+      status: currentOccurrence?.status ?? "upcoming",
+      hasPayments: payments.length > 0,
     }
   })
 }
 
+const URGENT_BILL_STATUSES = new Set(["due-soon", "due-today", "overdue"])
+
 function selectRecurringBillsSummary(
   recurringBills: RecurringBill[],
+  today: string,
 ): FinanceViewModel["recurringBillsSummary"] {
-  const paidAmount = recurringBills
-    .filter((bill) => bill.status === "paid")
-    .reduce((sum, bill) => sum + bill.amount, 0)
-  const upcomingAmount = recurringBills
-    .filter((bill) => bill.status === "upcoming" || bill.status === "due-soon")
-    .reduce((sum, bill) => sum + bill.amount, 0)
-  const dueSoonAmount = recurringBills
-    .filter((bill) => bill.status === "due-soon")
-    .reduce((sum, bill) => sum + bill.amount, 0)
+  const currentMonth = today.slice(0, 7)
+  const activeBills = recurringBills.filter((bill) => !bill.archivedAt)
+
+  let paidCount = 0
+  let paidAmount = 0
+  let upcomingCount = 0
+  let upcomingAmount = 0
+  let dueSoonCount = 0
+  let dueSoonAmount = 0
+
+  for (const bill of activeBills) {
+    for (const occurrence of bill.occurrences) {
+      if (occurrence.status === "paid" || occurrence.status === "skipped") {
+        if (
+          occurrence.status === "paid" &&
+          occurrence.dueDate.slice(0, 7) === currentMonth
+        ) {
+          paidCount += 1
+          paidAmount += occurrence.amount
+        }
+
+        continue
+      }
+
+      upcomingCount += 1
+      upcomingAmount += occurrence.amount
+
+      if (URGENT_BILL_STATUSES.has(occurrence.status)) {
+        dueSoonCount += 1
+        dueSoonAmount += occurrence.amount
+      }
+    }
+  }
 
   return [
-    { label: "Paid Bills", amount: paidAmount, color: "chart-1" },
+    {
+      label: "Paid Bills",
+      amount: paidAmount,
+      count: paidCount,
+      color: "chart-1",
+    },
     {
       label: "Total Upcoming",
       amount: upcomingAmount,
+      count: upcomingCount,
       color: "chart-4",
     },
-    { label: "Due Soon", amount: dueSoonAmount, color: "chart-2" },
+    {
+      label: "Due Soon",
+      amount: dueSoonAmount,
+      count: dueSoonCount,
+      color: "chart-2",
+    },
   ]
+}
+
+interface PendingCycleGroup {
+  periodStart: string
+  periodEnd: string
+  paymentDueDate: string
+  lines: CreditCardPendingBillLine[]
+}
+
+/**
+ * Pending lines for card-assigned bills: unsettled occurrences whose due
+ * date has been reached, grouped by the statement cycle they attach to.
+ * These are pure derivations; the real transactions only exist once the
+ * statement gets paid.
+ */
+function selectPendingBillCycles(
+  cards: CreditCardRecord[],
+  statements: CreditCardStatementRecord[],
+  recurringBills: RecurringBillRecord[],
+  paymentsByBillId: Map<string, RecurringBillPaymentRecord[]>,
+  counterparties: Map<string, CounterpartyRecord>,
+  categories: Map<string, CategoryRecord>,
+  today: string,
+): Map<string, Map<string, PendingCycleGroup>> {
+  const cyclesByCardId = new Map<string, Map<string, PendingCycleGroup>>()
+  const cardsById = byId(cards)
+
+  for (const bill of recurringBills) {
+    if (!bill.credit_card_id) {
+      continue
+    }
+
+    const card = cardsById.get(bill.credit_card_id)
+
+    if (!card) {
+      continue
+    }
+
+    const cardStatements = statements.filter(
+      (statement) => statement.credit_card_id === card.id,
+    )
+    const counterparty = getRequired(
+      counterparties,
+      bill.counterparty_id,
+      "counterparty",
+    )
+    const category = getRequired(categories, bill.category_id, "category")
+    const occurrences = resolveRecurringBillOccurrences(
+      bill,
+      paymentsByBillId.get(bill.id) ?? [],
+      today,
+    )
+
+    for (const occurrence of occurrences) {
+      if (
+        occurrence.status === "paid" ||
+        occurrence.status === "skipped" ||
+        occurrence.dueDate > today
+      ) {
+        continue
+      }
+
+      const cycle = getBillOccurrenceStatementCycle(
+        occurrence.dueDate,
+        card,
+        cardStatements,
+        today,
+      )
+      const cardCycles =
+        cyclesByCardId.get(card.id) ?? new Map<string, PendingCycleGroup>()
+      const group = cardCycles.get(cycle.periodStart) ?? {
+        periodStart: cycle.periodStart,
+        periodEnd: cycle.periodEnd,
+        paymentDueDate: cycle.paymentDueDate,
+        lines: [],
+      }
+
+      group.lines.push({
+        billId: bill.id,
+        name: counterparty.display_name,
+        avatarUrl: counterparty.avatar_url ?? "",
+        contactColor: counterparty.theme_color,
+        contactInitials: getInitials(counterparty.display_name),
+        dueDate: occurrence.dueDate,
+        amount: centsToDollars(occurrence.amountCents),
+        category: category.name,
+      })
+      cardCycles.set(cycle.periodStart, group)
+      cyclesByCardId.set(card.id, cardCycles)
+    }
+  }
+
+  return cyclesByCardId
 }
 
 function selectCreditCardStatements(
   statements: CreditCardStatementRecord[],
+  pendingCyclesByCardId: Map<string, Map<string, PendingCycleGroup>>,
 ): CreditCardStatement[] {
-  return statements.map((statement) => ({
-    id: statement.id,
-    creditCardId: statement.credit_card_id,
-    periodStart: statement.period_start,
-    periodEnd: statement.period_end,
-    paymentDueDate: statement.payment_due_date,
-    amount: centsToDollars(statement.statement_amount_cents),
-    lifecycleStatus: statement.lifecycle_status,
-    dueStatus: getCreditCardDueStatus(statement),
-    paidAt: statement.paid_at ?? undefined,
-  }))
+  const statementViews = statements.map((statement) => {
+    const pendingBills =
+      pendingCyclesByCardId
+        .get(statement.credit_card_id)
+        ?.get(statement.period_start)?.lines ?? []
+    const pendingBillsAmount = pendingBills.reduce(
+      (sum, line) => sum + line.amount,
+      0,
+    )
+    const amount = centsToDollars(statement.statement_amount_cents)
+
+    return {
+      id: statement.id,
+      creditCardId: statement.credit_card_id,
+      periodStart: statement.period_start,
+      periodEnd: statement.period_end,
+      paymentDueDate: statement.payment_due_date,
+      amount,
+      pendingBills,
+      pendingBillsAmount,
+      totalAmount: amount + pendingBillsAmount,
+      lifecycleStatus: statement.lifecycle_status,
+      dueStatus: getCreditCardDueStatus(statement),
+      paidAt: statement.paid_at ?? undefined,
+    }
+  })
+
+  // Cycles that have pending bills but no statement row yet (no purchases
+  // happened) still need a payable statement view.
+  const existingKeys = new Set(
+    statements.map(
+      (statement) => `${statement.credit_card_id}:${statement.period_start}`,
+    ),
+  )
+  const virtualStatements: CreditCardStatement[] = []
+
+  for (const [cardId, cycles] of pendingCyclesByCardId) {
+    for (const [periodStart, group] of cycles) {
+      if (existingKeys.has(`${cardId}:${periodStart}`)) {
+        continue
+      }
+
+      const pendingBillsAmount = group.lines.reduce(
+        (sum, line) => sum + line.amount,
+        0,
+      )
+
+      virtualStatements.push({
+        id: `virtual-${cardId}-${periodStart}`,
+        creditCardId: cardId,
+        periodStart: group.periodStart,
+        periodEnd: group.periodEnd,
+        paymentDueDate: group.paymentDueDate,
+        amount: 0,
+        pendingBills: group.lines,
+        pendingBillsAmount,
+        totalAmount: pendingBillsAmount,
+        lifecycleStatus: "open",
+        dueStatus: getCreditCardDueStatus({
+          lifecycle_status: "open",
+          payment_due_date: group.paymentDueDate,
+        }),
+        isVirtual: true,
+      })
+    }
+  }
+
+  return [...statementViews, ...virtualStatements]
 }
 
 function selectCreditCardPayments(
@@ -277,8 +533,12 @@ function selectCreditCards(
   cards: CreditCardRecord[],
   statements: CreditCardStatementRecord[],
   payments: CreditCardPaymentRecord[],
+  pendingCyclesByCardId: Map<string, Map<string, PendingCycleGroup>>,
 ): CreditCard[] {
-  const selectedStatements = selectCreditCardStatements(statements)
+  const selectedStatements = selectCreditCardStatements(
+    statements,
+    pendingCyclesByCardId,
+  )
   const selectedPayments = selectCreditCardPayments(payments)
 
   return cards.map((card) => {
@@ -289,7 +549,7 @@ function selectCreditCards(
       (payment) => payment.creditCardId === card.id,
     )
     const currentStatement = selectCurrentCreditCardStatement(cardStatements)
-    const currentStatementAmount = currentStatement?.amount ?? 0
+    const currentStatementAmount = currentStatement?.totalAmount ?? 0
 
     return {
       id: card.id,
@@ -419,18 +679,32 @@ export function selectFinanceViewModel(state: FinanceState): FinanceViewModel {
     currentBudgetAssignments,
     budgetsById,
   )
+  const today = todayIsoDate()
+  const paymentsByBillId = groupPaymentsByBillId(state.recurringBillPayments)
   const recurringBills = selectRecurringBills(
     state.recurringBills,
+    paymentsByBillId,
     counterparties,
+    categories,
+    today,
   )
-  const totalBillsAmount = recurringBills.reduce(
-    (sum, bill) => sum + bill.amount,
-    0,
+  const totalBillsAmount = recurringBills
+    .filter((bill) => !bill.archivedAt)
+    .reduce((sum, bill) => sum + bill.amount, 0)
+  const pendingCyclesByCardId = selectPendingBillCycles(
+    state.creditCards,
+    state.creditCardStatements,
+    state.recurringBills,
+    paymentsByBillId,
+    counterparties,
+    categories,
+    today,
   )
   const creditCards = selectCreditCards(
     state.creditCards,
     state.creditCardStatements,
     state.creditCardPayments,
+    pendingCyclesByCardId,
   )
   const creditCardSummary = selectCreditCardSummary(creditCards)
 
@@ -444,7 +718,7 @@ export function selectFinanceViewModel(state: FinanceState): FinanceViewModel {
     transactions,
     transactionCategories: selectTransactionCategories(state.categories),
     recurringBills,
-    recurringBillsSummary: selectRecurringBillsSummary(recurringBills),
+    recurringBillsSummary: selectRecurringBillsSummary(recurringBills, today),
     totalBillsAmount,
     creditCards,
     creditCardSummary,

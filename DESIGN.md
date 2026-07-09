@@ -342,6 +342,30 @@ Button labels should be action-specific: `Add Money`, `Create Budget`,
 - Charts should use the documented chart palette before adding new colors.
 - Avoid decorative charts that do not answer a finance question.
 
+### Recurring Bills
+
+- A bill's identity comes from its contact: rows use the shared `ContactAvatar`
+  with initials fallback, never raw images.
+- Occurrence statuses use fixed labels and icon + color together: `Paid`
+  (check, `accent`), `Skipped` (muted), `Upcoming` (muted foreground),
+  `Due Soon` and `Due Today` (warning icon, `destructive` text), `Overdue`
+  (warning icon, `destructive` text).
+- Finite bills show progress as `Payment N of M`; indefinite bills show the
+  frequency (`Monthly` / `Yearly`) instead.
+- The bill dialog locks `frequency` and `first due date` once a bill has any
+  settled payment. Locked fields render disabled with helper text explaining
+  to archive and recreate the bill to reschedule.
+- Paying an occurrence always asks for the payment source: the bank account or
+  one of the user's credit cards (using `CreditCardBadge`).
+- Skip and Archive are confirmed with `AlertDialog`. Copy states that skipping
+  records no money movement and archiving stops future occurrences while
+  keeping history.
+- Card-assigned bill occurrences render inside the card's statement history as
+  pending lines: muted row, `Pending` badge, due date. Statement balances
+  shown anywhere include pending bill amounts.
+- Archived bills stay listed under an `Archived` group with muted styling, no
+  pay/skip actions, and no new occurrences.
+
 ## Finance Data Rules
 
 - Use formatting helpers from `lib/format` for currency and signed amounts.

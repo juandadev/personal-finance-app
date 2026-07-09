@@ -1,18 +1,11 @@
 "use client"
 
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-  type RefObject,
-} from "react"
+import { useMemo, useState, type ReactNode } from "react"
 import { z } from "zod"
 
+import { CategorySelectWithQuickCreate } from "@/components/category-select-with-quick-create"
+import { ContactSelectWithQuickCreate } from "@/components/contact-select-with-quick-create"
 import { CreditCardBadge } from "@/components/credit-cards/credit-card-badge"
-import { ThemeSelect } from "@/components/theme-select"
-import { ContactAvatar } from "@/components/contact-avatar"
 import { Button } from "@/components/ui/button"
 import { CurrencyInput } from "@/components/ui/currency-input"
 import {
@@ -35,14 +28,13 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { useFinance } from "@/hooks/use-finance"
-import { formatDollarInput, themeOptions } from "@/lib/finance/form-utils"
+import { formatDollarInput } from "@/lib/finance/form-utils"
 import type { NewTransactionRecord } from "@/lib/finance/types"
 import {
   currencyCentsSchema,
   optionalTrimmedStringSchema,
   requiredSelectSchema,
   requiredStringSchema,
-  themeColorSchema,
 } from "@/lib/forms/validation"
 import { useStandardForm } from "@/lib/forms/use-standard-form"
 import type { Transaction } from "@/lib/types"
@@ -50,8 +42,6 @@ import type { ThemeColor } from "@/lib/theme-colors"
 import { getInitials } from "@/lib/utils"
 
 const noBudgetValue = "none"
-const createCategoryValue = "__create-category"
-const createContactValue = "__create-contact"
 
 const transactionFormSchema = z
   .object({
@@ -92,30 +82,10 @@ const transactionFormSchema = z
     }
   })
 
-const quickCategorySchema = z.object({
-  name: requiredStringSchema("Enter a category name.", 40),
-  themeColor: themeColorSchema,
-})
-
-const quickContactSchema = z.object({
-  displayName: requiredStringSchema("Enter a contact name.", 60),
-  type: z.enum(["person", "merchant"]),
-  themeColor: themeColorSchema,
-  notes: optionalTrimmedStringSchema(240),
-})
-
 type TransactionFormValues = z.input<typeof transactionFormSchema>
-type QuickCategoryValues = z.input<typeof quickCategorySchema>
-type QuickContactValues = z.input<typeof quickContactSchema>
 type SelectOption = {
   value: string
   label: string
-  contactAvatar?: {
-    name: string
-    initials: string
-    color: ThemeColor
-    avatarUrl?: string
-  }
   creditCardAvatar?: {
     nickname: string
     initials: string
@@ -157,20 +127,8 @@ function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
   const { state, actions } = useFinance()
   const isEditing = Boolean(transaction)
   const [open, setOpen] = useState(false)
-  const [showQuickCategoryForm, setShowQuickCategoryForm] = useState(false)
-  const [showQuickContactForm, setShowQuickContactForm] = useState(false)
   const [deleteStatusMessage, setDeleteStatusMessage] = useState("")
   const [isDeleting, setIsDeleting] = useState(false)
-  const [createdCategoryOption, setCreatedCategoryOption] =
-    useState<SelectOption | null>(null)
-  const [createdContactOption, setCreatedContactOption] =
-    useState<SelectOption | null>(null)
-  const [pendingCategorySelectionId, setPendingCategorySelectionId] = useState<
-    string | null
-  >(null)
-  const [pendingContactSelectionId, setPendingContactSelectionId] = useState<
-    string | null
-  >(null)
 
   const mainDefaultValues = useMemo(
     () =>
@@ -204,63 +162,11 @@ function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
       }) satisfies TransactionFormValues,
     [state.categories, state.counterparties, state.creditCards, transaction],
   )
-  const quickCategoryDefaultValues = useMemo(
-    () =>
-      ({
-        name: "",
-        themeColor: themeOptions[0].value,
-      }) satisfies QuickCategoryValues,
-    [],
-  )
-  const quickContactDefaultValues = useMemo(
-    () =>
-      ({
-        displayName: "",
-        type: "person",
-        themeColor: themeOptions[1]?.value ?? themeOptions[0].value,
-        notes: "",
-      }) satisfies QuickContactValues,
-    [],
-  )
-  const categoryOptions = useMemo(
-    () =>
-      withFallbackOption(
-        state.categories.map((category) => ({
-          value: category.id,
-          label: category.name,
-        })),
-        createdCategoryOption,
-      ),
-    [createdCategoryOption, state.categories],
-  )
-  const contactOptions = useMemo(
-    () =>
-      withFallbackOption(
-        state.counterparties.map((counterparty) => ({
-          value: counterparty.id,
-          label: counterparty.display_name,
-          contactAvatar: {
-            name: counterparty.display_name,
-            initials: getInitials(counterparty.display_name),
-            color: counterparty.theme_color,
-            avatarUrl: counterparty.avatar_url ?? undefined,
-          },
-        })),
-        createdContactOption,
-      ),
-    [createdContactOption, state.counterparties],
-  )
-
   const mainForm = useStandardForm({
     defaultValues: mainDefaultValues,
     schema: transactionFormSchema,
     onSubmit: async ({ applyActionResult, resetForm, value }) => {
       const accountId = transaction?.accountId ?? state.accounts[0]?.id ?? ""
-      const selectedCategoryId =
-        createdCategoryOption?.value ?? value.categoryId
-      const selectedCounterpartyId =
-        createdContactOption?.value ?? value.counterpartyId
-
       if (!accountId) {
         applyActionResult({
           ok: false,
@@ -271,7 +177,7 @@ function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
 
       const matchingBudgets = getMatchingBudgets({
         budgets: state.budgets,
-        categoryId: selectedCategoryId,
+        categoryId: value.categoryId,
         postedAt: value.postedAt,
         transactionType: value.transactionType,
       })
@@ -290,8 +196,8 @@ function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
       const payload: NewTransactionRecord = {
         id: transaction?.id ?? crypto.randomUUID(),
         account_id: accountId,
-        counterparty_id: selectedCounterpartyId,
-        category_id: selectedCategoryId,
+        counterparty_id: value.counterpartyId,
+        category_id: value.categoryId,
         concept: value.concept,
         amount_cents: signedAmount,
         is_voucher_expense: isVoucherExpense,
@@ -323,98 +229,11 @@ function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
       }
     },
   })
-  const quickCategoryForm = useStandardForm({
-    defaultValues: quickCategoryDefaultValues,
-    schema: quickCategorySchema,
-    onSubmit: async ({ applyActionResult, resetForm, value }) => {
-      const id = crypto.randomUUID()
-      const result = await actions.addCategory({
-        id,
-        name: value.name,
-        theme_color: value.themeColor,
-      })
-
-      if (!applyActionResult(result) || !result.ok) {
-        return
-      }
-
-      setCreatedCategoryOption({ value: id, label: value.name.trim() })
-      setPendingCategorySelectionId(id)
-      setShowQuickCategoryForm(false)
-      resetForm(quickCategoryDefaultValues)
-    },
-  })
-  const quickContactForm = useStandardForm({
-    defaultValues: quickContactDefaultValues,
-    schema: quickContactSchema,
-    onSubmit: async ({ applyActionResult, resetForm, value }) => {
-      const id = crypto.randomUUID()
-      const result = await actions.addCounterparty({
-        id,
-        display_name: value.displayName,
-        type: value.type,
-        theme_color: value.themeColor,
-        notes: value.notes,
-      })
-
-      if (!applyActionResult(result) || !result.ok) {
-        return
-      }
-
-      setCreatedContactOption({
-        value: id,
-        label: value.displayName.trim(),
-        contactAvatar: {
-          name: value.displayName.trim(),
-          initials: getInitials(value.displayName.trim()),
-          color: value.themeColor,
-        },
-      })
-      setPendingContactSelectionId(id)
-      setShowQuickContactForm(false)
-      resetForm(quickContactDefaultValues)
-    },
-  })
-
-  useEffect(() => {
-    if (!pendingCategorySelectionId) {
-      return
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      mainForm.setValue("categoryId", pendingCategorySelectionId)
-      setPendingCategorySelectionId(null)
-    }, 0)
-
-    return () => window.clearTimeout(timeoutId)
-  }, [mainForm, pendingCategorySelectionId])
-
-  useEffect(() => {
-    if (!pendingContactSelectionId) {
-      return
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      mainForm.setValue("counterpartyId", pendingContactSelectionId)
-      setPendingContactSelectionId(null)
-    }, 0)
-
-    return () => window.clearTimeout(timeoutId)
-  }, [mainForm, pendingContactSelectionId])
-
   const handleOpenChange = (nextOpen: boolean) => {
     setOpen(nextOpen)
 
     if (nextOpen) {
       mainForm.reset(mainDefaultValues)
-      quickCategoryForm.reset(quickCategoryDefaultValues)
-      quickContactForm.reset(quickContactDefaultValues)
-      setShowQuickCategoryForm(false)
-      setShowQuickContactForm(false)
-      setCreatedCategoryOption(null)
-      setCreatedContactOption(null)
-      setPendingCategorySelectionId(null)
-      setPendingContactSelectionId(null)
       setDeleteStatusMessage("")
       return
     }
@@ -423,14 +242,6 @@ function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
       mainForm.reset(mainDefaultValues)
     }
 
-    quickCategoryForm.reset(quickCategoryDefaultValues)
-    quickContactForm.reset(quickContactDefaultValues)
-    setShowQuickCategoryForm(false)
-    setShowQuickContactForm(false)
-    setCreatedCategoryOption(null)
-    setCreatedContactOption(null)
-    setPendingCategorySelectionId(null)
-    setPendingContactSelectionId(null)
     setDeleteStatusMessage("")
   }
 
@@ -643,73 +454,39 @@ function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
 
           <mainForm.form.Field name="categoryId">
             {(field) => (
-              <FormSelect
-                id="transaction-category"
-                label="Category"
-                value={
-                  pendingCategorySelectionId ??
-                  createdCategoryOption?.value ??
-                  field.state.value
+              <CategorySelectWithQuickCreate
+                key={
+                  open
+                    ? "transaction-category-open"
+                    : "transaction-category-closed"
                 }
-                onValueChange={(value) => {
-                  setCreatedCategoryOption(null)
-                  setPendingCategorySelectionId(null)
+                id="transaction-category"
+                value={field.state.value}
+                onValueChange={(value) =>
                   mainForm.setValue("categoryId", value)
-                  setShowQuickCategoryForm(false)
-                }}
-                options={categoryOptions}
-                placeholder="Select a category"
-                createItem={{
-                  value: createCategoryValue,
-                  label: "Add a new category",
-                  onSelect: () => setShowQuickCategoryForm(true),
-                }}
+                }
                 error={mainForm.fieldErrors.categoryId}
               />
             )}
           </mainForm.form.Field>
 
-          {showQuickCategoryForm ? (
-            <QuickCategoryPanel
-              form={quickCategoryForm}
-              onCancel={() => setShowQuickCategoryForm(false)}
-            />
-          ) : null}
-
           <mainForm.form.Field name="counterpartyId">
             {(field) => (
-              <FormSelect
-                id="transaction-contact"
-                label="Contact"
-                value={
-                  pendingContactSelectionId ??
-                  createdContactOption?.value ??
-                  field.state.value
+              <ContactSelectWithQuickCreate
+                key={
+                  open
+                    ? "transaction-contact-open"
+                    : "transaction-contact-closed"
                 }
-                onValueChange={(value) => {
-                  setCreatedContactOption(null)
-                  setPendingContactSelectionId(null)
+                id="transaction-contact"
+                value={field.state.value}
+                onValueChange={(value) =>
                   mainForm.setValue("counterpartyId", value)
-                  setShowQuickContactForm(false)
-                }}
-                options={contactOptions}
-                placeholder="Select a contact"
-                createItem={{
-                  value: createContactValue,
-                  label: "Add a new contact",
-                  onSelect: () => setShowQuickContactForm(true),
-                }}
+                }
                 error={mainForm.fieldErrors.counterpartyId}
               />
             )}
           </mainForm.form.Field>
-
-          {showQuickContactForm ? (
-            <QuickContactPanel
-              form={quickContactForm}
-              onCancel={() => setShowQuickContactForm(false)}
-            />
-          ) : null}
 
           <mainForm.form.Subscribe
             selector={(formState) => ({
@@ -834,212 +611,6 @@ function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
   )
 }
 
-function QuickCategoryPanel({
-  form,
-  onCancel,
-}: {
-  form: ReturnType<
-    typeof useStandardForm<
-      QuickCategoryValues,
-      z.output<typeof quickCategorySchema>
-    >
-  >
-  onCancel: () => void
-}) {
-  const nameInputRef = useRef<HTMLInputElement>(null)
-
-  useDeferredInputFocus(nameInputRef)
-
-  return (
-    <div className="bg-background space-y-3 rounded-lg p-3">
-      <p className="text-muted-foreground text-xs font-bold">
-        Quick Create Category
-      </p>
-      <form.form.Field name="name">
-        {(field) => (
-          <FormField
-            id="quick-category-name"
-            label="Name"
-            error={form.fieldErrors.name}
-          >
-            {(fieldProps) => (
-              <Input
-                {...fieldProps}
-                ref={nameInputRef}
-                value={field.state.value}
-                onChange={(event) => form.setValue("name", event.target.value)}
-                onBlur={field.handleBlur}
-                placeholder="New category name"
-              />
-            )}
-          </FormField>
-        )}
-      </form.form.Field>
-      <form.form.Field name="themeColor">
-        {(field) => (
-          <ThemeSelect
-            id="quick-category-theme"
-            value={field.state.value}
-            onValueChange={(value) => form.setValue("themeColor", value)}
-          />
-        )}
-      </form.form.Field>
-      {form.status?.message ? (
-        <FormStatusMessage variant={form.status.variant}>
-          {form.status.message}
-        </FormStatusMessage>
-      ) : null}
-      <div className="flex flex-wrap gap-3">
-        <form.form.Subscribe selector={(state) => state.isSubmitting}>
-          {(isSubmitting) => (
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              disabled={isSubmitting}
-              onClick={() => void form.form.handleSubmit()}
-            >
-              {isSubmitting ? "Adding..." : "Add Category"}
-            </Button>
-          )}
-        </form.form.Subscribe>
-        <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-          Cancel
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-function QuickContactPanel({
-  form,
-  onCancel,
-}: {
-  form: ReturnType<
-    typeof useStandardForm<
-      QuickContactValues,
-      z.output<typeof quickContactSchema>
-    >
-  >
-  onCancel: () => void
-}) {
-  const nameInputRef = useRef<HTMLInputElement>(null)
-
-  useDeferredInputFocus(nameInputRef)
-
-  return (
-    <div className="bg-background space-y-3 rounded-lg p-3">
-      <p className="text-muted-foreground text-xs font-bold">
-        Quick Create Contact
-      </p>
-      <form.form.Field name="displayName">
-        {(field) => (
-          <FormField
-            id="quick-contact-name"
-            label="Name"
-            error={form.fieldErrors.displayName}
-          >
-            {(fieldProps) => (
-              <Input
-                {...fieldProps}
-                ref={nameInputRef}
-                value={field.state.value}
-                onChange={(event) =>
-                  form.setValue("displayName", event.target.value)
-                }
-                onBlur={field.handleBlur}
-                placeholder="New contact name"
-              />
-            )}
-          </FormField>
-        )}
-      </form.form.Field>
-      <form.form.Field name="type">
-        {(field) => (
-          <FormSelect
-            id="quick-contact-type"
-            label="Contact Type"
-            value={field.state.value}
-            onValueChange={(value) =>
-              form.setValue("type", value as "person" | "merchant")
-            }
-            options={[
-              { value: "person", label: "Person" },
-              { value: "merchant", label: "Merchant" },
-            ]}
-            error={form.fieldErrors.type}
-          />
-        )}
-      </form.form.Field>
-      <form.form.Field name="themeColor">
-        {(field) => (
-          <ThemeSelect
-            id="quick-contact-theme"
-            value={field.state.value}
-            onValueChange={(value) => form.setValue("themeColor", value)}
-          />
-        )}
-      </form.form.Field>
-      <form.form.Field name="notes">
-        {(field) => (
-          <FormField
-            id="quick-contact-notes"
-            label="Notes"
-            error={form.fieldErrors.notes}
-          >
-            {(fieldProps) => (
-              <Textarea
-                {...fieldProps}
-                value={field.state.value}
-                onChange={(event) => form.setValue("notes", event.target.value)}
-                onBlur={field.handleBlur}
-                placeholder="Optional notes"
-              />
-            )}
-          </FormField>
-        )}
-      </form.form.Field>
-      {form.status?.message ? (
-        <FormStatusMessage variant={form.status.variant}>
-          {form.status.message}
-        </FormStatusMessage>
-      ) : null}
-      <div className="flex flex-wrap gap-3">
-        <form.form.Subscribe selector={(state) => state.isSubmitting}>
-          {(isSubmitting) => (
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              disabled={isSubmitting}
-              onClick={() => void form.form.handleSubmit()}
-            >
-              {isSubmitting ? "Adding..." : "Add Contact"}
-            </Button>
-          )}
-        </form.form.Subscribe>
-        <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-          Cancel
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-function withFallbackOption(
-  options: SelectOption[],
-  fallbackOption: SelectOption | null,
-) {
-  if (
-    !fallbackOption ||
-    options.some((option) => option.value === fallbackOption.value)
-  ) {
-    return options
-  }
-
-  return [...options, fallbackOption]
-}
-
 function SelectOptionLabel({ option }: { option: SelectOption }) {
   if (option.creditCardAvatar) {
     return (
@@ -1055,22 +626,7 @@ function SelectOptionLabel({ option }: { option: SelectOption }) {
     )
   }
 
-  if (!option.contactAvatar) {
-    return option.label
-  }
-
-  return (
-    <span className="flex items-center gap-3">
-      <ContactAvatar
-        className="size-8"
-        name={option.contactAvatar.name}
-        initials={option.contactAvatar.initials}
-        color={option.contactAvatar.color}
-        avatarUrl={option.contactAvatar.avatarUrl}
-      />
-      <span>{option.label}</span>
-    </span>
-  )
+  return option.label
 }
 
 function FormSelect({
@@ -1136,26 +692,6 @@ function FormSelect({
       )}
     </FormField>
   )
-}
-
-function useDeferredInputFocus(inputRef: RefObject<HTMLInputElement | null>) {
-  useEffect(() => {
-    let timeoutId: number | undefined
-    const frameId = window.requestAnimationFrame(() => {
-      timeoutId = window.setTimeout(() => {
-        inputRef.current?.focus({ preventScroll: true })
-        inputRef.current?.select()
-      }, 0)
-    })
-
-    return () => {
-      window.cancelAnimationFrame(frameId)
-
-      if (timeoutId !== undefined) {
-        window.clearTimeout(timeoutId)
-      }
-    }
-  }, [inputRef])
 }
 
 function getMatchingBudgets({

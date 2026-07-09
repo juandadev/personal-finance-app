@@ -4,6 +4,12 @@ import type { PoolClient } from "pg"
 
 import { withFinanceTransaction } from "@/lib/db/transaction"
 import { getCreditCardStatementCycle } from "@/lib/finance/credit-card-cycle"
+import {
+  getBillOccurrenceStatementCycle,
+  resolveRecurringBillOccurrences,
+  todayIsoDate,
+  type RecurringBillOccurrenceState,
+} from "@/lib/finance/recurring-bill-schedule"
 import type {
   AccountRecord,
   AccountSummaryRecord,
@@ -19,8 +25,11 @@ import type {
   NewCategoryRecord,
   NewCounterpartyRecord,
   NewCreditCardRecord,
+  NewRecurringBillRecord,
   NewTransactionRecord,
   PotRecord,
+  RecurringBillPaymentRecord,
+  RecurringBillPaymentSource,
   RecurringBillRecord,
   TransactionRecord,
   UserPreferencesRecord,
@@ -125,11 +134,25 @@ const recurringBillColumns = [
   "user_id",
   "id",
   "counterparty_id",
+  "concept",
   "amount_cents",
   "currency",
   "frequency",
-  "due_day_of_month",
+  "first_due_date::text AS first_due_date",
+  "total_payments",
+  "credit_card_id",
+  "category_id",
+  "archived_at::text AS archived_at",
+]
+const recurringBillPaymentColumns = [
+  "user_id",
+  "id",
+  "recurring_bill_id",
+  "due_date::text AS due_date",
+  "amount_cents",
   "status",
+  "transaction_id",
+  "paid_at::text AS paid_at",
 ]
 const creditCardColumns = [
   "user_id",
@@ -270,9 +293,14 @@ export async function loadFinanceState(
       [userId],
     )
     const recurringBills = await client.query<RecurringBillRecord>(
-      `SELECT ${recurringBillColumns.join(", ")} FROM recurring_bills WHERE user_id = $1 ORDER BY due_day_of_month, id`,
+      `SELECT ${recurringBillColumns.join(", ")} FROM recurring_bills WHERE user_id = $1 ORDER BY first_due_date, id`,
       [userId],
     )
+    const recurringBillPayments =
+      await client.query<RecurringBillPaymentRecord>(
+        `SELECT ${recurringBillPaymentColumns.join(", ")} FROM recurring_bill_payments WHERE user_id = $1 ORDER BY due_date, id`,
+        [userId],
+      )
     const creditCards = await client.query<CreditCardRecord>(
       `SELECT ${creditCardColumns.join(", ")} FROM credit_cards WHERE user_id = $1 ORDER BY archived_at NULLS FIRST, created_at, id`,
       [userId],
@@ -298,6 +326,7 @@ export async function loadFinanceState(
       budgetTransactionAssignments: budgetTransactionAssignments.rows,
       pots: pots.rows,
       recurringBills: recurringBills.rows,
+      recurringBillPayments: recurringBillPayments.rows,
       creditCards: creditCards.rows,
       creditCardStatements: creditCardStatements.rows,
       creditCardPayments: creditCardPayments.rows,
@@ -637,6 +666,70 @@ async function prepareTransactionPaymentMethod(
         is_voucher_expense: false,
       }
   }
+}
+
+async function insertTransactionRecord(
+  client: PoolClient,
+  userId: string,
+  transaction: NewTransactionRecord,
+) {
+  const result = await client.query<TransactionRecord>(
+    `
+      INSERT INTO transactions (
+        user_id,
+        id,
+        account_id,
+        counterparty_id,
+        category_id,
+        concept,
+        amount_cents,
+        is_voucher_expense,
+        payment_method,
+        credit_card_id,
+        credit_card_statement_id,
+        posted_at,
+        description
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      RETURNING ${transactionSelectColumns.join(", ")}
+    `,
+    [
+      userId,
+      transaction.id,
+      transaction.account_id,
+      transaction.counterparty_id,
+      transaction.category_id,
+      transaction.concept,
+      transaction.amount_cents,
+      transaction.is_voucher_expense,
+      transaction.payment_method,
+      transaction.credit_card_id,
+      transaction.credit_card_statement_id,
+      transaction.posted_at,
+      transaction.description,
+    ],
+  )
+
+  return result.rows[0]
+}
+
+async function getPrimaryPaymentAccount(client: PoolClient, userId: string) {
+  const accountResult = await client.query<AccountRecord>(
+    `
+      SELECT ${accountColumns.join(", ")}
+      FROM accounts
+      WHERE user_id = $1 AND type IN ('checking', 'savings')
+      ORDER BY id
+      LIMIT 1
+    `,
+    [userId],
+  )
+
+  if (!accountResult.rowCount) {
+    throw new Error("Your payment account is not ready yet.")
+  }
+
+  return accountResult.rows[0]
 }
 
 async function applyCreditCardStatementEffectIfNeeded(
@@ -1348,127 +1441,274 @@ async function ensureCardPaymentCounterparty(
   return result.rows[0]
 }
 
-export async function payCreditCardStatement(
+type RecurringBillWithContactRecord = RecurringBillRecord & {
+  display_name: string
+}
+
+interface PendingBillOccurrence {
+  bill: RecurringBillWithContactRecord
+  occurrence: RecurringBillOccurrenceState
+}
+
+async function getRecurringBillPayments(
+  client: PoolClient,
+  userId: string,
+  billId: string,
+) {
+  const result = await client.query<RecurringBillPaymentRecord>(
+    `
+      SELECT ${recurringBillPaymentColumns.join(", ")}
+      FROM recurring_bill_payments
+      WHERE user_id = $1 AND recurring_bill_id = $2
+      ORDER BY due_date, id
+    `,
+    [userId, billId],
+  )
+
+  return result.rows
+}
+
+async function insertRecurringBillPaymentRow(
+  client: PoolClient,
+  userId: string,
+  payment: Omit<RecurringBillPaymentRecord, "user_id" | "id">,
+) {
+  const result = await client.query<RecurringBillPaymentRecord>(
+    `
+      INSERT INTO recurring_bill_payments (
+        user_id,
+        recurring_bill_id,
+        due_date,
+        amount_cents,
+        status,
+        transaction_id,
+        paid_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING ${recurringBillPaymentColumns.join(", ")}
+    `,
+    [
+      userId,
+      payment.recurring_bill_id,
+      payment.due_date,
+      payment.amount_cents,
+      payment.status,
+      payment.transaction_id,
+      payment.paid_at,
+    ],
+  )
+
+  return result.rows[0]
+}
+
+/**
+ * Unsettled occurrences (due date reached) of bills assigned to this card
+ * that attach to this statement's cycle, with paid statements rolled past.
+ * Bill rows are locked so concurrent settlements conflict instead of
+ * double-charging.
+ */
+async function getPendingBillOccurrencesForStatement(
+  client: PoolClient,
+  userId: string,
+  card: Pick<
+    CreditCardRecord,
+    "id" | "closing_day_of_month" | "payment_due_day_of_month"
+  >,
+  statement: Pick<CreditCardStatementRecord, "period_start">,
+): Promise<PendingBillOccurrence[]> {
+  const billsResult = await client.query<RecurringBillWithContactRecord>(
+    `
+      SELECT ${recurringBillColumns.map((column) => `rb.${column}`).join(", ")}, c.display_name
+      FROM recurring_bills rb
+      JOIN counterparties c
+        ON c.user_id = rb.user_id
+        AND c.id = rb.counterparty_id
+      WHERE rb.user_id = $1 AND rb.credit_card_id = $2
+      ORDER BY rb.first_due_date, rb.id
+      FOR UPDATE OF rb
+    `,
+    [userId, card.id],
+  )
+
+  if (!billsResult.rowCount) {
+    return []
+  }
+
+  const statementsResult = await client.query<
+    Pick<
+      CreditCardStatementRecord,
+      "period_start" | "period_end" | "lifecycle_status"
+    >
+  >(
+    `
+      SELECT
+        period_start::text AS period_start,
+        period_end::text AS period_end,
+        lifecycle_status
+      FROM credit_card_statements
+      WHERE user_id = $1 AND credit_card_id = $2
+    `,
+    [userId, card.id],
+  )
+  const today = todayIsoDate()
+  const pending: PendingBillOccurrence[] = []
+
+  for (const bill of billsResult.rows) {
+    const payments = await getRecurringBillPayments(client, userId, bill.id)
+    const occurrences = resolveRecurringBillOccurrences(bill, payments, today)
+
+    for (const occurrence of occurrences) {
+      if (
+        occurrence.status === "paid" ||
+        occurrence.status === "skipped" ||
+        occurrence.dueDate > today
+      ) {
+        continue
+      }
+
+      const cycle = getBillOccurrenceStatementCycle(
+        occurrence.dueDate,
+        card,
+        statementsResult.rows,
+      )
+
+      if (cycle.periodStart === statement.period_start) {
+        pending.push({ bill, occurrence })
+      }
+    }
+  }
+
+  return pending
+}
+
+async function payCreditCardStatementWithClient(
+  client: PoolClient,
   userId: string,
   statementId: string,
   paidAt: string,
 ) {
-  return withFinanceTransaction(userId, async (client) => {
-    const statementResult = await client.query<CreditCardStatementRecord>(
-      `
+  const statementResult = await client.query<CreditCardStatementRecord>(
+    `
         SELECT ${creditCardStatementColumns.join(", ")}
         FROM credit_card_statements
         WHERE user_id = $1 AND id = $2
         FOR UPDATE
       `,
-      [userId, statementId],
-    )
+    [userId, statementId],
+  )
 
-    if (!statementResult.rowCount) {
-      throw new Error("Credit card statement not found.")
-    }
+  if (!statementResult.rowCount) {
+    throw new Error("Credit card statement not found.")
+  }
 
-    const statement = statementResult.rows[0]
+  const statement = statementResult.rows[0]
 
-    if (statement.lifecycle_status === "paid") {
-      throw new Error("This statement has already been paid.")
-    }
+  if (statement.lifecycle_status === "paid") {
+    throw new Error("This statement has already been paid.")
+  }
 
-    if (statement.statement_amount_cents <= 0) {
-      throw new Error("This statement does not have a balance to pay.")
-    }
+  const card = await getCreditCard(client, userId, statement.credit_card_id)
+  const sourceAccount = await getPrimaryPaymentAccount(client, userId)
 
-    const card = await getCreditCard(client, userId, statement.credit_card_id)
-    const accountResult = await client.query<AccountRecord>(
-      `
-        SELECT ${accountColumns.join(", ")}
-        FROM accounts
-        WHERE user_id = $1 AND type IN ('checking', 'savings')
-        ORDER BY id
-        LIMIT 1
-      `,
-      [userId],
-    )
+  // Materialize due occurrences of bills assigned to this card before
+  // computing the payable total: pending bills only become real
+  // transactions at the moment the statement gets paid.
+  const pendingOccurrences = await getPendingBillOccurrencesForStatement(
+    client,
+    userId,
+    card,
+    statement,
+  )
+  const billTransactions: TransactionRecord[] = []
+  const recurringBillPayments: RecurringBillPaymentRecord[] = []
+  const accountSummaries: AccountSummaryRecord[] = []
+  let statementAmountCents = statement.statement_amount_cents
 
-    if (!accountResult.rowCount) {
-      throw new Error("Your payment account is not ready yet.")
-    }
-
-    const sourceAccount = accountResult.rows[0]
-    const category = await getDefaultPaymentCategory(client, userId)
-    const counterparty = await ensureCardPaymentCounterparty(
-      client,
-      userId,
-      card,
-    )
-    const cashflowTransaction: NewTransactionRecord = {
+  for (const { bill, occurrence } of pendingOccurrences) {
+    const billTransaction = await insertTransactionRecord(client, userId, {
       id: crypto.randomUUID(),
       account_id: sourceAccount.id,
-      counterparty_id: counterparty.id,
-      category_id: category.id,
-      concept: `Pay ${card.nickname} statement`,
-      amount_cents: statement.statement_amount_cents * -1,
+      counterparty_id: bill.counterparty_id,
+      category_id: bill.category_id,
+      concept: bill.concept,
+      amount_cents: occurrence.amountCents * -1,
       is_voucher_expense: false,
-      payment_method: "credit_card_payment",
+      payment_method: "credit_card",
       credit_card_id: card.id,
       credit_card_statement_id: statement.id,
-      posted_at: paidAt,
-      description: `Payment for ${statement.period_start} to ${statement.period_end}.`,
-    }
-    const transactionResult = await client.query<TransactionRecord>(
-      `
-        INSERT INTO transactions (
-          user_id,
-          id,
-          account_id,
-          counterparty_id,
-          category_id,
-          concept,
-          amount_cents,
-          is_voucher_expense,
-          payment_method,
-          credit_card_id,
-          credit_card_statement_id,
-          posted_at,
-          description
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-        RETURNING ${transactionSelectColumns.join(", ")}
-      `,
-      [
-        userId,
-        cashflowTransaction.id,
-        cashflowTransaction.account_id,
-        cashflowTransaction.counterparty_id,
-        cashflowTransaction.category_id,
-        cashflowTransaction.concept,
-        cashflowTransaction.amount_cents,
-        cashflowTransaction.is_voucher_expense,
-        cashflowTransaction.payment_method,
-        cashflowTransaction.credit_card_id,
-        cashflowTransaction.credit_card_statement_id,
-        cashflowTransaction.posted_at,
-        cashflowTransaction.description,
-      ],
-    )
-    const savedTransaction = transactionResult.rows[0]
-    const effects = await applyAccountEffectsIfNeeded(
+      posted_at: occurrence.dueDate,
+      description: `Recurring bill due ${occurrence.dueDate}.`,
+    })
+    const billEffects = await applyAccountEffectsIfNeeded(
       client,
       userId,
-      savedTransaction,
+      billTransaction,
       1,
     )
-    const paidStatementResult = await client.query<CreditCardStatementRecord>(
-      `
+    const updatedStatement = await applyCreditCardStatementEffectIfNeeded(
+      client,
+      userId,
+      billTransaction,
+      1,
+    )
+    const billPayment = await insertRecurringBillPaymentRow(client, userId, {
+      recurring_bill_id: bill.id,
+      due_date: occurrence.dueDate,
+      amount_cents: occurrence.amountCents,
+      status: "paid",
+      transaction_id: billTransaction.id,
+      paid_at: paidAt,
+    })
+
+    billTransactions.push(billTransaction)
+    recurringBillPayments.push(billPayment)
+
+    if (billEffects?.accountSummary) {
+      accountSummaries.push(billEffects.accountSummary)
+    }
+
+    if (updatedStatement) {
+      statementAmountCents = updatedStatement.statement_amount_cents
+    }
+  }
+
+  if (statementAmountCents <= 0) {
+    throw new Error("This statement does not have a balance to pay.")
+  }
+
+  const category = await getDefaultPaymentCategory(client, userId)
+  const counterparty = await ensureCardPaymentCounterparty(client, userId, card)
+  const savedTransaction = await insertTransactionRecord(client, userId, {
+    id: crypto.randomUUID(),
+    account_id: sourceAccount.id,
+    counterparty_id: counterparty.id,
+    category_id: category.id,
+    concept: `Pay ${card.nickname} statement`,
+    amount_cents: statementAmountCents * -1,
+    is_voucher_expense: false,
+    payment_method: "credit_card_payment",
+    credit_card_id: card.id,
+    credit_card_statement_id: statement.id,
+    posted_at: paidAt,
+    description: `Payment for ${statement.period_start} to ${statement.period_end}.`,
+  })
+  const effects = await applyAccountEffectsIfNeeded(
+    client,
+    userId,
+    savedTransaction,
+    1,
+  )
+  const paidStatementResult = await client.query<CreditCardStatementRecord>(
+    `
         UPDATE credit_card_statements
         SET lifecycle_status = 'paid', paid_at = now()
         WHERE user_id = $1 AND id = $2
         RETURNING ${creditCardStatementColumns.join(", ")}
       `,
-      [userId, statement.id],
-    )
-    const paymentResult = await client.query<CreditCardPaymentRecord>(
-      `
+    [userId, statement.id],
+  )
+  const paymentResult = await client.query<CreditCardPaymentRecord>(
+    `
         INSERT INTO credit_card_payments (
           user_id,
           credit_card_id,
@@ -1481,23 +1721,68 @@ export async function payCreditCardStatement(
         VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING ${creditCardPaymentColumns.join(", ")}
       `,
-      [
-        userId,
-        card.id,
-        statement.id,
-        sourceAccount.id,
-        savedTransaction.id,
-        statement.statement_amount_cents,
-        paidAt,
-      ],
+    [
+      userId,
+      card.id,
+      statement.id,
+      sourceAccount.id,
+      savedTransaction.id,
+      statementAmountCents,
+      paidAt,
+    ],
+  )
+
+  return {
+    payment: paymentResult.rows[0],
+    transaction: savedTransaction,
+    // The auto-created "{nickname} Payment" contact must reach client
+    // state, or the transactions selector cannot resolve the cashflow
+    // transaction's counterparty.
+    counterparty,
+    accounts: effects?.account ? [effects.account] : [],
+    accountSummaries,
+    statement: paidStatementResult.rows[0],
+    billTransactions,
+    recurringBillPayments,
+  }
+}
+
+export async function payCreditCardStatement(
+  userId: string,
+  statementId: string,
+  paidAt: string,
+) {
+  return withFinanceTransaction(userId, (client) =>
+    payCreditCardStatementWithClient(client, userId, statementId, paidAt),
+  )
+}
+
+/**
+ * Pays the statement cycle containing `referenceDate` for a card, creating
+ * the statement row first when it does not exist yet. Used for cycles whose
+ * only balance is pending recurring bills (no purchases ever created a row).
+ */
+export async function payCreditCardCycle(
+  userId: string,
+  creditCardId: string,
+  referenceDate: string,
+  paidAt: string,
+) {
+  return withFinanceTransaction(userId, async (client) => {
+    const card = await getCreditCard(client, userId, creditCardId)
+    const statement = await ensureOpenCreditCardStatement(
+      client,
+      userId,
+      card,
+      referenceDate,
     )
 
-    return {
-      payment: paymentResult.rows[0],
-      transaction: savedTransaction,
-      accounts: effects?.account ? [effects.account] : [],
-      statement: paidStatementResult.rows[0],
-    }
+    return payCreditCardStatementWithClient(
+      client,
+      userId,
+      statement.id,
+      paidAt,
+    )
   })
 }
 
@@ -1530,6 +1815,32 @@ export async function closeZeroBalanceCreditCardStatement(
       throw new Error("This statement has a balance. Pay it instead.")
     }
 
+    const cardResult = await client.query<CreditCardRecord>(
+      `
+        SELECT ${creditCardColumns.join(", ")}
+        FROM credit_cards
+        WHERE user_id = $1 AND id = $2
+      `,
+      [userId, statement.credit_card_id],
+    )
+
+    if (!cardResult.rowCount) {
+      throw new Error("Credit card not found.")
+    }
+
+    const pendingOccurrences = await getPendingBillOccurrencesForStatement(
+      client,
+      userId,
+      cardResult.rows[0],
+      statement,
+    )
+
+    if (pendingOccurrences.length > 0) {
+      throw new Error(
+        "This statement has recurring bills due. Pay the statement instead.",
+      )
+    }
+
     const closedStatementResult = await client.query<CreditCardStatementRecord>(
       `
           UPDATE credit_card_statements
@@ -1541,6 +1852,396 @@ export async function closeZeroBalanceCreditCardStatement(
     )
 
     return closedStatementResult.rows[0]
+  })
+}
+
+async function getRecurringBillForUpdate(
+  client: PoolClient,
+  userId: string,
+  billId: string,
+) {
+  const result = await client.query<RecurringBillRecord>(
+    `
+      SELECT ${recurringBillColumns.join(", ")}
+      FROM recurring_bills
+      WHERE user_id = $1 AND id = $2
+      FOR UPDATE
+    `,
+    [userId, billId],
+  )
+
+  if (!result.rowCount) {
+    throw new Error("Recurring bill not found.")
+  }
+
+  return result.rows[0]
+}
+
+async function resolveUnsettledOccurrence(
+  client: PoolClient,
+  userId: string,
+  bill: RecurringBillRecord,
+) {
+  const payments = await getRecurringBillPayments(client, userId, bill.id)
+
+  return {
+    payments,
+    findOccurrence(dueDate: string) {
+      const occurrences = resolveRecurringBillOccurrences(bill, payments)
+      const occurrence = occurrences.find(
+        (candidate) => candidate.dueDate === dueDate,
+      )
+
+      if (!occurrence) {
+        throw new Error("This due date is not on the bill's schedule.")
+      }
+
+      if (occurrence.status === "paid" || occurrence.status === "skipped") {
+        throw new Error("This bill occurrence has already been settled.")
+      }
+
+      return occurrence
+    },
+  }
+}
+
+export async function insertRecurringBill(
+  userId: string,
+  bill: NewRecurringBillRecord,
+) {
+  return withFinanceTransaction(userId, async (client) => {
+    await assertUserRecord(
+      client,
+      "counterparties",
+      userId,
+      bill.counterparty_id,
+      "Contact",
+    )
+    await assertUserRecord(
+      client,
+      "categories",
+      userId,
+      bill.category_id,
+      "Category",
+    )
+
+    if (bill.credit_card_id) {
+      await getCreditCard(client, userId, bill.credit_card_id)
+    }
+
+    const result = await client.query<RecurringBillRecord>(
+      `
+        INSERT INTO recurring_bills (
+          user_id,
+          id,
+          counterparty_id,
+          concept,
+          amount_cents,
+          currency,
+          frequency,
+          first_due_date,
+          total_payments,
+          credit_card_id,
+          category_id,
+          archived_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        RETURNING ${recurringBillColumns.join(", ")}
+      `,
+      [
+        userId,
+        bill.id,
+        bill.counterparty_id,
+        bill.concept,
+        bill.amount_cents,
+        bill.currency,
+        bill.frequency,
+        bill.first_due_date,
+        bill.total_payments,
+        bill.credit_card_id,
+        bill.category_id,
+        bill.archived_at,
+      ],
+    )
+
+    return result.rows[0]
+  })
+}
+
+export async function updateRecurringBill(
+  userId: string,
+  id: string,
+  updates: Partial<Omit<RecurringBillRecord, "id" | "user_id">>,
+) {
+  return withFinanceTransaction(userId, async (client) => {
+    const existing = await getRecurringBillForUpdate(client, userId, id)
+    const paymentsResult = await client.query<{
+      total: string
+    }>(
+      `
+        SELECT count(*) AS total
+        FROM recurring_bill_payments
+        WHERE user_id = $1 AND recurring_bill_id = $2
+      `,
+      [userId, id],
+    )
+    const settledCount = Number(paymentsResult.rows[0]?.total ?? 0)
+
+    if (settledCount > 0) {
+      if (
+        updates.frequency !== undefined &&
+        updates.frequency !== existing.frequency
+      ) {
+        throw new Error(
+          "This bill already has payments, so its frequency is locked. Archive it and create a new bill to reschedule.",
+        )
+      }
+
+      if (
+        updates.first_due_date !== undefined &&
+        updates.first_due_date !== existing.first_due_date
+      ) {
+        throw new Error(
+          "This bill already has payments, so its first due date is locked. Archive it and create a new bill to reschedule.",
+        )
+      }
+    }
+
+    if (
+      updates.total_payments !== undefined &&
+      updates.total_payments !== null &&
+      updates.total_payments < settledCount
+    ) {
+      throw new Error(
+        `This bill already has ${settledCount} settled payments. The number of payments cannot be lower than that.`,
+      )
+    }
+
+    if (updates.counterparty_id) {
+      await assertUserRecord(
+        client,
+        "counterparties",
+        userId,
+        updates.counterparty_id,
+        "Contact",
+      )
+    }
+
+    if (updates.category_id) {
+      await assertUserRecord(
+        client,
+        "categories",
+        userId,
+        updates.category_id,
+        "Category",
+      )
+    }
+
+    if (updates.credit_card_id) {
+      await getCreditCard(client, userId, updates.credit_card_id)
+    }
+
+    const result = await client.query<RecurringBillRecord>(
+      `
+        UPDATE recurring_bills
+        SET
+          counterparty_id = COALESCE($2, counterparty_id),
+          concept = COALESCE($3, concept),
+          amount_cents = COALESCE($4, amount_cents),
+          currency = COALESCE($5, currency),
+          frequency = COALESCE($6, frequency),
+          first_due_date = COALESCE($7, first_due_date),
+          total_payments = CASE WHEN $8::boolean THEN $9::integer ELSE total_payments END,
+          credit_card_id = CASE WHEN $10::boolean THEN $11::uuid ELSE credit_card_id END,
+          category_id = COALESCE($12, category_id)
+        WHERE user_id = $1 AND id = $13
+        RETURNING ${recurringBillColumns.join(", ")}
+      `,
+      [
+        userId,
+        updates.counterparty_id ?? null,
+        updates.concept ?? null,
+        updates.amount_cents ?? null,
+        updates.currency ?? null,
+        updates.frequency ?? null,
+        updates.first_due_date ?? null,
+        updates.total_payments !== undefined,
+        updates.total_payments ?? null,
+        updates.credit_card_id !== undefined,
+        updates.credit_card_id ?? null,
+        updates.category_id ?? null,
+        id,
+      ],
+    )
+
+    return result.rows[0]
+  })
+}
+
+export async function archiveRecurringBill(userId: string, id: string) {
+  return withFinanceTransaction(userId, async (client) => {
+    const existing = await getRecurringBillForUpdate(client, userId, id)
+
+    if (existing.archived_at) {
+      throw new Error("This bill is already archived.")
+    }
+
+    const result = await client.query<RecurringBillRecord>(
+      `
+        UPDATE recurring_bills
+        SET archived_at = now()
+        WHERE user_id = $1 AND id = $2
+        RETURNING ${recurringBillColumns.join(", ")}
+      `,
+      [userId, id],
+    )
+
+    return result.rows[0]
+  })
+}
+
+export async function deleteRecurringBill(userId: string, id: string) {
+  return withFinanceTransaction(userId, async (client) => {
+    await getRecurringBillForUpdate(client, userId, id)
+
+    const paymentsResult = await client.query(
+      `
+        SELECT 1
+        FROM recurring_bill_payments
+        WHERE user_id = $1 AND recurring_bill_id = $2
+        LIMIT 1
+      `,
+      [userId, id],
+    )
+
+    if (paymentsResult.rowCount) {
+      throw new Error(
+        "This bill has payment history and cannot be deleted. Archive it instead.",
+      )
+    }
+
+    await client.query(
+      "DELETE FROM recurring_bills WHERE user_id = $1 AND id = $2",
+      [userId, id],
+    )
+
+    return { id }
+  })
+}
+
+export async function payRecurringBillOccurrence(
+  userId: string,
+  billId: string,
+  dueDate: string,
+  source: RecurringBillPaymentSource,
+  paidAt: string,
+) {
+  return withFinanceTransaction(userId, async (client) => {
+    const bill = await getRecurringBillForUpdate(client, userId, billId)
+    const { findOccurrence } = await resolveUnsettledOccurrence(
+      client,
+      userId,
+      bill,
+    )
+    const occurrence = findOccurrence(dueDate)
+    const sourceAccount = await getPrimaryPaymentAccount(client, userId)
+
+    let transaction: TransactionRecord
+    let creditCardStatement: CreditCardStatementRecord | null = null
+
+    if (source.type === "credit_card") {
+      const card = await getCreditCard(client, userId, source.creditCardId)
+      const statement = await ensureOpenCreditCardStatement(
+        client,
+        userId,
+        card,
+        paidAt,
+      )
+
+      transaction = await insertTransactionRecord(client, userId, {
+        id: crypto.randomUUID(),
+        account_id: sourceAccount.id,
+        counterparty_id: bill.counterparty_id,
+        category_id: bill.category_id,
+        concept: bill.concept,
+        amount_cents: occurrence.amountCents * -1,
+        is_voucher_expense: false,
+        payment_method: "credit_card",
+        credit_card_id: card.id,
+        credit_card_statement_id: statement.id,
+        posted_at: paidAt,
+        description: `Recurring bill due ${occurrence.dueDate}.`,
+      })
+      creditCardStatement = await applyCreditCardStatementEffectIfNeeded(
+        client,
+        userId,
+        transaction,
+        1,
+      )
+    } else {
+      transaction = await insertTransactionRecord(client, userId, {
+        id: crypto.randomUUID(),
+        account_id: sourceAccount.id,
+        counterparty_id: bill.counterparty_id,
+        category_id: bill.category_id,
+        concept: bill.concept,
+        amount_cents: occurrence.amountCents * -1,
+        is_voucher_expense: false,
+        payment_method: "bank_account",
+        credit_card_id: null,
+        credit_card_statement_id: null,
+        posted_at: paidAt,
+        description: `Recurring bill due ${occurrence.dueDate}.`,
+      })
+    }
+
+    const effects = await applyAccountEffectsIfNeeded(
+      client,
+      userId,
+      transaction,
+      1,
+    )
+    const billPayment = await insertRecurringBillPaymentRow(client, userId, {
+      recurring_bill_id: bill.id,
+      due_date: occurrence.dueDate,
+      amount_cents: occurrence.amountCents,
+      status: "paid",
+      transaction_id: transaction.id,
+      paid_at: paidAt,
+    })
+
+    return {
+      billPayment,
+      transaction,
+      accounts: effects?.account ? [effects.account] : [],
+      accountSummaries: effects?.accountSummary ? [effects.accountSummary] : [],
+      creditCardStatements: creditCardStatement ? [creditCardStatement] : [],
+    }
+  })
+}
+
+export async function skipRecurringBillOccurrence(
+  userId: string,
+  billId: string,
+  dueDate: string,
+) {
+  return withFinanceTransaction(userId, async (client) => {
+    const bill = await getRecurringBillForUpdate(client, userId, billId)
+    const { findOccurrence } = await resolveUnsettledOccurrence(
+      client,
+      userId,
+      bill,
+    )
+    const occurrence = findOccurrence(dueDate)
+
+    return insertRecurringBillPaymentRow(client, userId, {
+      recurring_bill_id: bill.id,
+      due_date: occurrence.dueDate,
+      amount_cents: occurrence.amountCents,
+      status: "skipped",
+      transaction_id: null,
+      paid_at: todayIsoDate(),
+    })
   })
 }
 

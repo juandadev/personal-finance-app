@@ -88,6 +88,7 @@ async function insertRows(
   rows: SeedRow[],
   conflictTarget: string,
   updateColumns: string[],
+  updateCondition?: string,
 ) {
   if (rows.length === 0) {
     return
@@ -108,7 +109,9 @@ async function insertRows(
   const updates = updateColumns
     .map((column) => `${column} = excluded.${column}`)
     .join(", ")
-  const conflictAction = updates ? `DO UPDATE SET ${updates}` : "DO NOTHING"
+  const conflictAction = updates
+    ? `DO UPDATE SET ${updates}${updateCondition ? ` WHERE ${updateCondition}` : ""}`
+    : "DO NOTHING"
 
   await client.query(
     `
@@ -138,6 +141,9 @@ async function seedDemoData(client: PoolClient) {
     [demoUserId, "Demo User", "USD", "America/Mexico_City"],
   )
 
+  // Categories conflict on the global id. Never reassign a row that another
+  // user already owns: their transactions and budgets reference it, and
+  // stealing it breaks their account.
   await insertRows(
     client,
     "categories",
@@ -145,6 +151,7 @@ async function seedDemoData(client: PoolClient) {
     categoriesSeedRows,
     "(id)",
     ["user_id", "name", "slug", "theme_color"],
+    "categories.user_id IS NULL OR categories.user_id = excluded.user_id",
   )
 
   await insertRows(
@@ -259,21 +266,29 @@ async function seedDemoData(client: PoolClient) {
       "user_id",
       "id",
       "counterparty_id",
+      "concept",
       "amount_cents",
       "currency",
       "frequency",
-      "due_day_of_month",
-      "status",
+      "first_due_date",
+      "total_payments",
+      "credit_card_id",
+      "category_id",
+      "archived_at",
     ],
     recurringBillsSeed,
     "(user_id, id)",
     [
       "counterparty_id",
+      "concept",
       "amount_cents",
       "currency",
       "frequency",
-      "due_day_of_month",
-      "status",
+      "first_due_date",
+      "total_payments",
+      "credit_card_id",
+      "category_id",
+      "archived_at",
     ],
   )
 }

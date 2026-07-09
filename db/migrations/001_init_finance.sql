@@ -230,8 +230,9 @@ CREATE INDEX IF NOT EXISTS transactions_user_posted_at_idx
 CREATE INDEX IF NOT EXISTS budgets_user_period_idx
   ON budgets (user_id, period, category_id);
 
-CREATE INDEX IF NOT EXISTS recurring_bills_user_due_day_idx
-  ON recurring_bills (user_id, due_day_of_month, id);
+-- recurring_bills_user_due_day_idx was removed in 009, which drops
+-- due_day_of_month and indexes first_due_date instead. Recreating it here
+-- would break replays of this file after 009 runs.
 
 DROP TRIGGER IF EXISTS profiles_touch_updated_at ON profiles;
 CREATE TRIGGER profiles_touch_updated_at
