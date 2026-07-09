@@ -105,6 +105,7 @@ function CreditCardTile({ creditCard }: { creditCard: CreditCard }) {
   const [archiveMessage, setArchiveMessage] = useState("")
   const [isArchiving, setIsArchiving] = useState(false)
   const status = creditCard.dueStatus
+  const hasReservedInstallments = creditCard.reservedInstallmentAmount > 0
 
   const handleArchive = async () => {
     setArchiveMessage("")
@@ -159,6 +160,16 @@ function CreditCardTile({ creditCard }: { creditCard: CreditCard }) {
         <Metric label="Closing Day" value={`Day ${creditCard.closingDay}`} />
         <Metric label="Due Day" value={`Day ${creditCard.paymentDueDay}`} />
       </div>
+
+      {hasReservedInstallments ? (
+        <p className="text-muted-foreground text-sm">
+          Includes{" "}
+          {formatCurrency(creditCard.reservedInstallmentAmount, {
+            forceDecimals: true,
+          })}{" "}
+          reserved for installments.
+        </p>
+      ) : null}
 
       {creditCard.currentStatement ? (
         <p className="text-muted-foreground text-sm">

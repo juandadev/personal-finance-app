@@ -57,6 +57,7 @@ export function CreditCardDetailContent({
   const cardTransactions = transactions.filter(
     (transaction) => transaction.creditCardId === creditCard.id,
   )
+  const hasReservedInstallments = creditCard.reservedInstallmentAmount > 0
 
   return (
     <div className="mt-6 space-y-6">
@@ -89,7 +90,12 @@ export function CreditCardDetailContent({
           <CloseCreditCardStatementDialog creditCard={creditCard} />
         </div>
 
-        <div className="grid gap-3 md:grid-cols-3">
+        <div
+          className={cn(
+            "grid gap-3",
+            hasReservedInstallments ? "md:grid-cols-4" : "md:grid-cols-3",
+          )}
+        >
           <Metric
             label="Current Statement"
             value={formatCurrency(creditCard.currentStatementAmount, {
@@ -102,6 +108,14 @@ export function CreditCardDetailContent({
               forceDecimals: true,
             })}
           />
+          {hasReservedInstallments ? (
+            <Metric
+              label="Reserved Installments"
+              value={formatCurrency(creditCard.reservedInstallmentAmount, {
+                forceDecimals: true,
+              })}
+            />
+          ) : null}
           <Metric
             label="Credit Limit"
             value={formatCurrency(creditCard.creditLimit, {

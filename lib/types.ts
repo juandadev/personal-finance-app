@@ -180,6 +180,7 @@ export interface CreditCard {
   statements: CreditCardStatement[]
   payments: CreditCardPayment[]
   currentStatementAmount: number
+  reservedInstallmentAmount: number
   availableCredit: number
   dueStatus: CreditCardDueStatus
 }

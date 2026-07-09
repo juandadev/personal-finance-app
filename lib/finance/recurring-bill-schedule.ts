@@ -126,6 +126,7 @@ export function resolveRecurringBillOccurrences(
   bill: ScheduleFields,
   payments: PaymentFields[],
   today = todayIsoDate(),
+  options: { includeAllFuture?: boolean } = {},
 ): RecurringBillOccurrenceState[] {
   const paymentsByDueDate = new Map(
     payments.map((payment) => [payment.due_date, payment]),
@@ -167,7 +168,7 @@ export function resolveRecurringBillOccurrences(
         status: getRecurringBillDueStatus(dueDate, today),
       })
 
-      if (dueDate > today) {
+      if (dueDate > today && !options.includeAllFuture) {
         break
       }
     }
