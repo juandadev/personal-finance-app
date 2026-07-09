@@ -43,10 +43,10 @@ export function BillsContent({ bills }: BillsContentProps) {
 
     switch (sortBy) {
       case "latest":
-        result.sort((a, b) => nextDueDate(a).localeCompare(nextDueDate(b)))
+        result.sort((a, b) => nextDueDate(b).localeCompare(nextDueDate(a)))
         break
       case "oldest":
-        result.sort((a, b) => nextDueDate(b).localeCompare(nextDueDate(a)))
+        result.sort((a, b) => nextDueDate(a).localeCompare(nextDueDate(b)))
         break
       case "a-z":
         result.sort((a, b) => a.name.localeCompare(b.name))
