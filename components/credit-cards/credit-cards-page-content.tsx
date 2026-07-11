@@ -158,6 +158,14 @@ function CreditCardTile({ creditCard }: { creditCard: CreditCard }) {
         </div>
 
         <div>
+          <p className="text-muted-foreground mb-3 text-sm">
+            Available Credit:{" "}
+            <span className="text-foreground font-semibold">
+              {formatCurrency(creditCard.availableCredit, {
+                forceDecimals: true,
+              })}
+            </span>
+          </p>
           <CreditUtilizationBar
             creditLimit={creditCard.creditLimit}
             currentStatementAmount={creditCard.currentStatementAmount}
@@ -182,13 +190,6 @@ function CreditCardTile({ creditCard }: { creditCard: CreditCard }) {
                 indicatorClassName="bg-muted-foreground/35"
               />
             ) : null}
-            <CreditValue
-              label="Available Credit"
-              value={formatCurrency(creditCard.availableCredit, {
-                forceDecimals: true,
-              })}
-              indicatorClassName="bg-background"
-            />
           </div>
         </div>
 
