@@ -148,35 +148,35 @@ Reference patterns:
 ```tsx
 // Opacity-only fade for elements that appear or disappear.
 <AnimatePresence initial={false} mode="popLayout">
-    {isVisible && (
-        <motion.span
-            initial={shouldReduceMotion ? false : {opacity: 0}}
-            animate={{opacity: 1}}
-            exit={{opacity: 0}}
-            transition={{duration: shouldReduceMotion ? 0 : 0.2}}
-        >
-            Label
-        </motion.span>
-    )}
+  {isVisible && (
+    <motion.span
+      initial={shouldReduceMotion ? false : { opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: shouldReduceMotion ? 0 : 0.2 }}
+    >
+      Label
+    </motion.span>
+  )}
 </AnimatePresence>
 ```
 
 ```tsx
 // Blur + opacity for switching between two elements in the same position.
 <AnimatePresence initial={false} mode="popLayout">
-    <motion.div
-        key={isCollapsed ? "collapsed" : "expanded"}
-        initial={shouldReduceMotion ? false : {opacity: 0, filter: "blur(2px)"}}
-        animate={
-            shouldReduceMotion ? {opacity: 1} : {opacity: 1, filter: "blur(0px)"}
-        }
-        exit={
-            shouldReduceMotion ? {opacity: 0} : {opacity: 0, filter: "blur(2px)"}
-        }
-        transition={{duration: shouldReduceMotion ? 0 : 0.2}}
-    >
-        {isCollapsed ? <CollapsedIcon/> : <ExpandedIcon/>}
-    </motion.div>
+  <motion.div
+    key={isCollapsed ? "collapsed" : "expanded"}
+    initial={shouldReduceMotion ? false : { opacity: 0, filter: "blur(2px)" }}
+    animate={
+      shouldReduceMotion ? { opacity: 1 } : { opacity: 1, filter: "blur(0px)" }
+    }
+    exit={
+      shouldReduceMotion ? { opacity: 0 } : { opacity: 0, filter: "blur(2px)" }
+    }
+    transition={{ duration: shouldReduceMotion ? 0 : 0.2 }}
+  >
+    {isCollapsed ? <CollapsedIcon /> : <ExpandedIcon />}
+  </motion.div>
 </AnimatePresence>
 ```
 

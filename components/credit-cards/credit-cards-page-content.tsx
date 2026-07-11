@@ -8,6 +8,7 @@ import { CloseCreditCardStatementDialog } from "@/components/credit-cards/close-
 import { CreditCardBadge } from "@/components/credit-cards/credit-card-badge"
 import { EditCreditCardDialog } from "@/components/credit-cards/credit-card-dialog"
 import { PayCreditCardStatementDialog } from "@/components/credit-cards/pay-credit-card-statement-dialog"
+import { CreditUtilizationBar } from "@/components/credit-cards/credit-utilization-bar"
 import { EmptyDataCard } from "@/components/empty-data-card"
 import {
   AlertDialog,
@@ -30,6 +31,7 @@ import {
   formatDisplayDate,
   formatDisplayDateRange,
 } from "@/lib/format"
+import { themeColorClasses } from "@/lib/theme-colors"
 import type { CreditCard, CreditCardDueStatus } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { useState } from "react"
@@ -63,7 +65,7 @@ export function CreditCardsPageContent() {
 
   return (
     <div className="mt-6 space-y-6">
-      <div className="grid gap-3 md:grid-cols-4 md:gap-6">
+      <div className="grid gap-3 md:grid-cols-2 md:gap-6 xl:grid-cols-4">
         <Card padding="overview" variant="primary">
           <p className="text-primary-foreground text-sm">Statement Balance</p>
           <p className="mt-3 text-3xl font-bold tracking-tight">
@@ -113,81 +115,124 @@ function CreditCardTile({ creditCard }: { creditCard: CreditCard }) {
   const hasReservedInstallments = creditCard.reservedInstallmentAmount > 0
 
   return (
-    <Card className="flex flex-col gap-5" padding="fixed">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <CreditCardBadge
-            nickname={creditCard.nickname}
-            initials={creditCard.initials}
-            color={creditCard.color}
-          />
-          <div>
-            <h2 className="text-xl font-bold tracking-tight">
-              {creditCard.nickname}
-            </h2>
-            <p className="text-muted-foreground text-sm">
-              {creditCard.issuer} {creditCard.network} ••••{" "}
-              {creditCard.lastFour}
-            </p>
+    <Card className="flex flex-col justify-between gap-5" padding="fixed">
+      <div className="space-y-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <CreditCardBadge
+              nickname={creditCard.nickname}
+              initials={creditCard.initials}
+              color={creditCard.color}
+            />
+            <div>
+              <h2 className="text-xl font-bold tracking-tight">
+                {creditCard.nickname}
+              </h2>
+              <p className="text-muted-foreground text-sm">
+                {creditCard.issuer} {creditCard.network} ••••{" "}
+                {creditCard.lastFour}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1">
+            <span
+              className={cn("text-sm font-semibold", statusClassName(status))}
+            >
+              {statusLabels[status]}
+            </span>
+            <ItemActions ariaLabel={`More options for ${creditCard.nickname}`}>
+              {rawCreditCard ? (
+                <EditCreditCardDialog
+                  creditCard={rawCreditCard}
+                  trigger={
+                    <DropdownMenuItem>Edit Credit Card</DropdownMenuItem>
+                  }
+                />
+              ) : null}
+              <ArchiveCreditCardDialog creditCard={creditCard} />
+            </ItemActions>
           </div>
         </div>
-        <div className="flex items-center gap-1">
-          <span className={cn("text-sm font-bold", statusClassName(status))}>
-            {statusLabels[status]}
-          </span>
-          <ItemActions ariaLabel={`More options for ${creditCard.nickname}`}>
-            {rawCreditCard ? (
-              <EditCreditCardDialog
-                creditCard={rawCreditCard}
-                trigger={<DropdownMenuItem>Edit Credit Card</DropdownMenuItem>}
+
+        <div>
+          <CreditUtilizationBar
+            creditLimit={creditCard.creditLimit}
+            currentStatementAmount={creditCard.currentStatementAmount}
+            reservedInstallmentAmount={creditCard.reservedInstallmentAmount}
+            color={creditCard.color}
+          />
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <CreditValue
+              label="Current Statement"
+              value={formatCurrency(creditCard.currentStatementAmount, {
+                forceDecimals: true,
+              })}
+              indicatorClassName={themeColorClasses[creditCard.color].bg}
+            />
+            {hasReservedInstallments ? (
+              <CreditValue
+                label="Reserved Installments"
+                value={formatCurrency(creditCard.reservedInstallmentAmount, {
+                  forceDecimals: true,
+                })}
+                indicatorClassName="bg-muted-foreground/35"
               />
             ) : null}
-            <ArchiveCreditCardDialog creditCard={creditCard} />
-          </ItemActions>
+            <CreditValue
+              label="Available Credit"
+              value={formatCurrency(creditCard.availableCredit, {
+                forceDecimals: true,
+              })}
+              indicatorClassName="bg-background"
+            />
+          </div>
+        </div>
+
+        <div className="bg-background rounded-lg p-4">
+          <dl className="grid gap-4 text-sm sm:grid-cols-3">
+            <div>
+              <dt className="text-muted-foreground text-xs">Credit Limit</dt>
+              <dd className="text-foreground mt-1 font-bold">
+                {formatCurrency(creditCard.creditLimit, {
+                  forceDecimals: true,
+                })}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground text-xs">Closing Day</dt>
+              <dd className="text-foreground mt-1 font-bold">
+                Day {creditCard.closingDay}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground text-xs">Due Day</dt>
+              <dd className="text-foreground mt-1 font-bold">
+                Day {creditCard.paymentDueDay}
+              </dd>
+            </div>
+          </dl>
+
+          {creditCard.currentStatement ? (
+            <p className="text-muted-foreground mt-4 border-t pt-4 text-sm">
+              Current period:{" "}
+              <span className="font-semibold">
+                {formatDisplayDateRange(
+                  creditCard.currentStatement.periodStart,
+                  creditCard.currentStatement.periodEnd,
+                )}
+              </span>
+              . Due{" "}
+              {formatDisplayDate(creditCard.currentStatement.paymentDueDate)}.
+            </p>
+          ) : (
+            <p className="text-muted-foreground mt-4 border-t pt-4 text-sm">
+              No statement activity yet. Card purchases will appear here once
+              added.
+            </p>
+          )}
         </div>
       </div>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Metric
-          label="Current Statement"
-          value={formatCurrency(creditCard.currentStatementAmount, {
-            forceDecimals: true,
-          })}
-        />
-        <Metric
-          label="Available Credit"
-          value={formatCurrency(creditCard.availableCredit, {
-            forceDecimals: true,
-          })}
-        />
-        <Metric label="Closing Day" value={`Day ${creditCard.closingDay}`} />
-        <Metric label="Due Day" value={`Day ${creditCard.paymentDueDay}`} />
-      </div>
-
-      {hasReservedInstallments ? (
-        <p className="text-muted-foreground text-sm">
-          Includes{" "}
-          {formatCurrency(creditCard.reservedInstallmentAmount, {
-            forceDecimals: true,
-          })}{" "}
-          reserved for installments.
-        </p>
-      ) : null}
-
-      {creditCard.currentStatement ? (
-        <p className="text-muted-foreground text-sm">
-          Current period:{" "}
-          {formatDisplayDateRange(
-            creditCard.currentStatement.periodStart,
-            creditCard.currentStatement.periodEnd,
-          )}
-          . Due {formatDisplayDate(creditCard.currentStatement.paymentDueDate)}.
-        </p>
-      ) : (
-        <p className="text-muted-foreground text-sm">
-          No statement activity yet. Card purchases will appear here once added.
-        </p>
-      )}
 
       <div className="flex flex-wrap items-center gap-3">
         <Button asChild variant="secondary" size="sm">
@@ -270,11 +315,25 @@ function ArchiveCreditCardDialog({ creditCard }: { creditCard: CreditCard }) {
   )
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function CreditValue({
+  label,
+  value,
+  indicatorClassName,
+}: {
+  label: string
+  value: string
+  indicatorClassName: string
+}) {
   return (
-    <div className="bg-background rounded-lg p-3">
-      <p className="text-muted-foreground text-xs">{label}</p>
-      <p className="text-foreground mt-1 text-sm font-bold">{value}</p>
+    <div className="flex gap-4">
+      <div
+        aria-hidden="true"
+        className={cn("w-1 shrink-0 rounded-full", indicatorClassName)}
+      />
+      <div>
+        <p className="text-muted-foreground text-xs">{label}</p>
+        <p className="text-foreground mt-1 text-sm font-bold">{value}</p>
+      </div>
     </div>
   )
 }

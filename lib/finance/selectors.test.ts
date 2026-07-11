@@ -225,6 +225,11 @@ describe("selectFinanceViewModel credit reservation", () => {
     expect(card.currentStatementAmount).toBe(100)
     expect(card.reservedInstallmentAmount).toBe(100)
     expect(card.availableCredit).toBe(800)
+    expect(
+      card.currentStatementAmount +
+        card.reservedInstallmentAmount +
+        card.availableCredit,
+    ).toBe(card.creditLimit)
   })
 
   test("archived finite bills stop reserving occurrences after the archive cutoff", () => {

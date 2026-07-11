@@ -90,5 +90,5 @@ export function formatDisplayDateRange(
   startIsoDate: string,
   endIsoDate: string,
 ) {
-  return `${formatDisplayDate(startIsoDate)} to ${formatDisplayDate(endIsoDate)}`
+  return `${formatDisplayDate(startIsoDate, "dd/MM/yyyy")} - ${formatDisplayDate(endIsoDate, "dd/MM/yyyy")}`
 }
