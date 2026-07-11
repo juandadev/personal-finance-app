@@ -3,7 +3,6 @@
 import { useState, useMemo } from "react"
 import { ArrowUpDown, CalendarClock } from "lucide-react"
 import { EmptyDataCard } from "@/components/empty-data-card"
-import { AddBillDialog } from "@/components/recurring-bills/bill-dialog"
 import { Card } from "@/components/ui/card"
 import type { RecurringBill, SortOption } from "@/lib/types"
 import { SearchInput } from "../transactions/search-input"
@@ -88,9 +87,6 @@ export function BillsContent({ bills }: BillsContentProps) {
           onChange={setSortBy}
           icon={<ArrowUpDown className="size-5" aria-hidden />}
         />
-        <div className="ml-auto">
-          <AddBillDialog />
-        </div>
       </div>
 
       {hasVisibleBills ? (

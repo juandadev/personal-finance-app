@@ -1,13 +1,9 @@
 "use client"
 
 import { useState } from "react"
+import { ItemActions } from "@/components/actions"
 import { Card, CardAction, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import type { Pot } from "@/lib/types"
 import { formatPotDueDateRemaining } from "@/lib/finance/pot-due-date"
 import { formatCurrency } from "@/lib/format"
@@ -18,7 +14,6 @@ import { EditPotDialog } from "./edit-pot-dialog"
 import { PotProgressBar } from "./pot-progress-bar"
 import { PotTransferDialog } from "./pot-transfer-dialog"
 import { Button } from "@/components/ui/button"
-import EllipsisIcon from "@/components/icons/EllipsisIcon"
 
 interface PotCardProps {
   pot: Pot
@@ -48,28 +43,17 @@ export function PotCard({ pot }: PotCardProps) {
             <h3>{pot.name}</h3>
           </CardTitle>
           <CardAction>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon-lg"
-                  aria-label={`More options for ${pot.name}`}
-                >
-                  <EllipsisIcon className="size-4" aria-hidden />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" sideOffset={8}>
-                <DropdownMenuItem onSelect={() => setIsEditOpen(true)}>
-                  Edit Pot
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  variant="destructive"
-                  onSelect={() => setIsDeleteOpen(true)}
-                >
-                  Delete Pot
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <ItemActions ariaLabel={`More options for ${pot.name}`}>
+              <DropdownMenuItem onSelect={() => setIsEditOpen(true)}>
+                Edit Pot
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                variant="destructive"
+                onSelect={() => setIsDeleteOpen(true)}
+              >
+                Delete Pot
+              </DropdownMenuItem>
+            </ItemActions>
           </CardAction>
         </CardHeader>
 

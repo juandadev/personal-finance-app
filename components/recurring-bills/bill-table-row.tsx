@@ -2,11 +2,13 @@
 
 import { CircleAlert, CircleCheck, CreditCard, MinusCircle } from "lucide-react"
 
+import { ItemActions } from "@/components/actions"
 import { ContactAvatar } from "@/components/contact-avatar"
 import { ArchiveBillDialog } from "@/components/recurring-bills/archive-bill-dialog"
 import { EditBillDialog } from "@/components/recurring-bills/bill-dialog"
 import { PayBillDialog } from "@/components/recurring-bills/pay-bill-dialog"
 import { SkipBillOccurrenceDialog } from "@/components/recurring-bills/skip-bill-occurrence-dialog"
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { TableCell, TableRow } from "@/components/ui/table"
 import { formatCurrency, formatDisplayDate } from "@/lib/format"
 import type { BillStatus, RecurringBill } from "@/lib/types"
@@ -137,9 +139,23 @@ function BillActions({ bill }: { bill: RecurringBill }) {
           <PayBillDialog bill={bill} occurrence={occurrence} />
         </>
       ) : null}
-      {bill.archivedAt ? null : <EditBillDialog bill={bill} />}
-      {!bill.archivedAt && bill.hasPayments ? (
-        <ArchiveBillDialog bill={bill} />
+      {!bill.archivedAt ? (
+        <ItemActions ariaLabel={`More options for ${bill.concept}`}>
+          <EditBillDialog
+            bill={bill}
+            trigger={<DropdownMenuItem>Edit Bill</DropdownMenuItem>}
+          />
+          {bill.hasPayments ? (
+            <ArchiveBillDialog
+              bill={bill}
+              trigger={
+                <DropdownMenuItem variant="destructive">
+                  Archive Bill
+                </DropdownMenuItem>
+              }
+            />
+          ) : null}
+        </ItemActions>
       ) : null}
     </div>
   )

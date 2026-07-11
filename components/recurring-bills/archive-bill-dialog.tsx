@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
 
 import {
   AlertDialog,
@@ -20,9 +20,10 @@ import type { RecurringBill } from "@/lib/types"
 
 interface ArchiveBillDialogProps {
   bill: RecurringBill
+  trigger?: ReactNode
 }
 
-export function ArchiveBillDialog({ bill }: ArchiveBillDialogProps) {
+export function ArchiveBillDialog({ bill, trigger }: ArchiveBillDialogProps) {
   const { actions } = useFinance()
   const [open, setOpen] = useState(false)
   const [statusMessage, setStatusMessage] = useState("")
@@ -47,9 +48,11 @@ export function ArchiveBillDialog({ bill }: ArchiveBillDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
-        <Button variant="ghost" size="sm" className="text-destructive">
-          Archive
-        </Button>
+        {trigger ?? (
+          <Button variant="ghost" size="sm" className="text-destructive">
+            Archive
+          </Button>
+        )}
       </AlertDialogTrigger>
       <AlertDialogContent variant="finance">
         <AlertDialogHeader className="text-left">

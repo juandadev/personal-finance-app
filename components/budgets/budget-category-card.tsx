@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { ItemActions } from "@/components/actions"
 import CaretRightIcon from "@/components/icons/CaretRightIcon"
 import {
   Card,
@@ -10,12 +11,7 @@ import {
   CardTitle,
   cardActionLinkClasses,
 } from "@/components/ui/card"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { formatCurrency, formatBudgetPercentage } from "@/lib/format"
 import { themeColorClasses } from "@/lib/theme-colors"
 import type { Budget, Transaction } from "@/lib/types"
@@ -24,8 +20,6 @@ import { BudgetProgressBar } from "./budget-progress-bar"
 import { DeleteBudgetDialog } from "./delete-budget-dialog"
 import { EditBudgetDialog } from "./edit-budget-dialog"
 import { LatestSpendingItem } from "./latest-spending-item"
-import { Button } from "@/components/ui/button"
-import EllipsisIcon from "@/components/icons/EllipsisIcon"
 
 interface BudgetCategoryCardProps {
   budget: Budget
@@ -55,28 +49,17 @@ export function BudgetCategoryCard({
           <h2>{budget.category}</h2>
         </CardTitle>
         <CardAction>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon-lg"
-                aria-label={`More options for ${budget.category}`}
-              >
-                <EllipsisIcon className="size-4" aria-hidden />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" sideOffset={8}>
-              <DropdownMenuItem onSelect={() => setIsEditOpen(true)}>
-                Edit Budget
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                variant="destructive"
-                onSelect={() => setIsDeleteOpen(true)}
-              >
-                Delete Budget
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <ItemActions ariaLabel={`More options for ${budget.category}`}>
+            <DropdownMenuItem onSelect={() => setIsEditOpen(true)}>
+              Edit Budget
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              variant="destructive"
+              onSelect={() => setIsDeleteOpen(true)}
+            >
+              Delete Budget
+            </DropdownMenuItem>
+          </ItemActions>
         </CardAction>
       </CardHeader>
 

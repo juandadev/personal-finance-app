@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
 
 import {
   AlertDialog,
@@ -22,11 +22,13 @@ import type { RecurringBill, RecurringBillOccurrence } from "@/lib/types"
 interface SkipBillOccurrenceDialogProps {
   bill: RecurringBill
   occurrence: RecurringBillOccurrence
+  trigger?: ReactNode
 }
 
 export function SkipBillOccurrenceDialog({
   bill,
   occurrence,
+  trigger,
 }: SkipBillOccurrenceDialogProps) {
   const { actions } = useFinance()
   const [open, setOpen] = useState(false)
@@ -55,9 +57,11 @@ export function SkipBillOccurrenceDialog({
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
-        <Button variant="ghost" size="sm">
-          Skip
-        </Button>
+        {trigger ?? (
+          <Button variant="ghost" size="sm">
+            Skip
+          </Button>
+        )}
       </AlertDialogTrigger>
       <AlertDialogContent variant="finance">
         <AlertDialogHeader className="text-left">

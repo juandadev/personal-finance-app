@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
 
 import {
   AlertDialog,
@@ -37,9 +37,14 @@ function todayIsoDate() {
 interface PayBillDialogProps {
   bill: RecurringBill
   occurrence: RecurringBillOccurrence
+  trigger?: ReactNode
 }
 
-export function PayBillDialog({ bill, occurrence }: PayBillDialogProps) {
+export function PayBillDialog({
+  bill,
+  occurrence,
+  trigger,
+}: PayBillDialogProps) {
   const { actions, state } = useFinance()
   const [open, setOpen] = useState(false)
   const [sourceValue, setSourceValue] = useState(bankAccountValue)
@@ -86,7 +91,7 @@ export function PayBillDialog({ bill, occurrence }: PayBillDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={handleOpenChange}>
       <AlertDialogTrigger asChild>
-        <Button size="sm">Pay Bill</Button>
+        {trigger ?? <Button size="sm">Pay Bill</Button>}
       </AlertDialogTrigger>
       <AlertDialogContent variant="finance">
         <AlertDialogHeader className="text-left">

@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 
+import { ItemActions } from "@/components/actions"
 import { AuthStatusMessage } from "@/components/auth/auth-page-shell"
 import { ContactAvatar } from "@/components/contact-avatar"
 import { EditTransactionDialog } from "@/components/transactions/transaction-dialog"
@@ -13,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { useFinance } from "@/hooks/use-finance"
 import { cn } from "@/lib/utils"
 import { formatSignedAmount, transactionAmountClassName } from "@/lib/format"
@@ -118,6 +120,8 @@ function MobileTransactionItem({
   isPending,
   onBudgetChange,
 }: TransactionItemProps) {
+  const [isEditOpen, setIsEditOpen] = useState(false)
+
   return (
     <li className="flex flex-col gap-3 py-3">
       <div className="flex items-center justify-between gap-3">
@@ -170,8 +174,17 @@ function MobileTransactionItem({
         />
       </div>
       <div className="flex justify-end">
-        <EditTransactionDialog transaction={transaction} />
+        <ItemActions ariaLabel={`More options for ${transaction.concept}`}>
+          <DropdownMenuItem onSelect={() => setIsEditOpen(true)}>
+            Edit Transaction
+          </DropdownMenuItem>
+        </ItemActions>
       </div>
+      <EditTransactionDialog
+        transaction={transaction}
+        open={isEditOpen}
+        onOpenChange={setIsEditOpen}
+      />
     </li>
   )
 }
@@ -182,6 +195,8 @@ function TransactionRow({
   isPending,
   onBudgetChange,
 }: TransactionItemProps) {
+  const [isEditOpen, setIsEditOpen] = useState(false)
+
   return (
     <TableRow>
       <TableCell>
@@ -226,7 +241,16 @@ function TransactionRow({
         {formatSignedAmount(transaction.amount)}
       </TableCell>
       <TableCell className="text-right">
-        <EditTransactionDialog transaction={transaction} />
+        <ItemActions ariaLabel={`More options for ${transaction.concept}`}>
+          <DropdownMenuItem onSelect={() => setIsEditOpen(true)}>
+            Edit Transaction
+          </DropdownMenuItem>
+        </ItemActions>
+        <EditTransactionDialog
+          transaction={transaction}
+          open={isEditOpen}
+          onOpenChange={setIsEditOpen}
+        />
       </TableCell>
     </TableRow>
   )

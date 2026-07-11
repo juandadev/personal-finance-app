@@ -203,6 +203,20 @@ Common product page structure:
 Use mobile-first layout. Stack content on small screens, then introduce grids
 and tables at `md` or `lg`.
 
+### Module Headers and Actions
+
+Actionable module headers use a `justify-between` layout: the title stays on
+the left and its action area stays right-aligned.
+
+- Show one visible primary action in a module header.
+- When secondary header actions exist, place them in one icon-only ellipsis
+  menu beside the primary action. Do not show multiple visible header buttons.
+- Header ellipsis triggers require an accessible name. Use the shared header
+  action wrapper so mobile layouts preserve the title and action area without
+  overflow.
+- Dashboard navigation links such as `See Details` and `View All` are valid
+  single header actions for read-only summary modules.
+
 ### Cards
 
 Cards are the primary product surface.
@@ -276,11 +290,24 @@ Finance data must stay readable on mobile.
 
 ### Menus and Secondary Actions
 
-- Use icon-only overflow buttons for card-level edit/delete menus.
+- Use the shared item-level icon-only ellipsis button for secondary actions on
+  managed cards and list/table rows.
 - Icons should be Lucide icons at `size-4` or `size-5`.
 - Icon-only buttons need an `aria-label`.
 - Menu items should use clear Title Case action labels.
 - Destructive menu items use destructive text.
+- Cards and list/table rows may show at most two dedicated action buttons.
+  Reserve them for high-frequency, task-completion flows such as paying a
+  bill, moving money, viewing card details, or settling a statement.
+- Record-management actions such as Edit, Delete, and Archive belong in the
+  item ellipsis menu by default.
+- Selectors, toggles, and inline data-entry controls do not count toward the
+  two-action limit.
+- Empty-state calls to action are exempt because they provide onboarding rather
+  than per-record management.
+- Keep header-level and item-level ellipsis menus as separate variants: header
+  menus contain secondary module actions; item menus contain actions for one
+  record.
 
 ## Component Standards
 

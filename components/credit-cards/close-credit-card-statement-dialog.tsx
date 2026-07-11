@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
 
 import {
   AlertDialog,
@@ -22,11 +22,13 @@ import type { CreditCard, CreditCardStatement } from "@/lib/types"
 interface CloseCreditCardStatementDialogProps {
   creditCard: CreditCard
   statement?: CreditCardStatement
+  trigger?: ReactNode
 }
 
 export function CloseCreditCardStatementDialog({
   creditCard,
   statement = creditCard.currentStatement,
+  trigger,
 }: CloseCreditCardStatementDialogProps) {
   const { actions } = useFinance()
   const [open, setOpen] = useState(false)
@@ -60,9 +62,11 @@ export function CloseCreditCardStatementDialog({
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
-        <Button size="sm" variant="secondary">
-          Close Statement
-        </Button>
+        {trigger ?? (
+          <Button size="sm" variant="secondary">
+            Close Statement
+          </Button>
+        )}
       </AlertDialogTrigger>
       <AlertDialogContent variant="finance">
         <AlertDialogHeader className="text-left">

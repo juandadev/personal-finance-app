@@ -3,16 +3,26 @@
 import Link from "next/link"
 import { CreditCardIcon } from "lucide-react"
 
+import { ItemActions } from "@/components/actions"
 import { CloseCreditCardStatementDialog } from "@/components/credit-cards/close-credit-card-statement-dialog"
 import { CreditCardBadge } from "@/components/credit-cards/credit-card-badge"
-import {
-  AddCreditCardDialog,
-  EditCreditCardDialog,
-} from "@/components/credit-cards/credit-card-dialog"
+import { EditCreditCardDialog } from "@/components/credit-cards/credit-card-dialog"
 import { PayCreditCardStatementDialog } from "@/components/credit-cards/pay-credit-card-statement-dialog"
 import { EmptyDataCard } from "@/components/empty-data-card"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogCloseButton,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { FormStatusMessage } from "@/components/ui/form"
 import { useFinance } from "@/hooks/use-finance"
 import {
@@ -53,9 +63,6 @@ export function CreditCardsPageContent() {
 
   return (
     <div className="mt-6 space-y-6">
-      <div className="flex justify-end">
-        <AddCreditCardDialog />
-      </div>
       <div className="grid gap-3 md:grid-cols-4 md:gap-6">
         <Card padding="overview" variant="primary">
           <p className="text-primary-foreground text-sm">Statement Balance</p>
@@ -98,27 +105,12 @@ export function CreditCardsPageContent() {
 }
 
 function CreditCardTile({ creditCard }: { creditCard: CreditCard }) {
-  const { actions, state } = useFinance()
+  const { state } = useFinance()
   const rawCreditCard = state.creditCards.find(
     (card) => card.id === creditCard.id,
   )
-  const [archiveMessage, setArchiveMessage] = useState("")
-  const [isArchiving, setIsArchiving] = useState(false)
   const status = creditCard.dueStatus
   const hasReservedInstallments = creditCard.reservedInstallmentAmount > 0
-
-  const handleArchive = async () => {
-    setArchiveMessage("")
-    setIsArchiving(true)
-
-    const result = await actions.archiveCreditCard(creditCard.id)
-
-    setIsArchiving(false)
-
-    if (!result.ok) {
-      setArchiveMessage(result.message)
-    }
-  }
 
   return (
     <Card className="flex flex-col gap-5" padding="fixed">
@@ -139,9 +131,20 @@ function CreditCardTile({ creditCard }: { creditCard: CreditCard }) {
             </p>
           </div>
         </div>
-        <span className={cn("text-sm font-bold", statusClassName(status))}>
-          {statusLabels[status]}
-        </span>
+        <div className="flex items-center gap-1">
+          <span className={cn("text-sm font-bold", statusClassName(status))}>
+            {statusLabels[status]}
+          </span>
+          <ItemActions ariaLabel={`More options for ${creditCard.nickname}`}>
+            {rawCreditCard ? (
+              <EditCreditCardDialog
+                creditCard={rawCreditCard}
+                trigger={<DropdownMenuItem>Edit Credit Card</DropdownMenuItem>}
+              />
+            ) : null}
+            <ArchiveCreditCardDialog creditCard={creditCard} />
+          </ItemActions>
+        </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -186,30 +189,84 @@ function CreditCardTile({ creditCard }: { creditCard: CreditCard }) {
         </p>
       )}
 
-      {archiveMessage ? (
-        <FormStatusMessage variant="error">{archiveMessage}</FormStatusMessage>
-      ) : null}
-
       <div className="flex flex-wrap items-center gap-3">
         <Button asChild variant="secondary" size="sm">
           <Link href={`/credit-cards/${creditCard.id}`}>See Details</Link>
         </Button>
-        {rawCreditCard ? (
-          <EditCreditCardDialog creditCard={rawCreditCard} />
-        ) : null}
         <PayCreditCardStatementDialog creditCard={creditCard} />
         <CloseCreditCardStatementDialog creditCard={creditCard} />
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          disabled={isArchiving}
-          onClick={handleArchive}
-        >
-          {isArchiving ? "Archiving..." : "Archive"}
-        </Button>
       </div>
     </Card>
+  )
+}
+
+function ArchiveCreditCardDialog({ creditCard }: { creditCard: CreditCard }) {
+  const { actions } = useFinance()
+  const [open, setOpen] = useState(false)
+  const [statusMessage, setStatusMessage] = useState("")
+  const [isArchiving, setIsArchiving] = useState(false)
+
+  const handleArchive = async () => {
+    setIsArchiving(true)
+    setStatusMessage("")
+
+    const result = await actions.archiveCreditCard(creditCard.id)
+
+    setIsArchiving(false)
+
+    if (!result.ok) {
+      setStatusMessage(result.message)
+      return
+    }
+
+    setOpen(false)
+  }
+
+  return (
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogTrigger asChild>
+        <DropdownMenuItem variant="destructive">
+          Archive Credit Card
+        </DropdownMenuItem>
+      </AlertDialogTrigger>
+      <AlertDialogContent variant="finance">
+        <AlertDialogHeader className="text-left">
+          <AlertDialogTitle variant="finance">
+            Archive {creditCard.nickname}?
+          </AlertDialogTitle>
+          <AlertDialogDescription variant="finance">
+            Archiving removes this card from active tracking while keeping its
+            statement and transaction history.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogCloseButton aria-label="Close archive credit card dialog" />
+        <div className="mt-5 flex flex-col gap-5">
+          {statusMessage ? (
+            <FormStatusMessage variant="error">
+              {statusMessage}
+            </FormStatusMessage>
+          ) : null}
+          <AlertDialogAction
+            variant="destructive"
+            size="finance-submit"
+            disabled={isArchiving}
+            onClick={(event) => {
+              event.preventDefault()
+              void handleArchive()
+            }}
+          >
+            {isArchiving ? "Archiving..." : "Archive Credit Card"}
+          </AlertDialogAction>
+          <AlertDialogCancel
+            variant="muted-link"
+            size="text-link"
+            className="mx-auto"
+          >
+            Cancel
+          </AlertDialogCancel>
+        </div>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }
 

@@ -100,6 +100,8 @@ function todayIsoDate() {
 interface TransactionDialogProps {
   transaction?: Transaction
   trigger?: ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 export function AddTransactionDialog() {
@@ -108,25 +110,49 @@ export function AddTransactionDialog() {
 
 export function EditTransactionDialog({
   transaction,
+  trigger,
+  open,
+  onOpenChange,
 }: {
   transaction: Transaction
+  trigger?: ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }) {
   return (
     <TransactionDialog
       transaction={transaction}
+      open={open}
+      onOpenChange={onOpenChange}
       trigger={
-        <Button variant="ghost" size="sm">
-          Edit
-        </Button>
+        trigger ?? (
+          <Button variant="ghost" size="sm">
+            Edit
+          </Button>
+        )
       }
     />
   )
 }
 
-function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
+function TransactionDialog({
+  transaction,
+  trigger,
+  open: controlledOpen,
+  onOpenChange,
+}: TransactionDialogProps) {
   const { state, actions } = useFinance()
   const isEditing = Boolean(transaction)
-  const [open, setOpen] = useState(false)
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : uncontrolledOpen
+  const setOpen = (nextOpen: boolean) => {
+    if (!isControlled) {
+      setUncontrolledOpen(nextOpen)
+    }
+
+    onOpenChange?.(nextOpen)
+  }
   const [deleteStatusMessage, setDeleteStatusMessage] = useState("")
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -267,7 +293,9 @@ function TransactionDialog({ transaction, trigger }: TransactionDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      {trigger ? <DialogTrigger asChild>{trigger}</DialogTrigger> : null}
+      {trigger && !isControlled ? (
+        <DialogTrigger asChild>{trigger}</DialogTrigger>
+      ) : null}
       <DialogContent variant="finance" showCloseButton={false}>
         <DialogHeader className="text-left">
           <DialogTitle variant="finance">

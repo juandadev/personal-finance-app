@@ -86,16 +86,20 @@ export function AddCreditCardDialog() {
 
 export function EditCreditCardDialog({
   creditCard,
+  trigger,
 }: {
   creditCard: CreditCardRecord
+  trigger?: ReactNode
 }) {
   return (
     <CreditCardDialog
       creditCard={creditCard}
       trigger={
-        <Button variant="ghost" size="sm">
-          Edit
-        </Button>
+        trigger ?? (
+          <Button variant="ghost" size="sm">
+            Edit
+          </Button>
+        )
       }
     />
   )

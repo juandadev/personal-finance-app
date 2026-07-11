@@ -1,7 +1,8 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, type ReactNode } from "react"
 import { z } from "zod"
+import { ItemActions } from "@/components/actions"
 import { ContactAvatar } from "@/components/contact-avatar"
 import { ThemeSelect } from "@/components/theme-select"
 import {
@@ -13,6 +14,7 @@ import {
   AlertDialogDescription,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -25,6 +27,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { FormField, FormStatusMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import {
@@ -132,14 +135,22 @@ function CategoryRow({ category }: { category: CategoryRecord }) {
           <p className="text-muted-foreground text-xs">{category.slug}</p>
         </div>
       </div>
-      <div className="flex items-center gap-2">
-        <CategoryDialog category={category} />
+      <ItemActions ariaLabel={`More options for ${category.name}`}>
+        <CategoryDialog
+          category={category}
+          trigger={<DropdownMenuItem>Edit Category</DropdownMenuItem>}
+        />
         <DeleteLibraryRecordDialog
           label={category.name}
           recordType="category"
+          trigger={
+            <DropdownMenuItem variant="destructive">
+              Delete Category
+            </DropdownMenuItem>
+          }
           onDelete={(actions) => actions.deleteCategory(category.id)}
         />
-      </div>
+      </ItemActions>
     </div>
   )
 }
@@ -164,19 +175,33 @@ function ContactRow({ counterparty }: { counterparty: CounterpartyRecord }) {
           </p>
         </div>
       </div>
-      <div className="flex items-center gap-2">
-        <ContactDialog counterparty={counterparty} />
+      <ItemActions ariaLabel={`More options for ${counterparty.display_name}`}>
+        <ContactDialog
+          counterparty={counterparty}
+          trigger={<DropdownMenuItem>Edit Contact</DropdownMenuItem>}
+        />
         <DeleteLibraryRecordDialog
           label={counterparty.display_name}
           recordType="contact"
+          trigger={
+            <DropdownMenuItem variant="destructive">
+              Delete Contact
+            </DropdownMenuItem>
+          }
           onDelete={(actions) => actions.deleteCounterparty(counterparty.id)}
         />
-      </div>
+      </ItemActions>
     </div>
   )
 }
 
-function CategoryDialog({ category }: { category?: CategoryRecord }) {
+function CategoryDialog({
+  category,
+  trigger,
+}: {
+  category?: CategoryRecord
+  trigger?: ReactNode
+}) {
   const { actions } = useFinance()
   const [open, setOpen] = useState(false)
   const defaultValues = useMemo(
@@ -224,9 +249,11 @@ function CategoryDialog({ category }: { category?: CategoryRecord }) {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button variant={category ? "ghost" : "default"} size="sm">
-          {category ? "Edit" : "Add Category"}
-        </Button>
+        {trigger ?? (
+          <Button variant={category ? "ghost" : "default"} size="sm">
+            {category ? "Edit" : "Add Category"}
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent variant="finance" showCloseButton={false}>
         <DialogHeader className="text-left">
@@ -298,8 +325,10 @@ function CategoryDialog({ category }: { category?: CategoryRecord }) {
 
 function ContactDialog({
   counterparty,
+  trigger,
 }: {
   counterparty?: CounterpartyRecord
+  trigger?: ReactNode
 }) {
   const { actions } = useFinance()
   const [open, setOpen] = useState(false)
@@ -360,9 +389,11 @@ function ContactDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button variant={counterparty ? "ghost" : "default"} size="sm">
-          {counterparty ? "Edit" : "Add Contact"}
-        </Button>
+        {trigger ?? (
+          <Button variant={counterparty ? "ghost" : "default"} size="sm">
+            {counterparty ? "Edit" : "Add Contact"}
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent variant="finance" showCloseButton={false}>
         <DialogHeader className="text-left">
@@ -490,6 +521,7 @@ function DeleteLibraryRecordDialog({
   label,
   recordType,
   onDelete,
+  trigger,
 }: {
   label: string
   recordType: "category" | "contact"
@@ -497,6 +529,7 @@ function DeleteLibraryRecordDialog({
     ok: boolean
     message: string
   }>
+  trigger?: ReactNode
 }) {
   const { actions } = useFinance()
   const [open, setOpen] = useState(false)
@@ -520,51 +553,53 @@ function DeleteLibraryRecordDialog({
   }
 
   return (
-    <>
-      <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
-        Delete
-      </Button>
-      <AlertDialog open={open} onOpenChange={setOpen}>
-        <AlertDialogContent variant="finance">
-          <AlertDialogHeader className="text-left">
-            <AlertDialogTitle variant="finance">
-              Delete {recordType}?
-            </AlertDialogTitle>
-            <AlertDialogDescription variant="finance">
-              Delete &lsquo;{label}&rsquo; from your transaction library. This
-              is only allowed when it is not used by finance records.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogCloseButton
-            aria-label={`Close delete ${recordType} dialog`}
-          />
-          <div className="mt-5 flex flex-col gap-5">
-            <AlertDialogAction
-              variant="destructive"
-              size="finance-submit"
-              disabled={isDeleting}
-              onClick={(event) => {
-                event.preventDefault()
-                void handleDelete()
-              }}
-            >
-              {isDeleting ? "Deleting..." : `Delete ${recordType}`}
-            </AlertDialogAction>
-            {statusMessage ? (
-              <FormStatusMessage variant="error">
-                {statusMessage}
-              </FormStatusMessage>
-            ) : null}
-            <AlertDialogCancel
-              variant="muted-link"
-              size="text-link"
-              className="mx-auto"
-            >
-              Keep {recordType}
-            </AlertDialogCancel>
-          </div>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogTrigger asChild>
+        {trigger ?? (
+          <Button variant="ghost" size="sm">
+            Delete
+          </Button>
+        )}
+      </AlertDialogTrigger>
+      <AlertDialogContent variant="finance">
+        <AlertDialogHeader className="text-left">
+          <AlertDialogTitle variant="finance">
+            Delete {recordType}?
+          </AlertDialogTitle>
+          <AlertDialogDescription variant="finance">
+            Delete &lsquo;{label}&rsquo; from your transaction library. This is
+            only allowed when it is not used by finance records.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogCloseButton
+          aria-label={`Close delete ${recordType} dialog`}
+        />
+        <div className="mt-5 flex flex-col gap-5">
+          <AlertDialogAction
+            variant="destructive"
+            size="finance-submit"
+            disabled={isDeleting}
+            onClick={(event) => {
+              event.preventDefault()
+              void handleDelete()
+            }}
+          >
+            {isDeleting ? "Deleting..." : `Delete ${recordType}`}
+          </AlertDialogAction>
+          {statusMessage ? (
+            <FormStatusMessage variant="error">
+              {statusMessage}
+            </FormStatusMessage>
+          ) : null}
+          <AlertDialogCancel
+            variant="muted-link"
+            size="text-link"
+            className="mx-auto"
+          >
+            Keep {recordType}
+          </AlertDialogCancel>
+        </div>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }

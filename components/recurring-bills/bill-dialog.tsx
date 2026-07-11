@@ -98,14 +98,22 @@ export function AddBillDialog() {
   return <BillDialog trigger={<Button>Add Bill</Button>} />
 }
 
-export function EditBillDialog({ bill }: { bill: RecurringBill }) {
+export function EditBillDialog({
+  bill,
+  trigger,
+}: {
+  bill: RecurringBill
+  trigger?: ReactNode
+}) {
   return (
     <BillDialog
       bill={bill}
       trigger={
-        <Button variant="ghost" size="sm">
-          Edit
-        </Button>
+        trigger ?? (
+          <Button variant="ghost" size="sm">
+            Edit
+          </Button>
+        )
       }
     />
   )
