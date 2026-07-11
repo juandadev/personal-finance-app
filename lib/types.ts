@@ -79,6 +79,7 @@ export type BillStatus =
 
 export interface RecurringBillOccurrence {
   dueDate: string
+  statusDueDate?: string
   sequence: number
   amount: number
   status: BillStatus

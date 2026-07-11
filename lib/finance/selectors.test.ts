@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 
 import { selectFinanceViewModel } from "@/lib/finance/selectors"
 import type {
+  CreditCardStatementRecord,
   FinanceState,
   RecurringBillPaymentRecord,
 } from "@/lib/finance/types"
@@ -110,6 +111,23 @@ function makePayment(
   }
 }
 
+function makeStatement(
+  overrides: Partial<CreditCardStatementRecord> = {},
+): CreditCardStatementRecord {
+  return {
+    id: "statement-1",
+    user_id: "user-1",
+    credit_card_id: "card-1",
+    period_start: "2026-06-21",
+    period_end: "2026-07-20",
+    payment_due_date: "2026-08-05",
+    statement_amount_cents: 0,
+    lifecycle_status: "open",
+    paid_at: null,
+    ...overrides,
+  }
+}
+
 function selectCard(state: FinanceState) {
   const card = selectFinanceViewModel(state, TODAY).creditCards[0]
 
@@ -118,6 +136,16 @@ function selectCard(state: FinanceState) {
   }
 
   return card
+}
+
+function selectBill(state: FinanceState, today = TODAY) {
+  const bill = selectFinanceViewModel(state, today).recurringBills[0]
+
+  if (!bill) {
+    throw new Error("Expected recurring bill.")
+  }
+
+  return bill
 }
 
 describe("selectFinanceViewModel credit reservation", () => {
@@ -248,5 +276,90 @@ describe("selectFinanceViewModel credit reservation", () => {
 
     expect(card.reservedInstallmentAmount).toBe(120)
     expect(card.availableCredit).toBe(-20)
+  })
+})
+
+describe("selectFinanceViewModel recurring bill status presentation", () => {
+  test("keeps a non-card bill's original due date and status", () => {
+    const bill = selectBill(
+      makeState(
+        {},
+        {
+          id: "bill-1",
+          credit_card_id: null,
+          first_due_date: "2026-07-04",
+        },
+      ),
+    )
+
+    expect(bill.currentOccurrence?.dueDate).toBe("2026-07-04")
+    expect(bill.currentOccurrence?.statusDueDate).toBeUndefined()
+    expect(bill.status).toBe("overdue")
+  })
+
+  test("uses a virtual statement cycle's payment due date for a card bill", () => {
+    const bill = selectBill(
+      makeState({}, { id: "bill-1", first_due_date: "2026-07-04" }),
+    )
+
+    expect(bill.currentOccurrence?.dueDate).toBe("2026-07-04")
+    expect(bill.currentOccurrence?.statusDueDate).toBe("2026-08-05")
+    expect(bill.status).toBe("upcoming")
+  })
+
+  test("transitions a card bill using its attached statement payment due date", () => {
+    const state = makeState(
+      { creditCardStatements: [makeStatement()] },
+      { id: "bill-1", first_due_date: "2026-07-04" },
+    )
+
+    expect(selectBill(state, "2026-07-28").status).toBe("upcoming")
+    expect(selectBill(state, "2026-07-29").status).toBe("due-soon")
+    expect(selectBill(state, "2026-08-05").status).toBe("due-today")
+    expect(selectBill(state, "2026-08-06").status).toBe("overdue")
+  })
+
+  test("preserves settled card occurrence statuses", () => {
+    const bill = selectBill(
+      makeState(
+        {
+          recurringBillPayments: [
+            makePayment({ due_date: "2026-07-04" }),
+            makePayment({
+              due_date: "2026-08-04",
+              status: "skipped",
+              transaction_id: null,
+            }),
+          ],
+        },
+        { id: "bill-1", first_due_date: "2026-07-04" },
+      ),
+      "2026-08-08",
+    )
+
+    expect(bill.occurrences[0]?.status).toBe("paid")
+    expect(bill.occurrences[0]?.statusDueDate).toBeUndefined()
+    expect(bill.occurrences[1]?.status).toBe("skipped")
+    expect(bill.occurrences[1]?.statusDueDate).toBeUndefined()
+  })
+
+  test("includes overdue card bills in the warning summary aggregate", () => {
+    const viewModel = selectFinanceViewModel(
+      makeState(
+        { creditCardStatements: [makeStatement()] },
+        { id: "bill-1", first_due_date: "2026-07-04" },
+      ),
+      "2026-08-06",
+    )
+    const dueSoonSummary = viewModel.recurringBillsSummary.find(
+      (summary) => summary.label === "Due Soon",
+    )
+
+    expect(dueSoonSummary).toEqual({
+      label: "Due Soon",
+      amount: 100,
+      count: 1,
+      color: "warning",
+    })
   })
 })

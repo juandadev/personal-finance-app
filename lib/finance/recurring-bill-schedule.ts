@@ -18,6 +18,7 @@ const MAX_GENERATED_OCCURRENCES = 1200
 
 export interface RecurringBillOccurrenceState {
   dueDate: string
+  statusDueDate?: string
   sequence: number
   amountCents: number
   status: BillStatus

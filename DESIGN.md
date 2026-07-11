@@ -48,6 +48,7 @@ Current light theme:
 - Secondary and muted surfaces: `#f2f3f7` via `--secondary` and `--muted`
 - Secondary text: `#696868` via `--muted-foreground`
 - Accent teal: `#277c78` via `--accent` and `--ring`
+- Warning brown: `#be6c49` via `--warning`
 - Destructive red: `#c94736` via `--destructive`
 - Borders and inputs: `#ebe9e6` via `--border` and `--input`
 
@@ -67,6 +68,7 @@ Guidelines:
 - Use `bg-card` for primary content containers.
 - Use `bg-background` for the page and subtle nested panels inside cards.
 - Use `text-accent` for positive amounts and positive financial states.
+- Use `text-warning` for warnings that need attention but are not overdue.
 - Use `text-destructive` or `bg-destructive` only for destructive or error
   states.
 - Budget and pot colors can be inline data colors when they represent a user or
@@ -146,35 +148,35 @@ Reference patterns:
 ```tsx
 // Opacity-only fade for elements that appear or disappear.
 <AnimatePresence initial={false} mode="popLayout">
-  {isVisible && (
-    <motion.span
-      initial={shouldReduceMotion ? false : { opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: shouldReduceMotion ? 0 : 0.2 }}
-    >
-      Label
-    </motion.span>
-  )}
+    {isVisible && (
+        <motion.span
+            initial={shouldReduceMotion ? false : {opacity: 0}}
+            animate={{opacity: 1}}
+            exit={{opacity: 0}}
+            transition={{duration: shouldReduceMotion ? 0 : 0.2}}
+        >
+            Label
+        </motion.span>
+    )}
 </AnimatePresence>
 ```
 
 ```tsx
 // Blur + opacity for switching between two elements in the same position.
 <AnimatePresence initial={false} mode="popLayout">
-  <motion.div
-    key={isCollapsed ? "collapsed" : "expanded"}
-    initial={shouldReduceMotion ? false : { opacity: 0, filter: "blur(2px)" }}
-    animate={
-      shouldReduceMotion ? { opacity: 1 } : { opacity: 1, filter: "blur(0px)" }
-    }
-    exit={
-      shouldReduceMotion ? { opacity: 0 } : { opacity: 0, filter: "blur(2px)" }
-    }
-    transition={{ duration: shouldReduceMotion ? 0 : 0.2 }}
-  >
-    {isCollapsed ? <CollapsedIcon /> : <ExpandedIcon />}
-  </motion.div>
+    <motion.div
+        key={isCollapsed ? "collapsed" : "expanded"}
+        initial={shouldReduceMotion ? false : {opacity: 0, filter: "blur(2px)"}}
+        animate={
+            shouldReduceMotion ? {opacity: 1} : {opacity: 1, filter: "blur(0px)"}
+        }
+        exit={
+            shouldReduceMotion ? {opacity: 0} : {opacity: 0, filter: "blur(2px)"}
+        }
+        transition={{duration: shouldReduceMotion ? 0 : 0.2}}
+    >
+        {isCollapsed ? <CollapsedIcon/> : <ExpandedIcon/>}
+    </motion.div>
 </AnimatePresence>
 ```
 
@@ -375,7 +377,7 @@ Button labels should be action-specific: `Add Money`, `Create Budget`,
   with initials fallback, never raw images.
 - Occurrence statuses use fixed labels and icon + color together: `Paid`
   (check, `accent`), `Skipped` (muted), `Upcoming` (muted foreground),
-  `Due Soon` and `Due Today` (warning icon, `destructive` text), `Overdue`
+  `Due Soon` and `Due Today` (warning icon, `warning` text), `Overdue`
   (warning icon, `destructive` text).
 - Finite bills show progress as `Payment N of M`; indefinite bills show the
   frequency (`Monthly` / `Yearly`) instead.

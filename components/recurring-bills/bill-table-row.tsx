@@ -27,10 +27,34 @@ const statusLabels: Record<BillStatus, string> = {
   overdue: "Overdue",
 }
 
-const urgentStatuses: BillStatus[] = ["due-soon", "due-today", "overdue"]
+const warningStatuses: BillStatus[] = ["due-soon", "due-today"]
 
-function isUrgent(status: BillStatus) {
-  return urgentStatuses.includes(status)
+function isWarning(status: BillStatus) {
+  return warningStatuses.includes(status)
+}
+
+function statusClassName(status: BillStatus) {
+  if (status === "paid") {
+    return "text-accent"
+  }
+
+  if (isWarning(status)) {
+    return "text-warning"
+  }
+
+  if (status === "overdue") {
+    return "text-destructive"
+  }
+
+  return "text-muted-foreground"
+}
+
+function amountClassName(status: BillStatus) {
+  if (isWarning(status)) {
+    return "text-warning"
+  }
+
+  return status === "overdue" ? "text-destructive" : "text-foreground"
 }
 
 function scheduleLabel(bill: RecurringBill) {
@@ -53,18 +77,11 @@ function StatusIndicator({
 
   return (
     <span className="flex items-center gap-1.5">
-      <span
-        className={cn(
-          "text-sm",
-          status === "paid"
-            ? "text-accent"
-            : isUrgent(status)
-              ? "text-destructive"
-              : "text-muted-foreground",
-        )}
-      >
-        {occurrence ? formatDisplayDate(occurrence.dueDate) : "—"} ·{" "}
-        {statusLabels[status]}
+      <span className={cn("text-sm", statusClassName(status))}>
+        {occurrence
+          ? formatDisplayDate(occurrence.statusDueDate ?? occurrence.dueDate)
+          : "—"}{" "}
+        · <span className="font-semibold">{statusLabels[status]}</span>
       </span>
       {status === "paid" ? (
         <CircleCheck
@@ -78,9 +95,9 @@ function StatusIndicator({
           aria-hidden
         />
       ) : null}
-      {isUrgent(status) ? (
+      {isWarning(status) || status === "overdue" ? (
         <CircleAlert
-          className={cn("text-destructive size-4", iconClassName)}
+          className={cn(statusClassName(status), "size-4", iconClassName)}
           aria-hidden
         />
       ) : null}
@@ -171,10 +188,7 @@ export function BillTableRow({ bill }: BillTableRowProps) {
         <StatusIndicator bill={bill} />
       </TableCell>
       <TableCell
-        className={cn(
-          "text-right font-bold",
-          isUrgent(bill.status) ? "text-destructive" : "text-foreground",
-        )}
+        className={cn("text-right font-bold", amountClassName(bill.status))}
       >
         {formatCurrency(bill.currentOccurrence?.amount ?? bill.amount, {
           forceDecimals: true,
@@ -197,12 +211,7 @@ export function MobileBillRow({ bill }: BillTableRowProps) {
     >
       <div className="flex items-center justify-between">
         <BillIdentity bill={bill} />
-        <span
-          className={cn(
-            "text-sm font-bold",
-            isUrgent(bill.status) ? "text-destructive" : "text-foreground",
-          )}
-        >
+        <span className={cn("text-sm font-bold", amountClassName(bill.status))}>
           {formatCurrency(bill.currentOccurrence?.amount ?? bill.amount, {
             forceDecimals: true,
           })}

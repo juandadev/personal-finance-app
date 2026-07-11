@@ -11,7 +11,7 @@ interface SummaryRowProps {
   label: string
   count: number
   amount: number
-  variant?: "default" | "danger"
+  variant?: "default" | "warning"
 }
 
 function SummaryRow({
@@ -25,7 +25,7 @@ function SummaryRow({
       <span
         className={cn(
           "text-sm",
-          variant === "danger" ? "text-destructive" : "text-muted-foreground",
+          variant === "warning" ? "text-warning" : "text-muted-foreground",
         )}
       >
         {label}
@@ -33,7 +33,7 @@ function SummaryRow({
       <span
         className={cn(
           "text-sm font-bold",
-          variant === "danger" ? "text-destructive" : "text-foreground",
+          variant === "warning" ? "text-warning" : "text-foreground",
         )}
       >
         {count} ({formatCurrency(amount, { forceDecimals: true })})
@@ -57,7 +57,7 @@ export function BillsSummaryCard({ summary }: BillsSummaryCardProps) {
             label={row.label}
             count={row.count}
             amount={row.amount}
-            variant={row.label === "Due Soon" ? "danger" : "default"}
+            variant={row.label === "Due Soon" ? "warning" : "default"}
           />
         ))}
       </div>

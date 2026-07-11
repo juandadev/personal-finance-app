@@ -1,6 +1,7 @@
 import { getCreditCardDueStatus } from "@/lib/finance/credit-card-cycle"
 import {
   getBillOccurrenceStatementCycle,
+  getRecurringBillDueStatus,
   resolveRecurringBillOccurrences,
   selectCurrentOccurrence,
   todayIsoDate,
@@ -208,11 +209,30 @@ function groupPaymentsByBillId(payments: RecurringBillPaymentRecord[]) {
   return paymentsByBillId
 }
 
+function groupCreditCardStatementsByCardId(
+  statements: CreditCardStatementRecord[],
+) {
+  const statementsByCardId = new Map<string, CreditCardStatementRecord[]>()
+
+  for (const statement of statements) {
+    const cardStatements = statementsByCardId.get(statement.credit_card_id)
+
+    if (cardStatements) {
+      cardStatements.push(statement)
+    } else {
+      statementsByCardId.set(statement.credit_card_id, [statement])
+    }
+  }
+
+  return statementsByCardId
+}
+
 function toOccurrenceView(
   occurrence: RecurringBillOccurrenceState,
 ): RecurringBillOccurrence {
   return {
     dueDate: occurrence.dueDate,
+    statusDueDate: occurrence.statusDueDate,
     sequence: occurrence.sequence,
     amount: centsToDollars(occurrence.amountCents),
     status: occurrence.status,
@@ -222,11 +242,52 @@ function toOccurrenceView(
   }
 }
 
+function resolveBillOccurrencePresentation(
+  bill: Pick<RecurringBillRecord, "credit_card_id">,
+  occurrences: RecurringBillOccurrenceState[],
+  creditCards: Map<string, CreditCardRecord>,
+  statementsByCardId: Map<string, CreditCardStatementRecord[]>,
+  today: string,
+) {
+  if (!bill.credit_card_id) {
+    return occurrences
+  }
+
+  const card = creditCards.get(bill.credit_card_id)
+
+  if (!card) {
+    return occurrences
+  }
+
+  const statements = statementsByCardId.get(card.id) ?? []
+
+  return occurrences.map((occurrence) => {
+    if (occurrence.status === "paid" || occurrence.status === "skipped") {
+      return occurrence
+    }
+
+    const cycle = getBillOccurrenceStatementCycle(
+      occurrence.dueDate,
+      card,
+      statements,
+      today,
+    )
+
+    return {
+      ...occurrence,
+      statusDueDate: cycle.paymentDueDate,
+      status: getRecurringBillDueStatus(cycle.paymentDueDate, today),
+    }
+  })
+}
+
 function selectRecurringBills(
   recurringBills: RecurringBillRecord[],
   paymentsByBillId: Map<string, RecurringBillPaymentRecord[]>,
   counterparties: Map<string, CounterpartyRecord>,
   categories: Map<string, CategoryRecord>,
+  creditCards: Map<string, CreditCardRecord>,
+  statementsByCardId: Map<string, CreditCardStatementRecord[]>,
   today: string,
 ): RecurringBill[] {
   return recurringBills.map((bill) => {
@@ -237,9 +298,11 @@ function selectRecurringBills(
     )
     const category = getRequired(categories, bill.category_id, "category")
     const payments = paymentsByBillId.get(bill.id) ?? []
-    const occurrenceStates = resolveRecurringBillOccurrences(
+    const occurrenceStates = resolveBillOccurrencePresentation(
       bill,
-      payments,
+      resolveRecurringBillOccurrences(bill, payments, today),
+      creditCards,
+      statementsByCardId,
       today,
     )
     const currentOccurrence = selectCurrentOccurrence(occurrenceStates)
@@ -328,7 +391,7 @@ function selectRecurringBillsSummary(
       label: "Due Soon",
       amount: dueSoonAmount,
       count: dueSoonCount,
-      color: "chart-2",
+      color: "warning",
     },
   ]
 }
@@ -721,6 +784,9 @@ export function selectFinanceViewModel(
   const categories = byId(state.categories)
   const counterparties = byId(state.counterparties)
   const creditCardsById = byId(state.creditCards)
+  const creditCardStatementsByCardId = groupCreditCardStatementsByCardId(
+    state.creditCardStatements,
+  )
   const budgetsById = byId(state.budgets)
   const currentBudgetAssignments = selectBudgetAssignmentsForCurrentBudgets(
     state.budgetTransactionAssignments,
@@ -753,6 +819,8 @@ export function selectFinanceViewModel(
     paymentsByBillId,
     counterparties,
     categories,
+    creditCardsById,
+    creditCardStatementsByCardId,
     today,
   )
   const totalBillsAmount = recurringBills
