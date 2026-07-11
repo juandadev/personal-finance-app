@@ -78,6 +78,8 @@ type CreditCardFormValues = z.input<typeof creditCardFormSchema>
 interface CreditCardDialogProps {
   creditCard?: CreditCardRecord
   trigger?: ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 export function AddCreditCardDialog() {
@@ -87,13 +89,19 @@ export function AddCreditCardDialog() {
 export function EditCreditCardDialog({
   creditCard,
   trigger,
+  open,
+  onOpenChange,
 }: {
   creditCard: CreditCardRecord
   trigger?: ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }) {
   return (
     <CreditCardDialog
       creditCard={creditCard}
+      open={open}
+      onOpenChange={onOpenChange}
       trigger={
         trigger ?? (
           <Button variant="ghost" size="sm">
@@ -105,9 +113,23 @@ export function EditCreditCardDialog({
   )
 }
 
-function CreditCardDialog({ creditCard, trigger }: CreditCardDialogProps) {
+function CreditCardDialog({
+  creditCard,
+  trigger,
+  open: controlledOpen,
+  onOpenChange,
+}: CreditCardDialogProps) {
   const { actions, state } = useFinance()
-  const [open, setOpen] = useState(false)
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : uncontrolledOpen
+  const setOpen = (nextOpen: boolean) => {
+    if (!isControlled) {
+      setUncontrolledOpen(nextOpen)
+    }
+
+    onOpenChange?.(nextOpen)
+  }
   const isEditing = Boolean(creditCard)
   const hasUnpaidStatement = creditCard
     ? state.creditCardStatements.some(
@@ -182,7 +204,9 @@ function CreditCardDialog({ creditCard, trigger }: CreditCardDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      {trigger ? <DialogTrigger asChild>{trigger}</DialogTrigger> : null}
+      {trigger && !isControlled ? (
+        <DialogTrigger asChild>{trigger}</DialogTrigger>
+      ) : null}
       <DialogContent variant="finance" showCloseButton={false}>
         <DialogHeader className="text-left">
           <DialogTitle variant="finance">

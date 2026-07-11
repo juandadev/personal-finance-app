@@ -117,6 +117,9 @@ export function TransactionLibraryContent() {
 }
 
 function CategoryRow({ category }: { category: CategoryRecord }) {
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+
   return (
     <div className="flex items-center justify-between gap-4 py-4">
       <div className="flex min-w-0 items-center gap-3">
@@ -136,26 +139,36 @@ function CategoryRow({ category }: { category: CategoryRecord }) {
         </div>
       </div>
       <ItemActions ariaLabel={`More options for ${category.name}`}>
-        <CategoryDialog
-          category={category}
-          trigger={<DropdownMenuItem>Edit Category</DropdownMenuItem>}
-        />
-        <DeleteLibraryRecordDialog
-          label={category.name}
-          recordType="category"
-          trigger={
-            <DropdownMenuItem variant="destructive">
-              Delete Category
-            </DropdownMenuItem>
-          }
-          onDelete={(actions) => actions.deleteCategory(category.id)}
-        />
+        <DropdownMenuItem onSelect={() => setIsEditOpen(true)}>
+          Edit Category
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          variant="destructive"
+          onSelect={() => setIsDeleteOpen(true)}
+        >
+          Delete Category
+        </DropdownMenuItem>
       </ItemActions>
+      <CategoryDialog
+        category={category}
+        open={isEditOpen}
+        onOpenChange={setIsEditOpen}
+      />
+      <DeleteLibraryRecordDialog
+        label={category.name}
+        recordType="category"
+        open={isDeleteOpen}
+        onOpenChange={setIsDeleteOpen}
+        onDelete={(actions) => actions.deleteCategory(category.id)}
+      />
     </div>
   )
 }
 
 function ContactRow({ counterparty }: { counterparty: CounterpartyRecord }) {
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+
   return (
     <div className="flex items-center justify-between gap-4 py-4">
       <div className="flex min-w-0 items-center gap-3">
@@ -176,21 +189,28 @@ function ContactRow({ counterparty }: { counterparty: CounterpartyRecord }) {
         </div>
       </div>
       <ItemActions ariaLabel={`More options for ${counterparty.display_name}`}>
-        <ContactDialog
-          counterparty={counterparty}
-          trigger={<DropdownMenuItem>Edit Contact</DropdownMenuItem>}
-        />
-        <DeleteLibraryRecordDialog
-          label={counterparty.display_name}
-          recordType="contact"
-          trigger={
-            <DropdownMenuItem variant="destructive">
-              Delete Contact
-            </DropdownMenuItem>
-          }
-          onDelete={(actions) => actions.deleteCounterparty(counterparty.id)}
-        />
+        <DropdownMenuItem onSelect={() => setIsEditOpen(true)}>
+          Edit Contact
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          variant="destructive"
+          onSelect={() => setIsDeleteOpen(true)}
+        >
+          Delete Contact
+        </DropdownMenuItem>
       </ItemActions>
+      <ContactDialog
+        counterparty={counterparty}
+        open={isEditOpen}
+        onOpenChange={setIsEditOpen}
+      />
+      <DeleteLibraryRecordDialog
+        label={counterparty.display_name}
+        recordType="contact"
+        open={isDeleteOpen}
+        onOpenChange={setIsDeleteOpen}
+        onDelete={(actions) => actions.deleteCounterparty(counterparty.id)}
+      />
     </div>
   )
 }
@@ -198,12 +218,25 @@ function ContactRow({ counterparty }: { counterparty: CounterpartyRecord }) {
 function CategoryDialog({
   category,
   trigger,
+  open: controlledOpen,
+  onOpenChange,
 }: {
   category?: CategoryRecord
   trigger?: ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }) {
   const { actions } = useFinance()
-  const [open, setOpen] = useState(false)
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : uncontrolledOpen
+  const setOpen = (nextOpen: boolean) => {
+    if (!isControlled) {
+      setUncontrolledOpen(nextOpen)
+    }
+
+    onOpenChange?.(nextOpen)
+  }
   const defaultValues = useMemo(
     () => ({
       name: category?.name ?? "",
@@ -248,13 +281,15 @@ function CategoryDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        {trigger ?? (
-          <Button variant={category ? "ghost" : "default"} size="sm">
-            {category ? "Edit" : "Add Category"}
-          </Button>
-        )}
-      </DialogTrigger>
+      {!isControlled ? (
+        <DialogTrigger asChild>
+          {trigger ?? (
+            <Button variant={category ? "ghost" : "default"} size="sm">
+              {category ? "Edit" : "Add Category"}
+            </Button>
+          )}
+        </DialogTrigger>
+      ) : null}
       <DialogContent variant="finance" showCloseButton={false}>
         <DialogHeader className="text-left">
           <DialogTitle variant="finance">
@@ -326,12 +361,25 @@ function CategoryDialog({
 function ContactDialog({
   counterparty,
   trigger,
+  open: controlledOpen,
+  onOpenChange,
 }: {
   counterparty?: CounterpartyRecord
   trigger?: ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }) {
   const { actions } = useFinance()
-  const [open, setOpen] = useState(false)
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : uncontrolledOpen
+  const setOpen = (nextOpen: boolean) => {
+    if (!isControlled) {
+      setUncontrolledOpen(nextOpen)
+    }
+
+    onOpenChange?.(nextOpen)
+  }
   const defaultValues = useMemo(
     () => ({
       displayName: counterparty?.display_name ?? "",
@@ -388,13 +436,15 @@ function ContactDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        {trigger ?? (
-          <Button variant={counterparty ? "ghost" : "default"} size="sm">
-            {counterparty ? "Edit" : "Add Contact"}
-          </Button>
-        )}
-      </DialogTrigger>
+      {!isControlled ? (
+        <DialogTrigger asChild>
+          {trigger ?? (
+            <Button variant={counterparty ? "ghost" : "default"} size="sm">
+              {counterparty ? "Edit" : "Add Contact"}
+            </Button>
+          )}
+        </DialogTrigger>
+      ) : null}
       <DialogContent variant="finance" showCloseButton={false}>
         <DialogHeader className="text-left">
           <DialogTitle variant="finance">
@@ -522,6 +572,8 @@ function DeleteLibraryRecordDialog({
   recordType,
   onDelete,
   trigger,
+  open: controlledOpen,
+  onOpenChange,
 }: {
   label: string
   recordType: "category" | "contact"
@@ -530,11 +582,26 @@ function DeleteLibraryRecordDialog({
     message: string
   }>
   trigger?: ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }) {
   const { actions } = useFinance()
-  const [open, setOpen] = useState(false)
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
   const [statusMessage, setStatusMessage] = useState("")
   const [isDeleting, setIsDeleting] = useState(false)
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : uncontrolledOpen
+  const setOpen = (nextOpen: boolean) => {
+    if (!isControlled) {
+      setUncontrolledOpen(nextOpen)
+    }
+
+    onOpenChange?.(nextOpen)
+
+    if (!nextOpen) {
+      setStatusMessage("")
+    }
+  }
 
   const handleDelete = async () => {
     setIsDeleting(true)
@@ -554,13 +621,15 @@ function DeleteLibraryRecordDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger asChild>
-        {trigger ?? (
-          <Button variant="ghost" size="sm">
-            Delete
-          </Button>
-        )}
-      </AlertDialogTrigger>
+      {!isControlled ? (
+        <AlertDialogTrigger asChild>
+          {trigger ?? (
+            <Button variant="ghost" size="sm">
+              Delete
+            </Button>
+          )}
+        </AlertDialogTrigger>
+      ) : null}
       <AlertDialogContent variant="finance">
         <AlertDialogHeader className="text-left">
           <AlertDialogTitle variant="finance">

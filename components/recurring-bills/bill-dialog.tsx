@@ -92,6 +92,8 @@ function todayIsoDate() {
 interface BillDialogProps {
   bill?: RecurringBill
   trigger?: ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 export function AddBillDialog() {
@@ -101,13 +103,19 @@ export function AddBillDialog() {
 export function EditBillDialog({
   bill,
   trigger,
+  open,
+  onOpenChange,
 }: {
   bill: RecurringBill
   trigger?: ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }) {
   return (
     <BillDialog
       bill={bill}
+      open={open}
+      onOpenChange={onOpenChange}
       trigger={
         trigger ?? (
           <Button variant="ghost" size="sm">
@@ -119,9 +127,23 @@ export function EditBillDialog({
   )
 }
 
-function BillDialog({ bill, trigger }: BillDialogProps) {
+function BillDialog({
+  bill,
+  trigger,
+  open: controlledOpen,
+  onOpenChange,
+}: BillDialogProps) {
   const { actions, state } = useFinance()
-  const [open, setOpen] = useState(false)
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : uncontrolledOpen
+  const setOpen = (nextOpen: boolean) => {
+    if (!isControlled) {
+      setUncontrolledOpen(nextOpen)
+    }
+
+    onOpenChange?.(nextOpen)
+  }
   const [deleteStatusMessage, setDeleteStatusMessage] = useState("")
   const [isDeleting, setIsDeleting] = useState(false)
   const isEditing = Boolean(bill)
@@ -237,7 +259,9 @@ function BillDialog({ bill, trigger }: BillDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      {trigger ? <DialogTrigger asChild>{trigger}</DialogTrigger> : null}
+      {trigger && !isControlled ? (
+        <DialogTrigger asChild>{trigger}</DialogTrigger>
+      ) : null}
       <DialogContent variant="finance" showCloseButton={false}>
         <DialogHeader className="text-left">
           <DialogTitle variant="finance">

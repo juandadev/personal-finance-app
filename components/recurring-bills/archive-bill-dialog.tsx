@@ -21,11 +21,27 @@ import type { RecurringBill } from "@/lib/types"
 interface ArchiveBillDialogProps {
   bill: RecurringBill
   trigger?: ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
-export function ArchiveBillDialog({ bill, trigger }: ArchiveBillDialogProps) {
+export function ArchiveBillDialog({
+  bill,
+  trigger,
+  open: controlledOpen,
+  onOpenChange,
+}: ArchiveBillDialogProps) {
   const { actions } = useFinance()
-  const [open, setOpen] = useState(false)
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : uncontrolledOpen
+  const setOpen = (nextOpen: boolean) => {
+    if (!isControlled) {
+      setUncontrolledOpen(nextOpen)
+    }
+
+    onOpenChange?.(nextOpen)
+  }
   const [statusMessage, setStatusMessage] = useState("")
   const [isArchiving, setIsArchiving] = useState(false)
 
@@ -47,13 +63,15 @@ export function ArchiveBillDialog({ bill, trigger }: ArchiveBillDialogProps) {
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger asChild>
-        {trigger ?? (
-          <Button variant="ghost" size="sm" className="text-destructive">
-            Archive
-          </Button>
-        )}
-      </AlertDialogTrigger>
+      {!isControlled ? (
+        <AlertDialogTrigger asChild>
+          {trigger ?? (
+            <Button variant="ghost" size="sm" className="text-destructive">
+              Archive
+            </Button>
+          )}
+        </AlertDialogTrigger>
+      ) : null}
       <AlertDialogContent variant="finance">
         <AlertDialogHeader className="text-left">
           <AlertDialogTitle variant="finance">

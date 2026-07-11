@@ -19,7 +19,6 @@ import {
   AlertDialogDescription,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -108,6 +107,8 @@ export function CreditCardsPageContent() {
 
 function CreditCardTile({ creditCard }: { creditCard: CreditCard }) {
   const { state } = useFinance()
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [isArchiveOpen, setIsArchiveOpen] = useState(false)
   const rawCreditCard = state.creditCards.find(
     (card) => card.id === creditCard.id,
   )
@@ -142,14 +143,16 @@ function CreditCardTile({ creditCard }: { creditCard: CreditCard }) {
             </span>
             <ItemActions ariaLabel={`More options for ${creditCard.nickname}`}>
               {rawCreditCard ? (
-                <EditCreditCardDialog
-                  creditCard={rawCreditCard}
-                  trigger={
-                    <DropdownMenuItem>Edit Credit Card</DropdownMenuItem>
-                  }
-                />
+                <DropdownMenuItem onSelect={() => setIsEditOpen(true)}>
+                  Edit Credit Card
+                </DropdownMenuItem>
               ) : null}
-              <ArchiveCreditCardDialog creditCard={creditCard} />
+              <DropdownMenuItem
+                variant="destructive"
+                onSelect={() => setIsArchiveOpen(true)}
+              >
+                Archive Credit Card
+              </DropdownMenuItem>
             </ItemActions>
           </div>
         </div>
@@ -241,13 +244,32 @@ function CreditCardTile({ creditCard }: { creditCard: CreditCard }) {
         <PayCreditCardStatementDialog creditCard={creditCard} />
         <CloseCreditCardStatementDialog creditCard={creditCard} />
       </div>
+      {rawCreditCard ? (
+        <EditCreditCardDialog
+          creditCard={rawCreditCard}
+          open={isEditOpen}
+          onOpenChange={setIsEditOpen}
+        />
+      ) : null}
+      <ArchiveCreditCardDialog
+        creditCard={creditCard}
+        open={isArchiveOpen}
+        onOpenChange={setIsArchiveOpen}
+      />
     </Card>
   )
 }
 
-function ArchiveCreditCardDialog({ creditCard }: { creditCard: CreditCard }) {
+function ArchiveCreditCardDialog({
+  creditCard,
+  open,
+  onOpenChange,
+}: {
+  creditCard: CreditCard
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
   const { actions } = useFinance()
-  const [open, setOpen] = useState(false)
   const [statusMessage, setStatusMessage] = useState("")
   const [isArchiving, setIsArchiving] = useState(false)
 
@@ -267,13 +289,16 @@ function ArchiveCreditCardDialog({ creditCard }: { creditCard: CreditCard }) {
     setOpen(false)
   }
 
+  const setOpen = (nextOpen: boolean) => {
+    onOpenChange(nextOpen)
+
+    if (!nextOpen) {
+      setStatusMessage("")
+    }
+  }
+
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger asChild>
-        <DropdownMenuItem variant="destructive">
-          Archive Credit Card
-        </DropdownMenuItem>
-      </AlertDialogTrigger>
       <AlertDialogContent variant="finance">
         <AlertDialogHeader className="text-left">
           <AlertDialogTitle variant="finance">

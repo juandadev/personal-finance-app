@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { CircleAlert, CircleCheck, CreditCard, MinusCircle } from "lucide-react"
 
 import { ItemActions } from "@/components/actions"
@@ -139,6 +140,8 @@ function BillIdentity({ bill }: { bill: RecurringBill }) {
 }
 
 function BillActions({ bill }: { bill: RecurringBill }) {
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [isArchiveOpen, setIsArchiveOpen] = useState(false)
   const occurrence = bill.currentOccurrence
   const isActionable =
     !bill.archivedAt &&
@@ -158,21 +161,34 @@ function BillActions({ bill }: { bill: RecurringBill }) {
       ) : null}
       {!bill.archivedAt ? (
         <ItemActions ariaLabel={`More options for ${bill.concept}`}>
+          <DropdownMenuItem onSelect={() => setIsEditOpen(true)}>
+            Edit Bill
+          </DropdownMenuItem>
+          {bill.hasPayments ? (
+            <DropdownMenuItem
+              variant="destructive"
+              onSelect={() => setIsArchiveOpen(true)}
+            >
+              Archive Bill
+            </DropdownMenuItem>
+          ) : null}
+        </ItemActions>
+      ) : null}
+      {!bill.archivedAt ? (
+        <>
           <EditBillDialog
             bill={bill}
-            trigger={<DropdownMenuItem>Edit Bill</DropdownMenuItem>}
+            open={isEditOpen}
+            onOpenChange={setIsEditOpen}
           />
           {bill.hasPayments ? (
             <ArchiveBillDialog
               bill={bill}
-              trigger={
-                <DropdownMenuItem variant="destructive">
-                  Archive Bill
-                </DropdownMenuItem>
-              }
+              open={isArchiveOpen}
+              onOpenChange={setIsArchiveOpen}
             />
           ) : null}
-        </ItemActions>
+        </>
       ) : null}
     </div>
   )
