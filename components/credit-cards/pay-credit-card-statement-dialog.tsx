@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useState, type ReactNode } from "react"
 
 import {
@@ -37,7 +38,7 @@ interface PayCreditCardStatementDialogProps {
 
 export function PayCreditCardStatementDialog({
   creditCard,
-  statement = creditCard.currentStatement,
+  statement,
   trigger,
 }: PayCreditCardStatementDialogProps) {
   const { actions } = useFinance()
@@ -45,12 +46,14 @@ export function PayCreditCardStatementDialog({
   const [paidAt, setPaidAt] = useState(todayIsoDate())
   const [statusMessage, setStatusMessage] = useState("")
   const [isPaying, setIsPaying] = useState(false)
+  const selectedStatement = statement ?? creditCard.oldestPayableStatement
+  const isCardLevelPayment = statement === undefined
   const canPay =
-    statement &&
-    statement.lifecycleStatus !== "paid" &&
-    statement.totalAmount > 0
+    selectedStatement &&
+    selectedStatement.lifecycleStatus !== "paid" &&
+    selectedStatement.totalAmount > 0
 
-  if (!canPay || !statement) {
+  if (!canPay || !selectedStatement) {
     return null
   }
 
@@ -60,13 +63,13 @@ export function PayCreditCardStatementDialog({
 
     // Virtual statements have no row yet (pending bills only); the cycle pay
     // action creates the statement before paying it.
-    const result = statement.isVirtual
+    const result = selectedStatement.isVirtual
       ? await actions.payCreditCardCycle(
           creditCard.id,
-          statement.periodEnd,
+          selectedStatement.periodEnd,
           paidAt,
         )
-      : await actions.payCreditCardStatement(statement.id, paidAt)
+      : await actions.payCreditCardStatement(selectedStatement.id, paidAt)
 
     setIsPaying(false)
 
@@ -87,8 +90,23 @@ export function PayCreditCardStatementDialog({
         <AlertDialogHeader className="text-left">
           <AlertDialogTitle variant="finance">Pay Statement?</AlertDialogTitle>
           <AlertDialogDescription variant="finance">
-            This will reduce your current balance without adding a new expense
-            or budget spend.
+            {isCardLevelPayment ? (
+              <>
+                You are paying the oldest payable statement:{" "}
+                <span className="font-semibold">
+                  {formatDisplayDateRange(
+                    selectedStatement.periodStart,
+                    selectedStatement.periodEnd,
+                  )}
+                </span>
+                . Choose another statement from card details if needed.
+              </>
+            ) : (
+              <>
+                This will reduce your current balance without adding a new
+                expense or budget spend.
+              </>
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogCloseButton aria-label="Close pay statement dialog" />
@@ -102,33 +120,33 @@ export function PayCreditCardStatementDialog({
               <dt className="text-muted-foreground">Statement Period</dt>
               <dd className="text-right">
                 {formatDisplayDateRange(
-                  statement.periodStart,
-                  statement.periodEnd,
+                  selectedStatement.periodStart,
+                  selectedStatement.periodEnd,
                 )}
               </dd>
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-muted-foreground">Due Date</dt>
               <dd className="text-right">
-                {formatDisplayDate(statement.paymentDueDate)}
+                {formatDisplayDate(selectedStatement.paymentDueDate)}
               </dd>
             </div>
-            {statement.pendingBillsAmount > 0 ? (
+            {selectedStatement.pendingBillsAmount > 0 ? (
               <>
                 <div className="flex justify-between gap-4">
                   <dt className="text-muted-foreground">Purchases</dt>
                   <dd className="text-right">
-                    {formatCurrency(statement.amount, {
+                    {formatCurrency(selectedStatement.amount, {
                       forceDecimals: true,
                     })}
                   </dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-muted-foreground">
-                    Recurring Bills ({statement.pendingBills.length})
+                    Recurring Bills ({selectedStatement.pendingBills.length})
                   </dt>
                   <dd className="text-right">
-                    {formatCurrency(statement.pendingBillsAmount, {
+                    {formatCurrency(selectedStatement.pendingBillsAmount, {
                       forceDecimals: true,
                     })}
                   </dd>
@@ -138,13 +156,13 @@ export function PayCreditCardStatementDialog({
             <div className="flex justify-between gap-4">
               <dt className="text-muted-foreground">Amount</dt>
               <dd className="text-right font-bold">
-                {formatCurrency(statement.totalAmount, {
+                {formatCurrency(selectedStatement.totalAmount, {
                   forceDecimals: true,
                 })}
               </dd>
             </div>
           </dl>
-          {statement.pendingBillsAmount > 0 ? (
+          {selectedStatement.pendingBillsAmount > 0 ? (
             <p className="text-muted-foreground text-xs leading-normal">
               Paying this statement also records the due recurring bills as card
               transactions and marks them as paid.
@@ -175,6 +193,13 @@ export function PayCreditCardStatementDialog({
             >
               {isPaying ? "Paying..." : "Pay Statement"}
             </AlertDialogAction>
+            {isCardLevelPayment ? (
+              <Button asChild variant="secondary" size="finance-submit">
+                <Link href={`/credit-cards/${creditCard.id}`}>
+                  View Card Details
+                </Link>
+              </Button>
+            ) : null}
             <AlertDialogCancel
               variant="muted-link"
               size="text-link"

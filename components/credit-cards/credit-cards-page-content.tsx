@@ -49,7 +49,7 @@ function statusClassName(status: CreditCardDueStatus) {
     case "due-today":
       return "text-destructive"
     case "due-soon":
-      return "text-foreground"
+      return "text-warning"
     case "paid":
       return "text-accent"
     case "upcoming":
@@ -58,7 +58,7 @@ function statusClassName(status: CreditCardDueStatus) {
 }
 
 export function CreditCardsPageContent() {
-  const { creditCards, creditCardSummary, totalCreditCardStatementBalance } =
+  const { creditCards, creditCardSummary, totalCreditCardPendingBalance } =
     useFinance()
   const activeCards = creditCards.filter((card) => !card.archivedAt)
 
@@ -66,9 +66,9 @@ export function CreditCardsPageContent() {
     <div className="mt-6 space-y-6">
       <div className="grid gap-3 md:grid-cols-2 md:gap-6 xl:grid-cols-4">
         <Card padding="overview" variant="primary">
-          <p className="text-primary-foreground text-sm">Statement Balance</p>
+          <p className="text-primary-foreground text-sm">Total Pending</p>
           <p className="mt-3 text-3xl font-bold tracking-tight">
-            {formatCurrency(totalCreditCardStatementBalance, {
+            {formatCurrency(totalCreditCardPendingBalance, {
               forceDecimals: true,
             })}
           </p>
@@ -168,15 +168,15 @@ function CreditCardTile({ creditCard }: { creditCard: CreditCard }) {
           </p>
           <CreditUtilizationBar
             creditLimit={creditCard.creditLimit}
-            currentStatementAmount={creditCard.currentStatementAmount}
+            totalPendingAmount={creditCard.totalPendingAmount}
             reservedInstallmentAmount={creditCard.reservedInstallmentAmount}
             color={creditCard.color}
           />
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <CreditValue
-              label="Current Statement"
-              value={formatCurrency(creditCard.currentStatementAmount, {
+              label="Total Pending"
+              value={formatCurrency(creditCard.totalPendingAmount, {
                 forceDecimals: true,
               })}
               indicatorClassName={themeColorClasses[creditCard.color].bg}

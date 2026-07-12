@@ -11,6 +11,7 @@ import { formatDisplayDate } from "@/lib/format"
 import type {
   Budget,
   CreditCard,
+  CreditCardDueStatus,
   CreditCardPayment,
   CreditCardPendingBillLine,
   CreditCardStatement,
@@ -551,6 +552,7 @@ function selectReservedInstallmentCentsByCard(
 function selectCreditCardStatements(
   statements: CreditCardStatementRecord[],
   pendingCyclesByCardId: Map<string, Map<string, PendingCycleGroup>>,
+  today: string,
 ): CreditCardStatement[] {
   const statementViews = statements.map((statement) => {
     const pendingBills =
@@ -574,7 +576,7 @@ function selectCreditCardStatements(
       pendingBillsAmount,
       totalAmount: amount + pendingBillsAmount,
       lifecycleStatus: statement.lifecycle_status,
-      dueStatus: getCreditCardDueStatus(statement),
+      dueStatus: getCreditCardDueStatus(statement, today),
       paidAt: statement.paid_at ?? undefined,
     }
   })
@@ -610,10 +612,13 @@ function selectCreditCardStatements(
         pendingBillsAmount,
         totalAmount: pendingBillsAmount,
         lifecycleStatus: "open",
-        dueStatus: getCreditCardDueStatus({
-          lifecycle_status: "open",
-          payment_due_date: group.paymentDueDate,
-        }),
+        dueStatus: getCreditCardDueStatus(
+          {
+            lifecycle_status: "open",
+            payment_due_date: group.paymentDueDate,
+          },
+          today,
+        ),
         isVirtual: true,
       })
     }
@@ -651,16 +656,77 @@ function selectCurrentCreditCardStatement(
   return activeStatement ?? unpaidStatements[0] ?? statements[0]
 }
 
+const creditCardDueStatusPriority: Record<CreditCardDueStatus, number> = {
+  paid: 0,
+  upcoming: 1,
+  "due-soon": 2,
+  "due-today": 3,
+  overdue: 4,
+}
+
+function selectCreditCardPendingSummary(
+  statements: CreditCardStatement[],
+  currentStatement?: CreditCardStatement,
+) {
+  const unpaidStatements = statements.filter(
+    (statement) => statement.lifecycleStatus !== "paid",
+  )
+  const oldestPayableStatement = unpaidStatements
+    .filter((statement) => statement.totalAmount > 0)
+    .toSorted((left, right) => {
+      const dueDateComparison = left.paymentDueDate.localeCompare(
+        right.paymentDueDate,
+      )
+
+      return dueDateComparison !== 0
+        ? dueDateComparison
+        : left.periodStart.localeCompare(right.periodStart)
+    })[0]
+  const mostUrgentUnpaidStatement = unpaidStatements.toSorted((left, right) => {
+    const statusComparison =
+      creditCardDueStatusPriority[right.dueStatus] -
+      creditCardDueStatusPriority[left.dueStatus]
+
+    if (statusComparison !== 0) {
+      return statusComparison
+    }
+
+    const dueDateComparison = left.paymentDueDate.localeCompare(
+      right.paymentDueDate,
+    )
+
+    return dueDateComparison !== 0
+      ? dueDateComparison
+      : left.periodStart.localeCompare(right.periodStart)
+  })[0]
+  const totalPendingCents = unpaidStatements.reduce(
+    (sum, statement) => sum + Math.round(statement.totalAmount * 100),
+    0,
+  )
+
+  return {
+    totalPendingAmount: centsToDollars(totalPendingCents),
+    oldestPayableStatement,
+    hasOverdueStatement: mostUrgentUnpaidStatement?.dueStatus === "overdue",
+    dueStatus:
+      mostUrgentUnpaidStatement?.dueStatus ??
+      currentStatement?.dueStatus ??
+      "upcoming",
+  }
+}
+
 function selectCreditCards(
   cards: CreditCardRecord[],
   statements: CreditCardStatementRecord[],
   payments: CreditCardPaymentRecord[],
   pendingCyclesByCardId: Map<string, Map<string, PendingCycleGroup>>,
   reservedInstallmentCentsByCard: Map<string, number>,
+  today: string,
 ): CreditCard[] {
   const selectedStatements = selectCreditCardStatements(
     statements,
     pendingCyclesByCardId,
+    today,
   )
   const selectedPayments = selectCreditCardPayments(payments)
 
@@ -673,6 +739,10 @@ function selectCreditCards(
     )
     const currentStatement = selectCurrentCreditCardStatement(cardStatements)
     const currentStatementAmount = currentStatement?.totalAmount ?? 0
+    const pendingSummary = selectCreditCardPendingSummary(
+      cardStatements,
+      currentStatement,
+    )
     const creditLimit = centsToDollars(card.credit_limit_cents)
     const reservedInstallmentAmount = centsToDollars(
       reservedInstallmentCentsByCard.get(card.id) ?? 0,
@@ -696,10 +766,15 @@ function selectCreditCards(
       statements: cardStatements,
       payments: cardPayments,
       currentStatementAmount,
+      totalPendingAmount: pendingSummary.totalPendingAmount,
+      oldestPayableStatement: pendingSummary.oldestPayableStatement,
+      hasOverdueStatement: pendingSummary.hasOverdueStatement,
       reservedInstallmentAmount,
       availableCredit:
-        creditLimit - currentStatementAmount - reservedInstallmentAmount,
-      dueStatus: currentStatement?.dueStatus ?? "upcoming",
+        creditLimit -
+        pendingSummary.totalPendingAmount -
+        reservedInstallmentAmount,
+      dueStatus: pendingSummary.dueStatus,
     }
   })
 }
@@ -725,17 +800,14 @@ function selectCreditCardSummary(
     {
       label: "Paid",
       count: paidCards.length,
-      amount: paidCards.reduce(
-        (sum, card) => sum + card.currentStatementAmount,
-        0,
-      ),
+      amount: paidCards.reduce((sum, card) => sum + card.totalPendingAmount, 0),
       color: "chart-1",
     },
     {
       label: "Upcoming",
       count: upcomingCards.length,
       amount: upcomingCards.reduce(
-        (sum, card) => sum + card.currentStatementAmount,
+        (sum, card) => sum + card.totalPendingAmount,
         0,
       ),
       color: "chart-4",
@@ -744,7 +816,7 @@ function selectCreditCardSummary(
       label: "Due Soon / Overdue",
       count: urgentCards.length,
       amount: urgentCards.reduce(
-        (sum, card) => sum + card.currentStatementAmount,
+        (sum, card) => sum + card.totalPendingAmount,
         0,
       ),
       color: "chart-2",
@@ -846,6 +918,7 @@ export function selectFinanceViewModel(
       pendingCyclesByCardId,
       today,
     ),
+    today,
   )
   const creditCardSummary = selectCreditCardSummary(creditCards)
 
@@ -863,8 +936,8 @@ export function selectFinanceViewModel(
     totalBillsAmount,
     creditCards,
     creditCardSummary,
-    totalCreditCardStatementBalance: creditCards.reduce(
-      (sum, card) => sum + card.currentStatementAmount,
+    totalCreditCardPendingBalance: creditCards.reduce(
+      (sum, card) => sum + card.totalPendingAmount,
       0,
     ),
   }

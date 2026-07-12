@@ -181,6 +181,9 @@ export interface CreditCard {
   statements: CreditCardStatement[]
   payments: CreditCardPayment[]
   currentStatementAmount: number
+  totalPendingAmount: number
+  oldestPayableStatement?: CreditCardStatement
+  hasOverdueStatement: boolean
   reservedInstallmentAmount: number
   availableCredit: number
   dueStatus: CreditCardDueStatus

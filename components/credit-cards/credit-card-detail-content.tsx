@@ -97,10 +97,11 @@ export function CreditCardDetailContent({
           )}
         >
           <Metric
-            label="Current Statement"
-            value={formatCurrency(creditCard.currentStatementAmount, {
+            label="Total Pending"
+            value={formatCurrency(creditCard.totalPendingAmount, {
               forceDecimals: true,
             })}
+            status={creditCard.dueStatus}
           />
           <Metric
             label="Available Credit"
@@ -304,10 +305,25 @@ function PaymentsCard({ creditCard }: { creditCard: CreditCard }) {
   )
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function Metric({
+  label,
+  value,
+  status,
+}: {
+  label: string
+  value: string
+  status?: CreditCardDueStatus
+}) {
   return (
     <div className="bg-background rounded-lg p-3">
-      <p className="text-muted-foreground text-xs">{label}</p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-muted-foreground text-xs">{label}</p>
+        {status ? (
+          <p className={cn("text-xs font-bold", statusClassName(status))}>
+            {statusLabels[status]}
+          </p>
+        ) : null}
+      </div>
       <p className="text-foreground mt-1 text-sm font-bold">{value}</p>
     </div>
   )

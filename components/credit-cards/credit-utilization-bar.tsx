@@ -6,30 +6,27 @@ import { cn } from "@/lib/utils"
 
 interface CreditUtilizationBarProps {
   creditLimit: number
-  currentStatementAmount: number
+  totalPendingAmount: number
   reservedInstallmentAmount: number
   color: ThemeColor
 }
 
 export function CreditUtilizationBar({
   creditLimit,
-  currentStatementAmount,
+  totalPendingAmount,
   reservedInstallmentAmount,
   color,
 }: CreditUtilizationBarProps) {
   const usableLimit = Math.max(creditLimit, 0)
-  const statementSegment = Math.min(
-    Math.max(currentStatementAmount, 0),
-    usableLimit,
-  )
+  const pendingSegment = Math.min(Math.max(totalPendingAmount, 0), usableLimit)
   const reservedSegment = Math.min(
     Math.max(reservedInstallmentAmount, 0),
-    Math.max(usableLimit - statementSegment, 0),
+    Math.max(usableLimit - pendingSegment, 0),
   )
-  const utilizedCredit = currentStatementAmount + reservedInstallmentAmount
+  const utilizedCredit = totalPendingAmount + reservedInstallmentAmount
   const availableCredit = creditLimit - utilizedCredit
-  const statementWidth =
-    usableLimit > 0 ? (statementSegment / usableLimit) * 100 : 0
+  const pendingWidth =
+    usableLimit > 0 ? (pendingSegment / usableLimit) * 100 : 0
   const reservedWidth =
     usableLimit > 0 ? (reservedSegment / usableLimit) * 100 : 0
 
@@ -41,12 +38,9 @@ export function CreditUtilizationBar({
       aria-valuemin={0}
       aria-valuemax={usableLimit}
       aria-valuenow={Math.min(Math.max(utilizedCredit, 0), usableLimit)}
-      aria-valuetext={`Current statement ${formatCurrency(
-        currentStatementAmount,
-        {
-          forceDecimals: true,
-        },
-      )}, reserved installments ${formatCurrency(reservedInstallmentAmount, {
+      aria-valuetext={`Total pending ${formatCurrency(totalPendingAmount, {
+        forceDecimals: true,
+      })}, reserved installments ${formatCurrency(reservedInstallmentAmount, {
         forceDecimals: true,
       })}, available credit ${formatCurrency(availableCredit, {
         forceDecimals: true,
@@ -59,13 +53,13 @@ export function CreditUtilizationBar({
           reservedWidth === 0 && "rounded-r-sm",
           themeColorClasses[color].bg,
         )}
-        style={{ width: `${statementWidth}%` }}
+        style={{ width: `${pendingWidth}%` }}
       />
       <div
         aria-hidden="true"
         className={cn(
           "bg-muted-foreground/35 h-full rounded-r-sm",
-          statementWidth === 0 && "rounded-l-sm",
+          pendingWidth === 0 && "rounded-l-sm",
         )}
         style={{ width: `${reservedWidth}%` }}
       />

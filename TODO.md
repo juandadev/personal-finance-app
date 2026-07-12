@@ -42,3 +42,10 @@
 - [ ] All the calendar input implementation are using the native calendar input, I want the custom one from shadcn, not
       sure if we get rid of it when I asked to add tanstack form library to manage forms, but I do want the custom shadcn
       calendar for every existing form that uses a calendar picker
+- [ ] We are assuming that when a user pays a credit card, he wants to pay everything from it, even though not paying
+      the total amount gets into more debt and interests, some people pays a custom amount (even more than they have to), so
+      we need to offer an option to set a custom amount when paying a credit card, and register the transaction for that
+      custom amount
+  - [ ] We need to consider adding a new status to a credit card, ONLY when the user didn't pay the whole amount, only
+        below that value, we should display a status that they are generating interest or something, don't know the exact
+        term in english for that

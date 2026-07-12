@@ -251,5 +251,5 @@ export interface FinanceViewModel {
   totalBillsAmount: number
   creditCards: CreditCard[]
   creditCardSummary: CreditCardSummary[]
-  totalCreditCardStatementBalance: number
+  totalCreditCardPendingBalance: number
 }

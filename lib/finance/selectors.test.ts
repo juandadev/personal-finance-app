@@ -284,6 +284,118 @@ describe("selectFinanceViewModel credit reservation", () => {
   })
 })
 
+describe("selectFinanceViewModel credit-card total pending", () => {
+  const overdueStatement = makeStatement({
+    id: "statement-june",
+    period_start: "2026-05-21",
+    period_end: "2026-06-20",
+    payment_due_date: "2026-07-15",
+    statement_amount_cents: 1_904_619,
+  })
+  const activeStatement = makeStatement({
+    id: "statement-july",
+    period_start: "2026-06-21",
+    period_end: "2026-07-20",
+    payment_due_date: "2026-08-15",
+    statement_amount_cents: 137_487,
+  })
+
+  test("uses the oldest due-soon statement for card status while preserving the active statement", () => {
+    const viewModel = selectFinanceViewModel(
+      makeState({
+        creditCardStatements: [overdueStatement, activeStatement],
+      }),
+      "2026-07-11",
+    )
+    const card = viewModel.creditCards[0]
+
+    expect(card?.currentStatement?.id).toBe("statement-july")
+    expect(card?.currentStatementAmount).toBe(1374.87)
+    expect(card?.totalPendingAmount).toBe(20_421.06)
+    expect(card?.oldestPayableStatement?.id).toBe("statement-june")
+    expect(card?.hasOverdueStatement).toBe(false)
+    expect(card?.dueStatus).toBe("due-soon")
+    expect(card?.availableCredit).toBe(-19_421.06)
+    expect(viewModel.totalCreditCardPendingBalance).toBe(20_421.06)
+    expect(
+      viewModel.creditCardSummary.find(
+        (summary) => summary.label === "Due Soon / Overdue",
+      ),
+    ).toEqual({
+      label: "Due Soon / Overdue",
+      count: 1,
+      amount: 20_421.06,
+      color: "chart-2",
+    })
+    expect(
+      viewModel.creditCardSummary.find(
+        (summary) => summary.label === "Upcoming",
+      )?.count,
+    ).toBe(0)
+  })
+
+  test("uses overdue status when any unpaid statement is past due", () => {
+    const card = selectFinanceViewModel(
+      makeState({
+        creditCardStatements: [overdueStatement, activeStatement],
+      }),
+      "2026-07-16",
+    ).creditCards[0]
+
+    expect(card?.currentStatement?.id).toBe("statement-july")
+    expect(card?.totalPendingAmount).toBe(20_421.06)
+    expect(card?.hasOverdueStatement).toBe(true)
+    expect(card?.dueStatus).toBe("overdue")
+  })
+
+  test("includes pending recurring bills once in the aggregate and available credit", () => {
+    const card = selectCard(
+      makeState(
+        {
+          creditCardStatements: [
+            makeStatement({
+              id: "statement-june",
+              period_start: "2026-05-21",
+              period_end: "2026-06-20",
+              payment_due_date: "2026-07-05",
+              statement_amount_cents: 25_000,
+            }),
+          ],
+        },
+        {
+          id: "bill-1",
+          amount_cents: 10_000,
+          first_due_date: "2026-07-04",
+          total_payments: 3,
+        },
+      ),
+    )
+
+    expect(card.totalPendingAmount).toBe(350)
+    expect(card.oldestPayableStatement?.id).toBe("statement-june")
+    expect(card.reservedInstallmentAmount).toBe(200)
+    expect(card.availableCredit).toBe(450)
+  })
+
+  test("removes paid statements from the aggregate and updates the payment target", () => {
+    const card = selectCard(
+      makeState({
+        creditCardStatements: [
+          {
+            ...overdueStatement,
+            lifecycle_status: "paid",
+            paid_at: "2026-07-12",
+          },
+          activeStatement,
+        ],
+      }),
+    )
+
+    expect(card.totalPendingAmount).toBe(1374.87)
+    expect(card.oldestPayableStatement?.id).toBe("statement-july")
+  })
+})
+
 describe("selectFinanceViewModel recurring bill status presentation", () => {
   test("keeps a non-card bill's original due date and status", () => {
     const bill = selectBill(

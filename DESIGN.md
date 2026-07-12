@@ -395,6 +395,16 @@ Button labels should be action-specific: `Add Money`, `Create Budget`,
 - Archived bills stay listed under an `Archived` group with muted styling, no
   pay/skip actions, and no new occurrences.
 
+### Credit Cards
+
+- Card-level balances use the `Total Pending` label and include every unpaid
+  statement, including pending card-assigned bill amounts.
+- Card-level status uses the most urgent unpaid statement: `Overdue`, then `Due
+Today`, then `Due Soon`, then `Upcoming`. `Overdue` uses destructive text.
+- When a card-level payment targets the oldest payable statement, the dialog
+  explains that selection, emphasizes the statement period, and offers a
+  secondary route to card details for choosing another statement.
+
 ## Finance Data Rules
 
 - Use formatting helpers from `lib/format` for currency and signed amounts.
