@@ -504,7 +504,6 @@ async function syncBudgetAssignment(
           ON b.user_id = t.user_id
           AND b.id = $3
           AND b.period = $4
-          AND b.category_id = t.category_id
         WHERE t.user_id = $1
           AND t.id = $2
           AND t.amount_cents < 0
@@ -533,7 +532,7 @@ async function syncBudgetAssignment(
 
   if (!result.rowCount) {
     throw new Error(
-      "Choose a matching current-month budget for this expense transaction.",
+      "Choose a current-month budget for this expense transaction.",
     )
   }
 
@@ -2371,7 +2370,6 @@ export async function assignTransactionToBudget(
             ON b.user_id = t.user_id
             AND b.id = $3
             AND b.period = $4
-            AND b.category_id = t.category_id
           WHERE t.user_id = $1
             AND t.id = $2
             AND t.amount_cents < 0
@@ -2400,7 +2398,7 @@ export async function assignTransactionToBudget(
 
     if (!result.rowCount) {
       throw new Error(
-        "Only matching-category current-month expense transactions can be assigned to budgets.",
+        "Only current-month expense transactions can be assigned to budgets.",
       )
     }
 

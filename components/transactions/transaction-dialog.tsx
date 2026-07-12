@@ -201,13 +201,12 @@ function TransactionDialog({
         return
       }
 
-      const matchingBudgets = getMatchingBudgets({
+      const eligibleBudgets = getEligibleBudgets({
         budgets: state.budgets,
-        categoryId: value.categoryId,
         postedAt: value.postedAt,
         transactionType: value.transactionType,
       })
-      const selectedBudgetId = matchingBudgets.some(
+      const selectedBudgetId = eligibleBudgets.some(
         (budget) => budget.id === value.budgetId,
       )
         ? value.budgetId
@@ -519,23 +518,21 @@ function TransactionDialog({
           <mainForm.form.Subscribe
             selector={(formState) => ({
               budgetId: formState.values.budgetId,
-              categoryId: formState.values.categoryId,
               postedAt: formState.values.postedAt,
               transactionType: formState.values.transactionType,
             })}
           >
-            {({ budgetId, categoryId, postedAt, transactionType }) => {
+            {({ budgetId, postedAt, transactionType }) => {
               if (transactionType !== "expense") {
                 return null
               }
 
-              const matchingBudgets = getMatchingBudgets({
+              const eligibleBudgets = getEligibleBudgets({
                 budgets: state.budgets,
-                categoryId,
                 postedAt,
                 transactionType,
               })
-              const selectedBudgetId = matchingBudgets.some(
+              const selectedBudgetId = eligibleBudgets.some(
                 (budget) => budget.id === budgetId,
               )
                 ? budgetId
@@ -545,14 +542,14 @@ function TransactionDialog({
                 <div className="space-y-2">
                   <FormSelect
                     id="transaction-budget"
-                    label="Matching Budget"
+                    label="Budget"
                     value={selectedBudgetId}
                     onValueChange={(value) =>
                       mainForm.setValue("budgetId", value)
                     }
                     options={[
                       { value: noBudgetValue, label: "No budget" },
-                      ...matchingBudgets.map((budget) => ({
+                      ...eligibleBudgets.map((budget) => ({
                         value: budget.id,
                         label:
                           state.categories.find(
@@ -561,9 +558,9 @@ function TransactionDialog({
                       })),
                     ]}
                   />
-                  {matchingBudgets.length === 0 ? (
+                  {eligibleBudgets.length === 0 ? (
                     <p className="text-muted-foreground text-xs">
-                      No matching active budget for this category and date.
+                      No active budget is available for this date.
                     </p>
                   ) : null}
                 </div>
@@ -722,14 +719,12 @@ function FormSelect({
   )
 }
 
-function getMatchingBudgets({
+function getEligibleBudgets({
   budgets,
-  categoryId,
   postedAt,
   transactionType,
 }: {
   budgets: ReturnType<typeof useFinance>["state"]["budgets"]
-  categoryId: string
   postedAt: string
   transactionType: "expense" | "income"
 }) {
@@ -737,8 +732,5 @@ function getMatchingBudgets({
     return []
   }
 
-  return budgets.filter(
-    (budget) =>
-      budget.category_id === categoryId && postedAt.startsWith(budget.period),
-  )
+  return budgets.filter((budget) => postedAt.startsWith(budget.period))
 }

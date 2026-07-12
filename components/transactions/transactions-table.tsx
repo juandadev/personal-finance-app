@@ -272,17 +272,15 @@ function BudgetAssignmentSelect({
   onBudgetChange,
 }: BudgetAssignmentSelectProps) {
   const isExpense = transaction.amount < 0
-  const matchingBudgets = budgets.filter(
-    (budget) => budget.categoryId === transaction.categoryId,
-  )
+  const eligibleBudgets = budgets
 
   if (!isExpense) {
     return <span className="text-muted-foreground text-xs">Not available</span>
   }
 
-  if (matchingBudgets.length === 0) {
+  if (eligibleBudgets.length === 0) {
     return (
-      <span className="text-muted-foreground text-xs">No matching budget</span>
+      <span className="text-muted-foreground text-xs">No active budget</span>
     )
   }
 
@@ -300,7 +298,7 @@ function BudgetAssignmentSelect({
       </SelectTrigger>
       <SelectContent align="end">
         <SelectItem value={UNASSIGNED_BUDGET_VALUE}>Unassigned</SelectItem>
-        {matchingBudgets.map((budget) => (
+        {eligibleBudgets.map((budget) => (
           <SelectItem key={budget.id} value={budget.id}>
             {budget.category}
           </SelectItem>

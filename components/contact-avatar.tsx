@@ -20,7 +20,7 @@ export function ContactAvatar({
   className,
 }: ContactAvatarProps) {
   return (
-    <Avatar className={cn("size-10", className)}>
+    <Avatar className={cn("border-card size-10 border-2", className)}>
       {avatarUrl ? (
         <AvatarImage src={avatarUrl} alt="" className="object-cover" />
       ) : null}
