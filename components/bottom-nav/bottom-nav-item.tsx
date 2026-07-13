@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { useEffect, useRef } from "react"
 import { cn } from "@/lib/utils"
 import type { NavItem as NavItemType } from "@/lib/types"
 import { motion, useReducedMotion } from "motion/react"
@@ -10,7 +11,18 @@ interface BottomNavItemProps {
 
 export function BottomNavItem({ item, active = false }: BottomNavItemProps) {
   const shouldReduceMotion = useReducedMotion()
+  const linkRef = useRef<HTMLAnchorElement>(null)
   const Icon = item.icon
+
+  useEffect(() => {
+    if (active) {
+      linkRef.current?.scrollIntoView({
+        behavior: "auto",
+        block: "nearest",
+        inline: "center",
+      })
+    }
+  }, [active])
 
   return (
     <>
@@ -26,10 +38,11 @@ export function BottomNavItem({ item, active = false }: BottomNavItemProps) {
         />
       )}
       <Link
+        ref={linkRef}
         href={item.href}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "flex flex-col items-center gap-1 rounded-lg px-4 py-3 text-xs font-bold transition-colors md:px-3 md:py-2",
+          "flex min-h-11 min-w-11 shrink-0 flex-col items-center gap-1 rounded-lg px-2 py-3 text-xs font-bold transition-colors md:px-3 md:py-2",
           active
             ? "text-sidebar-primary"
             : "text-sidebar-foreground hover:text-sidebar-primary-foreground",

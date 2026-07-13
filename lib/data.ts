@@ -4,7 +4,7 @@ import NavTransactionsIcon from "@/components/icons/NavTransactionsIcon"
 import NavBudgetsIcon from "@/components/icons/NavBudgetsIcon"
 import NavPotsIcon from "@/components/icons/NavPotsIcon"
 import NavRecurringBillsIcon from "@/components/icons/NavRecurringBillsIcon"
-import { CreditCard, ShieldCheck } from "lucide-react"
+import { ChartNoAxesCombined, CreditCard, ShieldCheck } from "lucide-react"
 
 export const navItems: NavItem[] = [
   { key: "overview", label: "Overview", icon: NavOverviewIcon, href: "/" },
@@ -27,6 +27,12 @@ export const navItems: NavItem[] = [
     label: "Recurring Bills",
     icon: NavRecurringBillsIcon,
     href: "/recurring-bills",
+  },
+  {
+    key: "forecast",
+    label: "Forecast",
+    icon: ChartNoAxesCombined,
+    href: "/forecast",
   },
 ]
 

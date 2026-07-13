@@ -19,6 +19,8 @@ export type RecurringBillPaymentStatus = "paid" | "skipped"
 export type TransactionPaymentMethod =
   "bank_account" | "credit_card" | "voucher" | "credit_card_payment"
 export type CreditCardStatementLifecycleStatus = "open" | "closed" | "paid"
+export type CashForecastAdjustmentKind = "additional_income" | "planned_outflow"
+export type CashForecastAdjustmentRecurrence = "once" | "monthly"
 
 export type FinanceUserId = string
 export type FinanceRecordId = string
@@ -211,6 +213,25 @@ export interface CreditCardPaymentRecord {
   paid_at: string
 }
 
+export interface CashForecastSettingsRecord {
+  user_id: FinanceUserId
+  default_monthly_income_cents: number
+  created_at: string
+  updated_at: string
+}
+
+export interface CashForecastAdjustmentRecord {
+  id: FinanceRecordId
+  user_id: FinanceUserId
+  kind: CashForecastAdjustmentKind
+  name: string
+  amount_cents: number
+  start_period: string
+  recurrence: CashForecastAdjustmentRecurrence
+  created_at: string
+  updated_at: string
+}
+
 export type NewBudgetRecord = Omit<BudgetRecord, "user_id">
 export type NewPotRecord = Omit<PotRecord, "user_id">
 export type NewCategoryRecord = Omit<CategoryRecord, "user_id">
@@ -218,6 +239,10 @@ export type NewCounterpartyRecord = Omit<CounterpartyRecord, "user_id">
 export type NewTransactionRecord = Omit<TransactionRecord, "user_id">
 export type NewCreditCardRecord = Omit<CreditCardRecord, "user_id">
 export type NewRecurringBillRecord = Omit<RecurringBillRecord, "user_id">
+export type NewCashForecastAdjustmentRecord = Omit<
+  CashForecastAdjustmentRecord,
+  "user_id" | "created_at" | "updated_at"
+>
 
 export interface FinanceState {
   preferences: UserPreferencesRecord
@@ -235,6 +260,8 @@ export interface FinanceState {
   creditCards: CreditCardRecord[]
   creditCardStatements: CreditCardStatementRecord[]
   creditCardPayments: CreditCardPaymentRecord[]
+  cashForecastSettings: CashForecastSettingsRecord | null
+  cashForecastAdjustments: CashForecastAdjustmentRecord[]
 }
 
 export interface FinanceViewModel {

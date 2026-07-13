@@ -3,6 +3,8 @@ import type {
   AccountSummaryRecord,
   BudgetRecord,
   BudgetTransactionAssignmentRecord,
+  CashForecastAdjustmentRecord,
+  CashForecastSettingsRecord,
   CategoryRecord,
   CounterpartyRecord,
   CreditCardPaymentRecord,
@@ -10,6 +12,7 @@ import type {
   CreditCardStatementRecord,
   FinanceState,
   NewBudgetRecord,
+  NewCashForecastAdjustmentRecord,
   NewCategoryRecord,
   NewCounterpartyRecord,
   NewCreditCardRecord,
@@ -106,6 +109,19 @@ export type FinanceAction =
       billTransactions?: TransactionRecord[]
       recurringBillPayments?: RecurringBillPaymentRecord[]
     }
+  | {
+      type: "cash-forecast/settings-save"
+      settings: CashForecastSettingsRecord
+    }
+  | {
+      type: "cash-forecast/adjustment-add"
+      adjustment: CashForecastAdjustmentRecord
+    }
+  | {
+      type: "cash-forecast/adjustment-update"
+      adjustment: CashForecastAdjustmentRecord
+    }
+  | { type: "cash-forecast/adjustment-delete"; id: string }
 
 export interface FinanceActions {
   addTransaction: (
@@ -206,6 +222,17 @@ export interface FinanceActions {
   closeCreditCardStatement: (
     statementId: string,
   ) => Promise<FinanceMutationResult>
+  saveCashForecastSettings: (
+    defaultMonthlyIncomeCents: number,
+  ) => Promise<FinanceMutationResult>
+  addCashForecastAdjustment: (
+    adjustment: NewCashForecastAdjustmentRecord,
+  ) => Promise<FinanceMutationResult>
+  updateCashForecastAdjustment: (
+    id: string,
+    adjustment: Omit<NewCashForecastAdjustmentRecord, "id">,
+  ) => Promise<FinanceMutationResult>
+  deleteCashForecastAdjustment: (id: string) => Promise<FinanceMutationResult>
 }
 
 export type FinanceMutationResult =
@@ -626,6 +653,36 @@ export function financeReducer(
               action.recurringBillPayments,
             )
           : state.recurringBillPayments,
+      }
+    case "cash-forecast/settings-save":
+      return {
+        ...state,
+        cashForecastSettings: action.settings,
+      }
+    case "cash-forecast/adjustment-add":
+    case "cash-forecast/adjustment-update":
+      return {
+        ...state,
+        cashForecastAdjustments: upsertById(
+          state.cashForecastAdjustments,
+          action.adjustment,
+        ).sort((left, right) => {
+          const createdComparison = left.created_at.localeCompare(
+            right.created_at,
+          )
+
+          return createdComparison !== 0
+            ? createdComparison
+            : left.id.localeCompare(right.id)
+        }),
+      }
+    case "cash-forecast/adjustment-delete":
+      return {
+        ...state,
+        cashForecastAdjustments: removeById(
+          state.cashForecastAdjustments,
+          action.id,
+        ),
       }
     default:
       return state

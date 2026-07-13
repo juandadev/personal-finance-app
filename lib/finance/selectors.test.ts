@@ -89,6 +89,8 @@ function makeState(
     ],
     creditCardStatements: [],
     creditCardPayments: [],
+    cashForecastSettings: null,
+    cashForecastAdjustments: [],
     ...overrides,
   }
 }

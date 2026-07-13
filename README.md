@@ -15,9 +15,7 @@ A polished static solution to the [Personal finance app challenge on Frontend Me
 
 ## Overview
 
-This project is built as a Frontend Mentor submission for the static comparison screenshot, while also serving as the foundation for a full-stack personal finance app. It keeps seeded finance data in JSON files for demo-mode usage and now scaffolds authenticated Neon Postgres persistence for signed-in users.
-
-Signed-in budget and pot changes are designed to persist through Neon Postgres. The JSON seed data remains in `data/` so a future demo area can reuse the same database-shaped contract without requiring account creation.
+This project began as a Frontend Mentor submission and now serves as a full-stack personal finance app with authenticated Neon Postgres persistence. Each signed-in user starts with an empty finance workspace and owns their data through PostgreSQL Row Level Security.
 
 ### Users Can
 
@@ -76,7 +74,7 @@ cp .env.example .env.local
 Required values:
 
 - `DATABASE_URL`: pooled Neon Postgres connection string for the app runtime.
-- `DATABASE_DIRECT_URL`: direct Neon Postgres connection string for migrations and seed scripts.
+- `DATABASE_DIRECT_URL`: direct Neon Postgres connection string for migrations.
 - `NEON_AUTH_BASE_URL`: Neon Auth branch URL.
 - `NEON_AUTH_COOKIE_SECRET`: at least 32 characters, for example from `openssl rand -base64 32`.
 
@@ -97,11 +95,10 @@ bun run start
 
 ### Database Setup
 
-Apply the raw SQL schema and seed the preserved demo finance data:
+Apply the raw SQL schema:
 
 ```bash
 bun run db:migrate
-bun run db:seed
 ```
 
 The schema uses normalized finance tables, UUID record IDs, integer cents, foreign keys, and PostgreSQL Row Level Security. Runtime queries are parameterized raw SQL through `pg`; no ORM is used.
@@ -112,7 +109,6 @@ The schema uses normalized finance tables, UUID record IDs, integer cents, forei
 bun run dev          # Start the local development server
 bun run build        # Create a production build
 bun run db:migrate   # Apply raw SQL migrations
-bun run db:seed      # Seed demo finance rows from data/*.json
 bun run start        # Start the production server
 bun run lint         # Run ESLint
 bun run lint:fix     # Fix lint issues where possible
@@ -132,10 +128,9 @@ components/transactions/
                       Transaction table, filters, search, and pagination
 components/recurring-bills/
                       Recurring bill summaries, filters, and table
-data/                 Database-shaped demo seed data
 db/migrations/        Raw SQL schema migrations
 lib/                  Auth, database, finance state, selectors, formatting, theme helpers
-scripts/db/           Migration and seed runners
+scripts/db/           Database migration runner
 ```
 
 ## Implementation Notes

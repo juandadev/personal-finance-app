@@ -27,6 +27,12 @@ export interface RecurringBillOccurrenceState {
   paidAt?: string
 }
 
+export interface RecurringBillOccurrenceOptions {
+  includeAllFuture?: boolean
+  throughDate?: string
+  archiveCutoffTimezone?: string
+}
+
 type ScheduleFields = Pick<
   RecurringBillRecord,
   | "frequency"
@@ -57,6 +63,38 @@ function toIsoDate(year: number, month: number, day: number) {
     month.toString().padStart(2, "0"),
     day.toString().padStart(2, "0"),
   ].join("-")
+}
+
+function getArchiveCutoffDate(
+  archivedAt: string | null,
+  timezone?: string,
+): string | null {
+  if (!archivedAt) {
+    return null
+  }
+
+  if (!timezone) {
+    return archivedAt.slice(0, 10)
+  }
+
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date(archivedAt))
+  const values = new Map(parts.map((part) => [part.type, part.value]))
+  const year = values.get("year")
+  const month = values.get("month")
+  const day = values.get("day")
+
+  if (!year || !month || !day) {
+    throw new Error(
+      `Could not resolve the archive date for timezone "${timezone}".`,
+    )
+  }
+
+  return `${year}-${month}-${day}`
 }
 
 export function todayIsoDate() {
@@ -127,12 +165,15 @@ export function resolveRecurringBillOccurrences(
   bill: ScheduleFields,
   payments: PaymentFields[],
   today = todayIsoDate(),
-  options: { includeAllFuture?: boolean } = {},
+  options: RecurringBillOccurrenceOptions = {},
 ): RecurringBillOccurrenceState[] {
   const paymentsByDueDate = new Map(
     payments.map((payment) => [payment.due_date, payment]),
   )
-  const archivedCutoff = bill.archived_at?.slice(0, 10) ?? null
+  const archivedCutoff = getArchiveCutoffDate(
+    bill.archived_at,
+    options.archiveCutoffTimezone,
+  )
   const occurrences: RecurringBillOccurrenceState[] = []
 
   for (let index = 0; index < MAX_GENERATED_OCCURRENCES; index += 1) {
@@ -145,6 +186,11 @@ export function resolveRecurringBillOccurrences(
       bill.frequency,
       index,
     )
+
+    if (options.throughDate && dueDate > options.throughDate) {
+      break
+    }
+
     const payment = paymentsByDueDate.get(dueDate)
 
     if (archivedCutoff !== null && dueDate > archivedCutoff && !payment) {
@@ -169,7 +215,11 @@ export function resolveRecurringBillOccurrences(
         status: getRecurringBillDueStatus(dueDate, today),
       })
 
-      if (dueDate > today && !options.includeAllFuture) {
+      if (
+        dueDate > today &&
+        !options.includeAllFuture &&
+        !options.throughDate
+      ) {
         break
       }
     }

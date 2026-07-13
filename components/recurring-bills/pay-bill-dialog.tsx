@@ -25,14 +25,11 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useFinance } from "@/hooks/use-finance"
+import { getForecastLocalDate } from "@/lib/finance/forecast-period"
 import { formatCurrency, formatDisplayDate } from "@/lib/format"
 import type { RecurringBill, RecurringBillOccurrence } from "@/lib/types"
 
 const bankAccountValue = "bank_account"
-
-function todayIsoDate() {
-  return new Date().toISOString().slice(0, 10)
-}
 
 interface PayBillDialogProps {
   bill: RecurringBill
@@ -46,9 +43,13 @@ export function PayBillDialog({
   trigger,
 }: PayBillDialogProps) {
   const { actions, state } = useFinance()
+  const localToday = getForecastLocalDate(
+    new Date(),
+    state.preferences.timezone,
+  )
   const [open, setOpen] = useState(false)
   const [sourceValue, setSourceValue] = useState(bankAccountValue)
-  const [paidAt, setPaidAt] = useState(todayIsoDate())
+  const [paidAt, setPaidAt] = useState(localToday)
   const [statusMessage, setStatusMessage] = useState("")
   const [isPaying, setIsPaying] = useState(false)
   const activeCards = state.creditCards.filter((card) => !card.archived_at)
@@ -58,7 +59,7 @@ export function PayBillDialog({
 
     if (nextOpen) {
       setSourceValue(bankAccountValue)
-      setPaidAt(todayIsoDate())
+      setPaidAt(localToday)
       setStatusMessage("")
     }
   }
@@ -152,6 +153,7 @@ export function PayBillDialog({
             <Input
               id="pay-bill-paid-at"
               type="date"
+              max={localToday}
               value={paidAt}
               onChange={(event) => setPaidAt(event.target.value)}
             />

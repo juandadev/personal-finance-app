@@ -14,6 +14,7 @@ import {
   archiveRecurringBillAction,
   closeCreditCardStatementAction,
   createBudgetAction,
+  createCashForecastAdjustmentAction,
   createCategoryAction,
   createCounterpartyAction,
   createCreditCardAction,
@@ -21,6 +22,7 @@ import {
   createRecurringBillAction,
   createTransactionAction,
   deleteBudgetAction,
+  deleteCashForecastAdjustmentAction,
   deleteCategoryAction,
   deleteCounterpartyAction,
   deletePotAction,
@@ -28,9 +30,11 @@ import {
   deleteTransactionAction,
   payRecurringBillOccurrenceAction,
   skipRecurringBillOccurrenceAction,
+  saveCashForecastSettingsAction,
   transferPotAction,
   unassignTransactionFromBudgetAction,
   updateBudgetAction,
+  updateCashForecastAdjustmentAction,
   updateCategoryAction,
   updateCounterpartyAction,
   updateCreditCardAction,
@@ -47,6 +51,7 @@ import type {
   CreditCardRecord,
   FinanceState,
   FinanceViewModel,
+  NewCashForecastAdjustmentRecord,
   NewBudgetRecord,
   NewCategoryRecord,
   NewCounterpartyRecord,
@@ -559,6 +564,65 @@ export function FinanceProvider({
               dispatch({
                 type: "credit-card/statement-upsert",
                 statements: [result.data],
+              })
+            }
+
+            return result
+          }),
+        ),
+      saveCashForecastSettings: (defaultMonthlyIncomeCents: number) =>
+        runFinanceAction(() =>
+          saveCashForecastSettingsAction(defaultMonthlyIncomeCents).then(
+            (result) => {
+              if (result.ok) {
+                dispatch({
+                  type: "cash-forecast/settings-save",
+                  settings: result.data,
+                })
+              }
+
+              return result
+            },
+          ),
+        ),
+      addCashForecastAdjustment: (
+        adjustment: NewCashForecastAdjustmentRecord,
+      ) =>
+        runFinanceAction(() =>
+          createCashForecastAdjustmentAction(adjustment).then((result) => {
+            if (result.ok) {
+              dispatch({
+                type: "cash-forecast/adjustment-add",
+                adjustment: result.data,
+              })
+            }
+
+            return result
+          }),
+        ),
+      updateCashForecastAdjustment: (
+        id: string,
+        adjustment: Omit<NewCashForecastAdjustmentRecord, "id">,
+      ) =>
+        runFinanceAction(() =>
+          updateCashForecastAdjustmentAction(id, adjustment).then((result) => {
+            if (result.ok) {
+              dispatch({
+                type: "cash-forecast/adjustment-update",
+                adjustment: result.data,
+              })
+            }
+
+            return result
+          }),
+        ),
+      deleteCashForecastAdjustment: (id: string) =>
+        runFinanceAction(() =>
+          deleteCashForecastAdjustmentAction(id).then((result) => {
+            if (result.ok) {
+              dispatch({
+                type: "cash-forecast/adjustment-delete",
+                id: result.data.id,
               })
             }
 

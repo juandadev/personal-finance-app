@@ -43,7 +43,16 @@ WITH first_profile AS (
 UPDATE categories
 SET user_id = first_profile.user_id
 FROM first_profile
-WHERE categories.user_id IS NULL;
+WHERE categories.user_id IS NULL
+  AND NOT EXISTS (
+    SELECT 1
+    FROM categories AS owned_category
+    WHERE owned_category.user_id = first_profile.user_id
+      AND (
+        lower(owned_category.name) = lower(categories.name)
+        OR lower(owned_category.slug) = lower(categories.slug)
+      )
+  );
 
 CREATE UNIQUE INDEX IF NOT EXISTS categories_user_name_unique
   ON categories (user_id, lower(name))

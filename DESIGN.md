@@ -250,6 +250,9 @@ Finance data must stay readable on mobile.
 - Zod is the standard validation schema layer. Client schemas should prevent
   known invalid input before submit, while server-side schemas remain the final
   authority for persisted data.
+- Transaction and payment dates that apply balance or settlement effects
+  immediately must default to and be capped at the profile-local current date.
+  Historical dates remain valid, and the server must reject future dates.
 - Use `AlertDialog` for destructive confirmations.
 - Labels are required for every input.
 - Helper text should be muted and specific.
@@ -370,6 +373,51 @@ Button labels should be action-specific: `Add Money`, `Create Budget`,
   carry the meaning.
 - Charts should use the documented chart palette before adding new colors.
 - Avoid decorative charts that do not answer a finance question.
+
+### Forecast Charts
+
+- Forecast modules use a composed monthly chart: `chart-1` income bars,
+  `chart-4` outflow bars, and a `chart-3` ending-balance line. Negative balance
+  points and balance labels use `destructive` plus explicit negative text or
+  signs.
+- Show 13 ordered month targets: the current local calendar month followed by
+  the next 12 months. Pin the current month initially. A pinned month controls
+  the related activity report; hover and keyboard focus may preview only the
+  prominent balance value without changing that report.
+- Pointer exit and focus loss restore the pinned value. Click, tap, Enter, or
+  Space pins a month, while Left and Right Arrow move focus between month
+  targets.
+- Every month target must be a real keyboard and touch control with an
+  accessible label that names its month, income, outflows, monthly change, and
+  ending balance. Do not rely on a chart tooltip for access to forecast data.
+- De-emphasize inactive months with opacity while keeping labels readable.
+  Mobile plots use horizontal scrolling and tap-to-pin; targets remain at least
+  44px wide. Honor reduced motion and disable decorative chart animation.
+
+### Cash Forecast
+
+- Use `Cash Forecast` as the page title and `Forecast` as its navigation label.
+  The page header exposes `Add Forecast Item` as its one primary action and
+  keeps `Edit Monthly Income` in the header ellipsis menu.
+- Missing monthly-income settings auto-open setup, keep the report unavailable,
+  and fall back to an inline `Set Monthly Income` state when dismissed. A saved
+  zero value is valid.
+- Missing primary payment accounts and unsupported mixed currencies are
+  blocking setup states. Negative projected balances and zero-activity months
+  remain valid report states.
+- Forecast activity uses 10 parent rows per page. Credit-card statement
+  children expand beneath their parent and do not count toward pagination.
+  Desktop uses the dense table pattern; mobile uses stacked list rows.
+- The current month is a reconciled whole-month cash summary. Its activity list
+  combines actual primary-account cash transactions posted to date with pending
+  forecast items, and every row visibly says `Actual` or `Pending`. Current
+  totals combine both groups; empty copy names both actual and pending activity.
+- The current-month summary shows reconstructed opening balance, today's actual
+  balance, pending additional income, and pending outflows. Future months remain
+  projections, and the saved default monthly income starts with the first
+  future month.
+- Only user-created forecast adjustments expose item-level Edit and Delete
+  actions. Generated income, bill, and card rows are read-only.
 
 ### Recurring Bills
 

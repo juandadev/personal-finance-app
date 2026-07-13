@@ -19,16 +19,13 @@ import { FormStatusMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useFinance } from "@/hooks/use-finance"
+import { getForecastLocalDate } from "@/lib/finance/forecast-period"
 import {
   formatCurrency,
   formatDisplayDate,
   formatDisplayDateRange,
 } from "@/lib/format"
 import type { CreditCard, CreditCardStatement } from "@/lib/types"
-
-function todayIsoDate() {
-  return new Date().toISOString().slice(0, 10)
-}
 
 interface PayCreditCardStatementDialogProps {
   creditCard: CreditCard
@@ -41,9 +38,13 @@ export function PayCreditCardStatementDialog({
   statement,
   trigger,
 }: PayCreditCardStatementDialogProps) {
-  const { actions } = useFinance()
+  const { actions, state } = useFinance()
+  const localToday = getForecastLocalDate(
+    new Date(),
+    state.preferences.timezone,
+  )
   const [open, setOpen] = useState(false)
-  const [paidAt, setPaidAt] = useState(todayIsoDate())
+  const [paidAt, setPaidAt] = useState(localToday)
   const [statusMessage, setStatusMessage] = useState("")
   const [isPaying, setIsPaying] = useState(false)
   const selectedStatement = statement ?? creditCard.oldestPayableStatement
@@ -52,6 +53,15 @@ export function PayCreditCardStatementDialog({
     selectedStatement &&
     selectedStatement.lifecycleStatus !== "paid" &&
     selectedStatement.totalAmount > 0
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen)
+
+    if (nextOpen) {
+      setPaidAt(localToday)
+      setStatusMessage("")
+    }
+  }
 
   if (!canPay || !selectedStatement) {
     return null
@@ -82,7 +92,7 @@ export function PayCreditCardStatementDialog({
   }
 
   return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
+    <AlertDialog open={open} onOpenChange={handleOpenChange}>
       <AlertDialogTrigger asChild>
         {trigger ?? <Button size="sm">Pay Statement</Button>}
       </AlertDialogTrigger>
@@ -173,6 +183,7 @@ export function PayCreditCardStatementDialog({
             <Input
               id="credit-card-paid-at"
               type="date"
+              max={localToday}
               value={paidAt}
               onChange={(event) => setPaidAt(event.target.value)}
             />

@@ -7,15 +7,20 @@ import { getCreditCardStatementCycle } from "@/lib/finance/credit-card-cycle"
 import {
   getBillOccurrenceStatementCycle,
   resolveRecurringBillOccurrences,
-  todayIsoDate,
   type RecurringBillOccurrenceState,
 } from "@/lib/finance/recurring-bill-schedule"
+import {
+  assertDateNotAfterLocalToday,
+  getLocalIsoDate,
+} from "@/lib/finance/local-date"
 import type {
   AccountRecord,
   AccountSummaryRecord,
   BudgetRecord,
   BudgetSummaryRecord,
   BudgetTransactionAssignmentRecord,
+  CashForecastAdjustmentRecord,
+  CashForecastSettingsRecord,
   CategoryRecord,
   CounterpartyRecord,
   CreditCardPaymentRecord,
@@ -23,6 +28,7 @@ import type {
   CreditCardStatementRecord,
   FinanceState,
   NewCategoryRecord,
+  NewCashForecastAdjustmentRecord,
   NewCounterpartyRecord,
   NewCreditCardRecord,
   NewRecurringBillRecord,
@@ -190,6 +196,23 @@ const creditCardPaymentColumns = [
   "amount_cents",
   "paid_at::text AS paid_at",
 ]
+const cashForecastSettingsColumns = [
+  "user_id",
+  "default_monthly_income_cents",
+  "created_at::text AS created_at",
+  "updated_at::text AS updated_at",
+]
+const cashForecastAdjustmentColumns = [
+  "user_id",
+  "id",
+  "kind",
+  "name",
+  "amount_cents",
+  "start_period",
+  "recurrence",
+  "created_at::text AS created_at",
+  "updated_at::text AS updated_at",
+]
 
 async function ensureUserProfile(
   client: PoolClient,
@@ -198,8 +221,8 @@ async function ensureUserProfile(
 ) {
   await client.query(
     `
-      INSERT INTO profiles (user_id, display_name, default_currency)
-      VALUES ($1, $2, 'USD')
+      INSERT INTO profiles (user_id, display_name)
+      VALUES ($1, $2)
       ON CONFLICT (user_id)
       DO UPDATE SET display_name = COALESCE(excluded.display_name, profiles.display_name)
     `,
@@ -231,6 +254,35 @@ async function ensureDefaultCategories(client: PoolClient, userId: string) {
 
 function toPeriod(isoDate: string) {
   return isoDate.slice(0, 7)
+}
+
+async function getUserProfileTimezone(client: PoolClient, userId: string) {
+  const result = await client.query<Pick<UserPreferencesRecord, "timezone">>(
+    "SELECT timezone FROM profiles WHERE user_id = $1",
+    [userId],
+  )
+
+  if (!result.rowCount) {
+    throw new Error("Your profile is not ready yet. Refresh and try again.")
+  }
+
+  return result.rows[0].timezone
+}
+
+async function getUserLocalToday(client: PoolClient, userId: string) {
+  const timezone = await getUserProfileTimezone(client, userId)
+
+  return getLocalIsoDate(new Date(), timezone)
+}
+
+async function assertDateNotAfterUserLocalToday(
+  client: PoolClient,
+  userId: string,
+  isoDate: string,
+) {
+  const timezone = await getUserProfileTimezone(client, userId)
+
+  return assertDateNotAfterLocalToday(isoDate, timezone)
 }
 
 export async function loadFinanceState(
@@ -313,6 +365,15 @@ export async function loadFinanceState(
       `SELECT ${creditCardPaymentColumns.join(", ")} FROM credit_card_payments WHERE user_id = $1 ORDER BY paid_at DESC, id`,
       [userId],
     )
+    const cashForecastSettings = await client.query<CashForecastSettingsRecord>(
+      `SELECT ${cashForecastSettingsColumns.join(", ")} FROM cash_forecast_settings WHERE user_id = $1`,
+      [userId],
+    )
+    const cashForecastAdjustments =
+      await client.query<CashForecastAdjustmentRecord>(
+        `SELECT ${cashForecastAdjustmentColumns.join(", ")} FROM cash_forecast_adjustments WHERE user_id = $1 ORDER BY created_at, id`,
+        [userId],
+      )
 
     return {
       preferences: profile.rows[0],
@@ -330,6 +391,8 @@ export async function loadFinanceState(
       creditCards: creditCards.rows,
       creditCardStatements: creditCardStatements.rows,
       creditCardPayments: creditCardPayments.rows,
+      cashForecastSettings: cashForecastSettings.rows[0] ?? null,
+      cashForecastAdjustments: cashForecastAdjustments.rows,
     }
   })
 }
@@ -962,6 +1025,11 @@ export async function insertTransaction(
   budgetId: string | null,
 ) {
   return withFinanceTransaction(userId, async (client) => {
+    await assertDateNotAfterUserLocalToday(
+      client,
+      userId,
+      transaction.posted_at,
+    )
     const preparedTransaction = await prepareTransactionPaymentMethod(
       client,
       userId,
@@ -1062,6 +1130,7 @@ export async function updateTransaction(
   budgetId: string | null,
 ) {
   return withFinanceTransaction(userId, async (client) => {
+    await assertDateNotAfterUserLocalToday(client, userId, updates.posted_at)
     const existingResult = await client.query<TransactionRecord>(
       `
         SELECT ${transactionSelectColumns.join(", ")}
@@ -1514,6 +1583,7 @@ async function getPendingBillOccurrencesForStatement(
     "id" | "closing_day_of_month" | "payment_due_day_of_month"
   >,
   statement: Pick<CreditCardStatementRecord, "period_start">,
+  today: string,
 ): Promise<PendingBillOccurrence[]> {
   const billsResult = await client.query<RecurringBillWithContactRecord>(
     `
@@ -1549,7 +1619,6 @@ async function getPendingBillOccurrencesForStatement(
     `,
     [userId, card.id],
   )
-  const today = todayIsoDate()
   const pending: PendingBillOccurrence[] = []
 
   for (const bill of billsResult.rows) {
@@ -1586,6 +1655,11 @@ async function payCreditCardStatementWithClient(
   statementId: string,
   paidAt: string,
 ) {
+  const localToday = await assertDateNotAfterUserLocalToday(
+    client,
+    userId,
+    paidAt,
+  )
   const statementResult = await client.query<CreditCardStatementRecord>(
     `
         SELECT ${creditCardStatementColumns.join(", ")}
@@ -1617,6 +1691,7 @@ async function payCreditCardStatementWithClient(
     userId,
     card,
     statement,
+    localToday,
   )
   const billTransactions: TransactionRecord[] = []
   const recurringBillPayments: RecurringBillPaymentRecord[] = []
@@ -1827,11 +1902,13 @@ export async function closeZeroBalanceCreditCardStatement(
       throw new Error("Credit card not found.")
     }
 
+    const localToday = await getUserLocalToday(client, userId)
     const pendingOccurrences = await getPendingBillOccurrencesForStatement(
       client,
       userId,
       cardResult.rows[0],
       statement,
+      localToday,
     )
 
     if (pendingOccurrences.length > 0) {
@@ -1880,13 +1957,14 @@ async function resolveUnsettledOccurrence(
   client: PoolClient,
   userId: string,
   bill: RecurringBillRecord,
+  today: string,
 ) {
   const payments = await getRecurringBillPayments(client, userId, bill.id)
 
   return {
     payments,
     findOccurrence(dueDate: string) {
-      const occurrences = resolveRecurringBillOccurrences(bill, payments)
+      const occurrences = resolveRecurringBillOccurrences(bill, payments, today)
       const occurrence = occurrences.find(
         (candidate) => candidate.dueDate === dueDate,
       )
@@ -2136,11 +2214,17 @@ export async function payRecurringBillOccurrence(
   paidAt: string,
 ) {
   return withFinanceTransaction(userId, async (client) => {
+    const localToday = await assertDateNotAfterUserLocalToday(
+      client,
+      userId,
+      paidAt,
+    )
     const bill = await getRecurringBillForUpdate(client, userId, billId)
     const { findOccurrence } = await resolveUnsettledOccurrence(
       client,
       userId,
       bill,
+      localToday,
     )
     const occurrence = findOccurrence(dueDate)
     const sourceAccount = await getPrimaryPaymentAccount(client, userId)
@@ -2225,11 +2309,13 @@ export async function skipRecurringBillOccurrence(
   dueDate: string,
 ) {
   return withFinanceTransaction(userId, async (client) => {
+    const localToday = await getUserLocalToday(client, userId)
     const bill = await getRecurringBillForUpdate(client, userId, billId)
     const { findOccurrence } = await resolveUnsettledOccurrence(
       client,
       userId,
       bill,
+      localToday,
     )
     const occurrence = findOccurrence(dueDate)
 
@@ -2239,7 +2325,7 @@ export async function skipRecurringBillOccurrence(
       amount_cents: occurrence.amountCents,
       status: "skipped",
       transaction_id: null,
-      paid_at: todayIsoDate(),
+      paid_at: localToday,
     })
   })
 }
@@ -2530,5 +2616,119 @@ export async function deletePot(userId: string, id: string) {
     if (!result.rowCount) {
       throw new Error("Pot not found.")
     }
+  })
+}
+
+export async function upsertCashForecastSettings(
+  userId: string,
+  defaultMonthlyIncomeCents: number,
+) {
+  return withFinanceTransaction(userId, async (client) => {
+    const result = await client.query<CashForecastSettingsRecord>(
+      `
+        INSERT INTO cash_forecast_settings (
+          user_id,
+          default_monthly_income_cents
+        )
+        VALUES ($1, $2)
+        ON CONFLICT (user_id)
+        DO UPDATE SET
+          default_monthly_income_cents = excluded.default_monthly_income_cents
+        RETURNING ${cashForecastSettingsColumns.join(", ")}
+      `,
+      [userId, defaultMonthlyIncomeCents],
+    )
+
+    return result.rows[0]
+  })
+}
+
+export async function insertCashForecastAdjustment(
+  userId: string,
+  adjustment: NewCashForecastAdjustmentRecord,
+) {
+  return withFinanceTransaction(userId, async (client) => {
+    const result = await client.query<CashForecastAdjustmentRecord>(
+      `
+        INSERT INTO cash_forecast_adjustments (
+          user_id,
+          id,
+          kind,
+          name,
+          amount_cents,
+          start_period,
+          recurrence
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING ${cashForecastAdjustmentColumns.join(", ")}
+      `,
+      [
+        userId,
+        adjustment.id,
+        adjustment.kind,
+        adjustment.name,
+        adjustment.amount_cents,
+        adjustment.start_period,
+        adjustment.recurrence,
+      ],
+    )
+
+    return result.rows[0]
+  })
+}
+
+export async function updateCashForecastAdjustment(
+  userId: string,
+  id: string,
+  adjustment: Omit<NewCashForecastAdjustmentRecord, "id">,
+) {
+  return withFinanceTransaction(userId, async (client) => {
+    const result = await client.query<CashForecastAdjustmentRecord>(
+      `
+        UPDATE cash_forecast_adjustments
+        SET
+          kind = $3,
+          name = $4,
+          amount_cents = $5,
+          start_period = $6,
+          recurrence = $7
+        WHERE user_id = $1 AND id = $2
+        RETURNING ${cashForecastAdjustmentColumns.join(", ")}
+      `,
+      [
+        userId,
+        id,
+        adjustment.kind,
+        adjustment.name,
+        adjustment.amount_cents,
+        adjustment.start_period,
+        adjustment.recurrence,
+      ],
+    )
+
+    if (!result.rowCount) {
+      throw new Error("Forecast item not found.")
+    }
+
+    return result.rows[0]
+  })
+}
+
+export async function deleteCashForecastAdjustment(userId: string, id: string) {
+  return withFinanceTransaction(userId, async (client) => {
+    const result = await client.query<{ id: string }>(
+      `
+        DELETE FROM cash_forecast_adjustments
+        WHERE user_id = $1 AND id = $2
+        RETURNING id
+      `,
+      [userId, id],
+    )
+
+    if (!result.rowCount) {
+      throw new Error("Forecast item not found.")
+    }
+
+    return result.rows[0]
   })
 }

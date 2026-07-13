@@ -1,0 +1,175 @@
+"use client"
+
+import { useState } from "react"
+import { AlertTriangle, Landmark, WalletCards } from "lucide-react"
+
+import { ModuleHeaderActions } from "@/components/actions"
+import { EmptyDataCard } from "@/components/empty-data-card"
+import { ForecastActivityReport } from "@/components/forecast/forecast-activity-report"
+import { AddForecastItemDialog } from "@/components/forecast/forecast-item-dialog"
+import { ForecastSummaryChart } from "@/components/forecast/forecast-summary-chart"
+import { MonthlyIncomeDialog } from "@/components/forecast/monthly-income-dialog"
+import { PageHeading } from "@/components/overview/page-heading"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
+import { Skeleton } from "@/components/ui/skeleton"
+import { useCashForecast } from "@/hooks/use-cash-forecast"
+import { useFinance } from "@/hooks/use-finance"
+import type { CashForecastResult } from "@/lib/finance/cash-forecast"
+
+type ReadyForecast = Extract<CashForecastResult, { status: "ready" }>
+
+export function ForecastPageContent() {
+  const { state } = useFinance()
+  const report = useCashForecast()
+  const [incomeDialogOpen, setIncomeDialogOpen] = useState(
+    state.cashForecastSettings === null,
+  )
+  const readyReport = report?.status === "ready" ? report : null
+  const periods = readyReport?.months.map((month) => month.period) ?? []
+
+  return (
+    <div className="mx-auto flex w-full max-w-6xl flex-col">
+      <PageHeading title="Cash Forecast" fixed>
+        <ModuleHeaderActions
+          ariaLabel="More cash forecast actions"
+          primaryAction={
+            readyReport ? (
+              <AddForecastItemDialog periods={periods} />
+            ) : (
+              <Button disabled aria-label="Add Forecast Item">
+                <span className="sm:hidden">Add Item</span>
+                <span className="hidden sm:inline">Add Forecast Item</span>
+              </Button>
+            )
+          }
+        >
+          {state.cashForecastSettings ? (
+            <DropdownMenuItem onSelect={() => setIncomeDialogOpen(true)}>
+              Edit Monthly Income
+            </DropdownMenuItem>
+          ) : null}
+        </ModuleHeaderActions>
+      </PageHeading>
+
+      <div className="mt-6">
+        {report === null ? (
+          <ForecastClientLoading />
+        ) : report.status === "blocked" ? (
+          <ForecastBlockedState
+            reason={report.reason}
+            onSetIncome={() => setIncomeDialogOpen(true)}
+          />
+        ) : (
+          <ForecastReadyContent report={report} />
+        )}
+      </div>
+
+      <MonthlyIncomeDialog
+        initialIncomeCents={
+          state.cashForecastSettings?.default_monthly_income_cents
+        }
+        open={incomeDialogOpen}
+        onOpenChange={setIncomeDialogOpen}
+      />
+    </div>
+  )
+}
+
+function ForecastBlockedState({
+  reason,
+  onSetIncome,
+}: {
+  reason: Exclude<CashForecastResult, { status: "ready" }>["reason"]
+  onSetIncome: () => void
+}) {
+  if (reason === "missing-settings") {
+    return (
+      <EmptyDataCard
+        surface="card"
+        className="min-h-96"
+        icon={<WalletCards className="size-5" aria-hidden />}
+        title="Set Up Your Forecast"
+        description="Add your usual monthly income to unlock the current month plus 12 future months. A value of $0 is valid."
+        action={<Button onClick={onSetIncome}>Set Monthly Income</Button>}
+      />
+    )
+  }
+
+  if (reason === "missing-primary-account") {
+    return (
+      <EmptyDataCard
+        surface="card"
+        className="min-h-96"
+        icon={<Landmark className="size-5" aria-hidden />}
+        title="Primary Account Needed"
+        description="Cash Forecast needs a checking or savings account with a current balance before it can calculate your projection."
+      />
+    )
+  }
+
+  return (
+    <EmptyDataCard
+      surface="card"
+      className="min-h-96"
+      icon={<AlertTriangle className="size-5" aria-hidden />}
+      title="Mixed Currencies Are Not Supported"
+      description="Your primary account, default currency, and recurring bills must use the same currency before Cash Forecast can combine them."
+    />
+  )
+}
+
+function ForecastReadyContent({ report }: { report: ReadyForecast }) {
+  const { state } = useFinance()
+  const [pinnedPeriod, setPinnedPeriod] = useState(
+    report.months[0]?.period ?? "",
+  )
+  const selectedMonth =
+    report.months.find((month) => month.period === pinnedPeriod) ??
+    report.months[0]
+  const selectedPeriod = selectedMonth?.period ?? ""
+  const periods = report.months.map((month) => month.period)
+
+  if (!selectedMonth) {
+    return null
+  }
+
+  return (
+    <div className="space-y-6">
+      <ForecastSummaryChart
+        report={report}
+        pinnedPeriod={selectedPeriod}
+        onPinnedPeriodChange={setPinnedPeriod}
+      />
+      <ForecastActivityReport
+        key={selectedPeriod}
+        adjustments={state.cashForecastAdjustments}
+        currency={report.currency}
+        month={selectedMonth}
+        periods={periods}
+      />
+    </div>
+  )
+}
+
+function ForecastClientLoading() {
+  return (
+    <Card
+      className="space-y-6"
+      aria-label="Loading cash forecast"
+      aria-busy="true"
+    >
+      <p className="sr-only">Loading forecast...</p>
+      <div className="space-y-3">
+        <Skeleton className="h-4 w-56 max-w-full" />
+        <Skeleton className="h-10 w-48 max-w-full" />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Skeleton className="h-18 rounded-lg" />
+        <Skeleton className="h-18 rounded-lg" />
+      </div>
+      <Skeleton className="h-72 rounded-lg" />
+    </Card>
+  )
+}

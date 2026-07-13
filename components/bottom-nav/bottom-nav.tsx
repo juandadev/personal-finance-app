@@ -13,12 +13,12 @@ function isActiveNavItem(activeKey: string, href: string) {
 export function BottomNav({ activeKey, navItems }: BottomNavProps) {
   return (
     <nav
-      className="bg-sidebar fixed inset-x-0 bottom-0 z-50 flex px-4 pt-2 pb-[env(safe-area-inset-bottom)] lg:hidden"
+      className="bg-sidebar fixed inset-x-0 bottom-0 z-50 [scrollbar-width:none] overflow-x-auto overscroll-x-contain pt-2 pb-[env(safe-area-inset-bottom)] lg:hidden [&::-webkit-scrollbar]:hidden"
       aria-label="Main navigation"
     >
-      <ul className="flex flex-1 items-center justify-around">
+      <ul className="mx-auto flex w-max min-w-full items-stretch justify-center gap-1 px-2">
         {navItems.map((item) => (
-          <li key={item.key} className="relative isolate">
+          <li key={item.key} className="relative isolate shrink-0">
             <BottomNavItem
               item={item}
               active={isActiveNavItem(activeKey, item.href)}

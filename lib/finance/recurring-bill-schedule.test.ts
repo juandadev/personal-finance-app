@@ -145,6 +145,34 @@ describe("resolveRecurringBillOccurrences", () => {
     expect(occurrences[1]?.status).toBe("overdue")
   })
 
+  test("uses an explicit timezone for archive cutoffs without changing the default", () => {
+    const boundaryBill = makeBill({
+      first_due_date: "2026-08-01",
+      total_payments: 1,
+      archived_at: "2026-08-01T02:00:00.000Z",
+    })
+    const defaultOccurrences = resolveRecurringBillOccurrences(
+      boundaryBill,
+      [],
+      TODAY,
+      { throughDate: "2026-08-31" },
+    )
+    const zonedOccurrences = resolveRecurringBillOccurrences(
+      boundaryBill,
+      [],
+      TODAY,
+      {
+        throughDate: "2026-08-31",
+        archiveCutoffTimezone: "America/Mexico_City",
+      },
+    )
+
+    expect(defaultOccurrences.map((occurrence) => occurrence.dueDate)).toEqual([
+      "2026-08-01",
+    ])
+    expect(zonedOccurrences).toEqual([])
+  })
+
   test("extends past a settled future occurrence to the next unsettled one", () => {
     const payments = [
       makePayment({ due_date: "2026-05-15" }),
@@ -171,6 +199,51 @@ describe("resolveRecurringBillOccurrences", () => {
     expect(occurrences).toHaveLength(1)
     expect(occurrences[0]?.dueDate).toBe("2026-07-23")
     expect(occurrences[0]?.status).toBe("upcoming")
+  })
+
+  test("generates unsettled occurrences only through a bounded horizon", () => {
+    const occurrences = resolveRecurringBillOccurrences(
+      makeBill({ first_due_date: "2026-07-31" }),
+      [],
+      TODAY,
+      { throughDate: "2026-10-15" },
+    )
+
+    expect(occurrences.map((occurrence) => occurrence.dueDate)).toEqual([
+      "2026-07-31",
+      "2026-08-31",
+      "2026-09-30",
+    ])
+  })
+
+  test("respects finite and archived schedules inside a bounded horizon", () => {
+    const finite = resolveRecurringBillOccurrences(
+      makeBill({
+        first_due_date: "2026-07-15",
+        total_payments: 2,
+      }),
+      [],
+      TODAY,
+      { throughDate: "2027-12-31" },
+    )
+    const archived = resolveRecurringBillOccurrences(
+      makeBill({
+        first_due_date: "2026-07-15",
+        archived_at: "2026-08-20T12:00:00.000Z",
+      }),
+      [],
+      TODAY,
+      { throughDate: "2027-12-31" },
+    )
+
+    expect(finite.map((occurrence) => occurrence.dueDate)).toEqual([
+      "2026-07-15",
+      "2026-08-15",
+    ])
+    expect(archived.map((occurrence) => occurrence.dueDate)).toEqual([
+      "2026-07-15",
+      "2026-08-15",
+    ])
   })
 })
 

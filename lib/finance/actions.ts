@@ -7,6 +7,7 @@ import {
   archiveRecurringBill,
   assignTransactionToBudget,
   closeZeroBalanceCreditCardStatement,
+  deleteCashForecastAdjustment,
   deleteBudget,
   deleteCategory,
   deleteCounterparty,
@@ -14,6 +15,7 @@ import {
   deleteRecurringBill,
   deleteTransaction,
   insertBudget,
+  insertCashForecastAdjustment,
   insertCategory,
   insertCounterparty,
   insertCreditCard,
@@ -27,12 +29,14 @@ import {
   transferPotBalance,
   unassignTransactionFromBudget,
   updateBudget,
+  updateCashForecastAdjustment,
   updateCategory,
   updateCounterparty,
   updateCreditCard,
   updatePot,
   updateRecurringBill,
   updateTransaction,
+  upsertCashForecastSettings,
 } from "@/lib/finance/queries"
 import { isFutureISODate } from "@/lib/finance/pot-due-date"
 import type {
@@ -41,12 +45,15 @@ import type {
   BudgetRecord,
   BudgetSummaryRecord,
   BudgetTransactionAssignmentRecord,
+  CashForecastAdjustmentRecord,
+  CashForecastSettingsRecord,
   CategoryRecord,
   CounterpartyRecord,
   CreditCardPaymentRecord,
   CreditCardRecord,
   CreditCardStatementRecord,
   NewBudgetRecord,
+  NewCashForecastAdjustmentRecord,
   NewCategoryRecord,
   NewCounterpartyRecord,
   NewCreditCardRecord,
@@ -80,6 +87,33 @@ const themeColorSchema = z.enum(
   ],
 )
 const recordIdSchema = z.string().uuid()
+const maximumMoneyCents = 2_147_483_647
+const forecastPeriodSchema = z
+  .string()
+  .regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Choose a valid month.")
+const cashForecastSettingsSchema = z
+  .number()
+  .int()
+  .min(0)
+  .max(maximumMoneyCents)
+const cashForecastAdjustmentFields = {
+  id: recordIdSchema,
+  name: z.string().trim().min(1).max(80),
+  amount_cents: z.number().int().positive().max(maximumMoneyCents),
+  start_period: forecastPeriodSchema,
+}
+const cashForecastAdjustmentSchema = z.discriminatedUnion("kind", [
+  z.object({
+    ...cashForecastAdjustmentFields,
+    kind: z.literal("additional_income"),
+    recurrence: z.literal("once"),
+  }),
+  z.object({
+    ...cashForecastAdjustmentFields,
+    kind: z.literal("planned_outflow"),
+    recurrence: z.enum(["once", "monthly"]),
+  }),
+])
 
 const budgetSchema = z.object({
   id: recordIdSchema,
@@ -1111,6 +1145,85 @@ export async function deletePotAction(
       ok: true,
       message: "Pot deleted.",
       data: undefined,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function saveCashForecastSettingsAction(
+  defaultMonthlyIncomeCents: number,
+): Promise<FinanceActionResult<CashForecastSettingsRecord>> {
+  try {
+    const userId = await getUserId()
+    const parsedIncomeCents = cashForecastSettingsSchema.parse(
+      defaultMonthlyIncomeCents,
+    )
+    const data = await upsertCashForecastSettings(userId, parsedIncomeCents)
+
+    return {
+      ok: true,
+      message: "Monthly income saved.",
+      data,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function createCashForecastAdjustmentAction(
+  adjustment: NewCashForecastAdjustmentRecord,
+): Promise<FinanceActionResult<CashForecastAdjustmentRecord>> {
+  try {
+    const userId = await getUserId()
+    const parsedAdjustment = cashForecastAdjustmentSchema.parse(adjustment)
+    const data = await insertCashForecastAdjustment(userId, parsedAdjustment)
+
+    return {
+      ok: true,
+      message: "Forecast item created.",
+      data,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function updateCashForecastAdjustmentAction(
+  id: string,
+  adjustment: Omit<NewCashForecastAdjustmentRecord, "id">,
+): Promise<FinanceActionResult<CashForecastAdjustmentRecord>> {
+  try {
+    const userId = await getUserId()
+    const parsedAdjustment = cashForecastAdjustmentSchema.parse({
+      id,
+      ...adjustment,
+    })
+    const { id: parsedId, ...updates } = parsedAdjustment
+    const data = await updateCashForecastAdjustment(userId, parsedId, updates)
+
+    return {
+      ok: true,
+      message: "Forecast item updated.",
+      data,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function deleteCashForecastAdjustmentAction(
+  id: string,
+): Promise<FinanceActionResult<{ id: string }>> {
+  try {
+    const userId = await getUserId()
+    const parsedId = recordIdSchema.parse(id)
+    const data = await deleteCashForecastAdjustment(userId, parsedId)
+
+    return {
+      ok: true,
+      message: "Forecast item deleted.",
+      data,
     }
   } catch (error) {
     return handleFinanceActionError(error)

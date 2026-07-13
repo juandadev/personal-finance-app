@@ -1,4 +1,13 @@
 import { getCreditCardDueStatus } from "@/lib/finance/credit-card-cycle"
+import { selectPrimaryPaymentAccount } from "@/lib/finance/accounts"
+import {
+  buildCashForecast,
+  type CashForecastResult,
+} from "@/lib/finance/cash-forecast"
+import {
+  buildCreditCardObligations,
+  type CreditCardObligation,
+} from "@/lib/finance/credit-card-obligations"
 import {
   getBillOccurrenceStatementCycle,
   getRecurringBillDueStatus,
@@ -397,124 +406,45 @@ function selectRecurringBillsSummary(
   ]
 }
 
-interface PendingCycleGroup {
-  periodStart: string
-  periodEnd: string
-  paymentDueDate: string
-  lines: CreditCardPendingBillLine[]
-}
-
-/**
- * Pending lines for card-assigned bills: unsettled occurrences whose due
- * date has been reached, grouped by the statement cycle they attach to.
- * These are pure derivations; the real transactions only exist once the
- * statement gets paid.
- */
-function selectPendingBillCycles(
-  cards: CreditCardRecord[],
-  statements: CreditCardStatementRecord[],
-  recurringBills: RecurringBillRecord[],
-  paymentsByBillId: Map<string, RecurringBillPaymentRecord[]>,
+function selectPendingBillLines(
+  obligation: CreditCardObligation,
   counterparties: Map<string, CounterpartyRecord>,
   categories: Map<string, CategoryRecord>,
-  today: string,
-): Map<string, Map<string, PendingCycleGroup>> {
-  const cyclesByCardId = new Map<string, Map<string, PendingCycleGroup>>()
-  const cardsById = byId(cards)
-
-  for (const bill of recurringBills) {
-    if (!bill.credit_card_id) {
-      continue
-    }
-
-    const card = cardsById.get(bill.credit_card_id)
-
-    if (!card) {
-      continue
-    }
-
-    const cardStatements = statements.filter(
-      (statement) => statement.credit_card_id === card.id,
-    )
+): CreditCardPendingBillLine[] {
+  return obligation.pendingBillLines.map((line) => {
     const counterparty = getRequired(
       counterparties,
-      bill.counterparty_id,
+      line.counterpartyId,
       "counterparty",
     )
-    const category = getRequired(categories, bill.category_id, "category")
-    const occurrences = resolveRecurringBillOccurrences(
-      bill,
-      paymentsByBillId.get(bill.id) ?? [],
-      today,
-    )
+    const category = getRequired(categories, line.categoryId, "category")
 
-    for (const occurrence of occurrences) {
-      if (
-        occurrence.status === "paid" ||
-        occurrence.status === "skipped" ||
-        occurrence.dueDate > today
-      ) {
-        continue
-      }
-
-      const cycle = getBillOccurrenceStatementCycle(
-        occurrence.dueDate,
-        card,
-        cardStatements,
-        today,
-      )
-      const cardCycles =
-        cyclesByCardId.get(card.id) ?? new Map<string, PendingCycleGroup>()
-      const group = cardCycles.get(cycle.periodStart) ?? {
-        periodStart: cycle.periodStart,
-        periodEnd: cycle.periodEnd,
-        paymentDueDate: cycle.paymentDueDate,
-        lines: [],
-      }
-
-      group.lines.push({
-        billId: bill.id,
-        name: counterparty.display_name,
-        avatarUrl: counterparty.avatar_url ?? "",
-        contactColor: counterparty.theme_color,
-        contactInitials: getInitials(counterparty.display_name),
-        dueDate: occurrence.dueDate,
-        amount: centsToDollars(occurrence.amountCents),
-        category: category.name,
-      })
-      cardCycles.set(cycle.periodStart, group)
-      cyclesByCardId.set(card.id, cardCycles)
+    return {
+      billId: line.billId,
+      name: counterparty.display_name,
+      avatarUrl: counterparty.avatar_url ?? "",
+      contactColor: counterparty.theme_color,
+      contactInitials: getInitials(counterparty.display_name),
+      dueDate: line.dueDate,
+      amount: centsToDollars(line.amountCents),
+      category: category.name,
     }
-  }
-
-  return cyclesByCardId
-}
-
-function selectPendingBillOccurrenceKeys(
-  pendingCyclesByCardId: Map<string, Map<string, PendingCycleGroup>>,
-): Set<string> {
-  const pendingOccurrenceKeys = new Set<string>()
-
-  for (const cycles of pendingCyclesByCardId.values()) {
-    for (const group of cycles.values()) {
-      for (const line of group.lines) {
-        pendingOccurrenceKeys.add(`${line.billId}:${line.dueDate}`)
-      }
-    }
-  }
-
-  return pendingOccurrenceKeys
+  })
 }
 
 function selectReservedInstallmentCentsByCard(
   recurringBills: RecurringBillRecord[],
   paymentsByBillId: Map<string, RecurringBillPaymentRecord[]>,
-  pendingCyclesByCardId: Map<string, Map<string, PendingCycleGroup>>,
+  obligations: CreditCardObligation[],
   today: string,
 ): Map<string, number> {
   const reservedCentsByCard = new Map<string, number>()
-  const pendingOccurrenceKeys = selectPendingBillOccurrenceKeys(
-    pendingCyclesByCardId,
+  const pendingOccurrenceKeys = new Set(
+    obligations.flatMap((obligation) =>
+      obligation.pendingBillLines.map(
+        (line) => `${line.billId}:${line.dueDate}`,
+      ),
+    ),
   )
 
   for (const bill of recurringBills) {
@@ -550,81 +480,44 @@ function selectReservedInstallmentCentsByCard(
 }
 
 function selectCreditCardStatements(
-  statements: CreditCardStatementRecord[],
-  pendingCyclesByCardId: Map<string, Map<string, PendingCycleGroup>>,
+  obligations: CreditCardObligation[],
+  counterparties: Map<string, CounterpartyRecord>,
+  categories: Map<string, CategoryRecord>,
   today: string,
 ): CreditCardStatement[] {
-  const statementViews = statements.map((statement) => {
-    const pendingBills =
-      pendingCyclesByCardId
-        .get(statement.credit_card_id)
-        ?.get(statement.period_start)?.lines ?? []
-    const pendingBillsAmount = pendingBills.reduce(
-      (sum, line) => sum + line.amount,
-      0,
+  return obligations.map((obligation) => {
+    const pendingBills = selectPendingBillLines(
+      obligation,
+      counterparties,
+      categories,
     )
-    const amount = centsToDollars(statement.statement_amount_cents)
+    const amount = centsToDollars(obligation.statementAmountCents)
+    const pendingBillsAmount = centsToDollars(obligation.pendingBillAmountCents)
 
     return {
-      id: statement.id,
-      creditCardId: statement.credit_card_id,
-      periodStart: statement.period_start,
-      periodEnd: statement.period_end,
-      paymentDueDate: statement.payment_due_date,
+      id:
+        obligation.statementId ??
+        `virtual-${obligation.cardId}-${obligation.periodStart}`,
+      creditCardId: obligation.cardId,
+      periodStart: obligation.periodStart,
+      periodEnd: obligation.periodEnd,
+      paymentDueDate: obligation.paymentDueDate,
       amount,
       pendingBills,
       pendingBillsAmount,
       totalAmount: amount + pendingBillsAmount,
-      lifecycleStatus: statement.lifecycle_status,
-      dueStatus: getCreditCardDueStatus(statement, today),
-      paidAt: statement.paid_at ?? undefined,
+      lifecycleStatus: obligation.lifecycleStatus,
+      dueStatus: getCreditCardDueStatus(
+        {
+          lifecycle_status: obligation.lifecycleStatus,
+          payment_due_date: obligation.paymentDueDate,
+        },
+        today,
+      ),
+      paidAt: obligation.paidAt ?? undefined,
+      isVirtual: obligation.isVirtual || undefined,
     }
   })
-
-  // Cycles that have pending bills but no statement row yet (no purchases
-  // happened) still need a payable statement view.
-  const existingKeys = new Set(
-    statements.map(
-      (statement) => `${statement.credit_card_id}:${statement.period_start}`,
-    ),
-  )
-  const virtualStatements: CreditCardStatement[] = []
-
-  for (const [cardId, cycles] of pendingCyclesByCardId) {
-    for (const [periodStart, group] of cycles) {
-      if (existingKeys.has(`${cardId}:${periodStart}`)) {
-        continue
-      }
-
-      const pendingBillsAmount = group.lines.reduce(
-        (sum, line) => sum + line.amount,
-        0,
-      )
-
-      virtualStatements.push({
-        id: `virtual-${cardId}-${periodStart}`,
-        creditCardId: cardId,
-        periodStart: group.periodStart,
-        periodEnd: group.periodEnd,
-        paymentDueDate: group.paymentDueDate,
-        amount: 0,
-        pendingBills: group.lines,
-        pendingBillsAmount,
-        totalAmount: pendingBillsAmount,
-        lifecycleStatus: "open",
-        dueStatus: getCreditCardDueStatus(
-          {
-            lifecycle_status: "open",
-            payment_due_date: group.paymentDueDate,
-          },
-          today,
-        ),
-        isVirtual: true,
-      })
-    }
-  }
-
-  return [...statementViews, ...virtualStatements]
 }
 
 function selectCreditCardPayments(
@@ -717,15 +610,17 @@ function selectCreditCardPendingSummary(
 
 function selectCreditCards(
   cards: CreditCardRecord[],
-  statements: CreditCardStatementRecord[],
+  obligations: CreditCardObligation[],
   payments: CreditCardPaymentRecord[],
-  pendingCyclesByCardId: Map<string, Map<string, PendingCycleGroup>>,
   reservedInstallmentCentsByCard: Map<string, number>,
+  counterparties: Map<string, CounterpartyRecord>,
+  categories: Map<string, CategoryRecord>,
   today: string,
 ): CreditCard[] {
   const selectedStatements = selectCreditCardStatements(
-    statements,
-    pendingCyclesByCardId,
+    obligations,
+    counterparties,
+    categories,
     today,
   )
   const selectedPayments = selectCreditCardPayments(payments)
@@ -827,7 +722,7 @@ function selectCreditCardSummary(
 function selectSummaryStats(
   state: FinanceState,
 ): FinanceViewModel["summaryStats"] {
-  const primaryAccount = state.accounts[0]
+  const primaryAccount = selectPrimaryPaymentAccount(state.accounts)
   const accountSummary = state.accountSummaries[0]
 
   return [
@@ -898,26 +793,28 @@ export function selectFinanceViewModel(
   const totalBillsAmount = recurringBills
     .filter((bill) => !bill.archivedAt)
     .reduce((sum, bill) => sum + bill.amount, 0)
-  const pendingCyclesByCardId = selectPendingBillCycles(
-    state.creditCards,
-    state.creditCardStatements,
-    state.recurringBills,
-    paymentsByBillId,
-    counterparties,
-    categories,
-    today,
-  )
+  const creditCardObligations = buildCreditCardObligations({
+    cards: state.creditCards,
+    statements: state.creditCardStatements,
+    cardPayments: state.creditCardPayments,
+    transactions: state.transactions,
+    recurringBills: state.recurringBills,
+    recurringBillPayments: state.recurringBillPayments,
+    asOfDate: today,
+    throughDate: today,
+  })
   const creditCards = selectCreditCards(
     state.creditCards,
-    state.creditCardStatements,
+    creditCardObligations,
     state.creditCardPayments,
-    pendingCyclesByCardId,
     selectReservedInstallmentCentsByCard(
       state.recurringBills,
       paymentsByBillId,
-      pendingCyclesByCardId,
+      creditCardObligations,
       today,
     ),
+    counterparties,
+    categories,
     today,
   )
   const creditCardSummary = selectCreditCardSummary(creditCards)
@@ -941,4 +838,11 @@ export function selectFinanceViewModel(
       0,
     ),
   }
+}
+
+export function selectCashForecast(
+  state: FinanceState,
+  asOf: Date,
+): CashForecastResult {
+  return buildCashForecast(state, asOf)
 }

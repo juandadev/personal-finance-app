@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { useFinance } from "@/hooks/use-finance"
+import { getForecastLocalDate } from "@/lib/finance/forecast-period"
 import { formatDollarInput } from "@/lib/finance/form-utils"
 import type { NewTransactionRecord } from "@/lib/finance/types"
 import {
@@ -93,10 +94,6 @@ type SelectOption = {
   }
 }
 
-function todayIsoDate() {
-  return new Date().toISOString().slice(0, 10)
-}
-
 interface TransactionDialogProps {
   transaction?: Transaction
   trigger?: ReactNode
@@ -142,6 +139,10 @@ function TransactionDialog({
   onOpenChange,
 }: TransactionDialogProps) {
   const { state, actions } = useFinance()
+  const localToday = getForecastLocalDate(
+    new Date(),
+    state.preferences.timezone,
+  )
   const isEditing = Boolean(transaction)
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
   const isControlled = controlledOpen !== undefined
@@ -164,7 +165,7 @@ function TransactionDialog({
         amount: transaction
           ? formatDollarInput(Math.abs(transaction.amount))
           : "",
-        postedAt: transaction?.postedAt ?? todayIsoDate(),
+        postedAt: transaction?.postedAt ?? localToday,
         concept: transaction?.concept ?? "",
         categoryId: transaction?.categoryId ?? state.categories[0]?.id ?? "",
         counterpartyId:
@@ -186,7 +187,13 @@ function TransactionDialog({
         description: transaction?.description ?? "",
         budgetId: transaction?.budgetId ?? noBudgetValue,
       }) satisfies TransactionFormValues,
-    [state.categories, state.counterparties, state.creditCards, transaction],
+    [
+      localToday,
+      state.categories,
+      state.counterparties,
+      state.creditCards,
+      transaction,
+    ],
   )
   const mainForm = useStandardForm({
     defaultValues: mainDefaultValues,
@@ -446,6 +453,7 @@ function TransactionDialog({
                   <Input
                     {...fieldProps}
                     type="date"
+                    max={localToday}
                     value={field.state.value}
                     onChange={(event) =>
                       mainForm.setValue("postedAt", event.target.value)

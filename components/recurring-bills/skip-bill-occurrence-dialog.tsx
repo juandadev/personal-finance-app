@@ -70,10 +70,12 @@ export function SkipBillOccurrenceDialog({
           </AlertDialogTitle>
           <AlertDialogDescription variant="finance">
             Skipping records no money movement. The{" "}
-            {formatCurrency(occurrence.amount, { forceDecimals: true })}{" "}
-            {bill.name} payment due {formatDisplayDate(occurrence.dueDate)} will
-            be marked as skipped and still counts toward the bill&apos;s
-            progress.
+            <strong>
+              {formatCurrency(occurrence.amount, { forceDecimals: true })}
+            </strong>{" "}
+            to <strong>{bill.name}</strong> payment due{" "}
+            <strong>{formatDisplayDate(occurrence.dueDate)} </strong> will be
+            marked as skipped and still counts toward the bill&apos;s progress.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogCloseButton aria-label="Close skip bill dialog" />
