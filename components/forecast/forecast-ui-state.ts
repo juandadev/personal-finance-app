@@ -35,7 +35,6 @@ export function createForecastItemSchema(
       const canRetainPastPeriod =
         retainedMonthlyStartPeriod !== undefined &&
         value.startPeriod === retainedMonthlyStartPeriod &&
-        value.kind === "planned_outflow" &&
         value.repeatMonthly
 
       if (periods.includes(value.startPeriod) || canRetainPastPeriod) {
@@ -51,19 +50,16 @@ export function createForecastItemSchema(
 }
 
 export function getForecastItemPeriodOptions({
-  kind,
   periods,
   repeatMonthly,
   retainedMonthlyStartPeriod,
 }: {
-  kind: CashForecastAdjustmentKind
   periods: string[]
   repeatMonthly: boolean
   retainedMonthlyStartPeriod?: string
 }) {
   if (
     retainedMonthlyStartPeriod &&
-    kind === "planned_outflow" &&
     repeatMonthly &&
     !periods.includes(retainedMonthlyStartPeriod)
   ) {

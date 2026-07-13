@@ -106,7 +106,7 @@ const cashForecastAdjustmentSchema = z.discriminatedUnion("kind", [
   z.object({
     ...cashForecastAdjustmentFields,
     kind: z.literal("additional_income"),
-    recurrence: z.literal("once"),
+    recurrence: z.enum(["once", "monthly"]),
   }),
   z.object({
     ...cashForecastAdjustmentFields,

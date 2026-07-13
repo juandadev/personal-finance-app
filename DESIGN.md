@@ -416,6 +416,9 @@ Button labels should be action-specific: `Add Money`, `Create Budget`,
   balance, pending additional income, and pending outflows. Future months remain
   projections, and the saved default monthly income starts with the first
   future month.
+- User-created additional-income and planned-outflow adjustments may be
+  one-time or repeat monthly from their selected start month. They remain
+  pending forecast-only entries until edited or deleted.
 - Only user-created forecast adjustments expose item-level Edit and Delete
   actions. Generated income, bill, and card rows are read-only.
 

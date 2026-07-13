@@ -21,15 +21,14 @@ describe("forecast item period state", () => {
     repeatMonthly: true,
   }
 
-  test("retains a past start only for the existing monthly outflow", () => {
+  test("retains a past start for either existing monthly adjustment", () => {
     expect(schema.safeParse(values).success).toBe(true)
     expect(
       schema.safeParse({
         ...values,
         kind: "additional_income",
-        repeatMonthly: false,
       }).success,
-    ).toBe(false)
+    ).toBe(true)
     expect(schema.safeParse({ ...values, repeatMonthly: false }).success).toBe(
       false,
     )
@@ -38,7 +37,6 @@ describe("forecast item period state", () => {
   test("removes a past option and resets it when recurrence no longer applies", () => {
     expect(
       getForecastItemPeriodOptions({
-        kind: "planned_outflow",
         periods: PERIODS,
         repeatMonthly: true,
         retainedMonthlyStartPeriod: PAST_PERIOD,
@@ -46,7 +44,6 @@ describe("forecast item period state", () => {
     ).toEqual([PAST_PERIOD, ...PERIODS])
     expect(
       getForecastItemPeriodOptions({
-        kind: "planned_outflow",
         periods: PERIODS,
         repeatMonthly: false,
         retainedMonthlyStartPeriod: PAST_PERIOD,
@@ -70,7 +67,6 @@ describe("forecast item period state", () => {
     ).toBe(true)
     expect(
       getForecastItemPeriodOptions({
-        kind: "additional_income",
         periods: PERIODS,
         repeatMonthly: false,
       })[0],

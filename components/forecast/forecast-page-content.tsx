@@ -30,7 +30,7 @@ export function ForecastPageContent() {
   const periods = readyReport?.months.map((month) => month.period) ?? []
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
       <PageHeading title="Cash Forecast" fixed>
         <ModuleHeaderActions
           ariaLabel="More cash forecast actions"

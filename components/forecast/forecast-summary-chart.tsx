@@ -167,7 +167,7 @@ export function ForecastSummaryChart({
               </p>
             </div>
 
-            <dl className="grid gap-3 sm:grid-cols-2 xl:min-w-112">
+            <dl className="grid gap-3 sm:grid-cols-2 xl:min-w-md">
               <BridgeValue
                 label="Current Month Opening"
                 value={formatCurrency(report.bridge.openingBalanceCents / 100, {
@@ -279,8 +279,9 @@ export function ForecastSummaryChart({
                       dataKey="endingBalance"
                       stroke="var(--color-endingBalance)"
                       strokeWidth={2}
-                      dot={(props) => (
+                      dot={({ key, ...props }) => (
                         <ForecastBalanceDot
+                          key={key}
                           {...props}
                           activePeriod={activePeriod}
                         />

@@ -242,10 +242,6 @@ function adjustmentApplies(
   adjustment: CashForecastAdjustmentRecord,
   period: string,
 ) {
-  if (adjustment.kind === "additional_income") {
-    return period === adjustment.start_period
-  }
-
   return adjustment.recurrence === "monthly"
     ? period >= adjustment.start_period
     : period === adjustment.start_period

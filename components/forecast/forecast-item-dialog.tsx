@@ -100,8 +100,7 @@ function ForecastItemDialog({
   const isEditing = Boolean(adjustment)
   const createIdRef = useRef<string | null>(null)
   const retainedMonthlyStartPeriod =
-    adjustment?.kind === "planned_outflow" &&
-    adjustment.recurrence === "monthly" &&
+    adjustment?.recurrence === "monthly" &&
     !periods.includes(adjustment.start_period)
       ? adjustment.start_period
       : undefined
@@ -140,10 +139,7 @@ function ForecastItemDialog({
         name: value.name,
         amount_cents: value.amount,
         start_period: value.startPeriod,
-        recurrence:
-          value.kind === "planned_outflow" && value.repeatMonthly
-            ? "monthly"
-            : "once",
+        recurrence: value.repeatMonthly ? "monthly" : "once",
       }
       const result = adjustment
         ? await actions.updateCashForecastAdjustment(adjustment.id, {
@@ -214,24 +210,13 @@ function ForecastItemDialog({
                   value={field.state.value}
                   onValueChange={(value: CashForecastAdjustmentKind) => {
                     form.setValue("kind", value)
-
-                    if (value === "additional_income") {
-                      form.setValue("repeatMonthly", false)
-                      form.setValue(
-                        "startPeriod",
-                        getHorizonStartPeriod(
-                          form.form.state.values.startPeriod,
-                          periods,
-                        ),
-                      )
-                    }
                   }}
                 >
                   <ForecastKindOption
                     id="forecast-kind-income"
                     value="additional_income"
                     label="Additional Income"
-                    description="One-time income"
+                    description="One-time or monthly"
                     selected={field.state.value === "additional_income"}
                   />
                   <ForecastKindOption
@@ -292,15 +277,9 @@ function ForecastItemDialog({
             )}
           </form.form.Field>
 
-          <form.form.Subscribe
-            selector={(state) => ({
-              kind: state.values.kind,
-              repeatMonthly: state.values.repeatMonthly,
-            })}
-          >
-            {({ kind, repeatMonthly }) => {
+          <form.form.Subscribe selector={(state) => state.values.repeatMonthly}>
+            {(repeatMonthly) => {
               const availablePeriods = getForecastItemPeriodOptions({
-                kind,
                 periods,
                 repeatMonthly,
                 retainedMonthlyStartPeriod,
@@ -347,53 +326,47 @@ function ForecastItemDialog({
             }}
           </form.form.Subscribe>
 
-          <form.form.Subscribe selector={(state) => state.values.kind}>
-            {(kind) =>
-              kind === "planned_outflow" ? (
-                <form.form.Field name="repeatMonthly">
-                  {(field) => (
-                    <Label
-                      htmlFor="forecast-item-repeat"
-                      className="bg-background flex min-h-11 cursor-pointer items-start gap-3 rounded-lg p-4"
-                    >
-                      <Checkbox
-                        id="forecast-item-repeat"
-                        checked={field.state.value}
-                        onCheckedChange={(checked) => {
-                          const repeatMonthly = checked === true
+          <form.form.Field name="repeatMonthly">
+            {(field) => (
+              <Label
+                htmlFor="forecast-item-repeat"
+                className="bg-background flex min-h-11 cursor-pointer items-start gap-3 rounded-lg p-4"
+              >
+                <Checkbox
+                  id="forecast-item-repeat"
+                  checked={field.state.value}
+                  onCheckedChange={(checked) => {
+                    const repeatMonthly = checked === true
 
-                          form.setValue("repeatMonthly", repeatMonthly)
+                    form.setValue("repeatMonthly", repeatMonthly)
 
-                          if (!repeatMonthly) {
-                            form.setValue(
-                              "startPeriod",
-                              getHorizonStartPeriod(
-                                form.form.state.values.startPeriod,
-                                periods,
-                              ),
-                            )
-                          }
-                        }}
-                        aria-describedby="forecast-item-repeat-helper"
-                      />
-                      <span className="space-y-1">
-                        <span className="text-foreground block text-sm font-bold">
-                          Repeat Every Month
-                        </span>
-                        <span
-                          id="forecast-item-repeat-helper"
-                          className="text-muted-foreground block text-xs leading-normal font-normal"
-                        >
-                          Continue this amount in each rolling forecast month
-                          until you edit or delete it.
-                        </span>
-                      </span>
-                    </Label>
-                  )}
-                </form.form.Field>
-              ) : null
-            }
-          </form.form.Subscribe>
+                    if (!repeatMonthly) {
+                      form.setValue(
+                        "startPeriod",
+                        getHorizonStartPeriod(
+                          form.form.state.values.startPeriod,
+                          periods,
+                        ),
+                      )
+                    }
+                  }}
+                  aria-describedby="forecast-item-repeat-helper"
+                />
+                <span className="space-y-1">
+                  <span className="text-foreground block text-sm font-bold">
+                    Repeat Every Month
+                  </span>
+                  <span
+                    id="forecast-item-repeat-helper"
+                    className="text-muted-foreground block text-xs leading-normal font-normal"
+                  >
+                    Continue this amount in each rolling forecast month until
+                    you edit or delete it.
+                  </span>
+                </span>
+              </Label>
+            )}
+          </form.form.Field>
 
           {form.status?.message ? (
             <FormStatusMessage variant={form.status.variant}>

@@ -76,9 +76,9 @@ month pins it and updates a paginated activity list below the chart.
 - Apply a credit-card obligation in its statement payment-due month.
 - Apply a custom planned outflow in the user-selected month. It has no payment
   source and does not shift according to a card cycle.
-- A repeating planned outflow starts in its selected period and remains active
-  in every later rolling forecast month until edited or deleted.
-- Keep additional-income adjustments one-time and month-specific.
+- A repeating additional-income or planned-outflow adjustment starts in its
+  selected period and remains active in every later rolling forecast month
+  until edited or deleted.
 
 ## Terminology
 
@@ -131,8 +131,7 @@ Store user-created forecast entries:
 
 Database and server validation must enforce these invariants:
 
-- `additional_income` always uses `recurrence = once`.
-- `planned_outflow` may use `once` or `monthly`.
+- Both adjustment kinds may use `once` or `monthly`.
 - A monthly adjustment is active when
   `forecast_period >= adjustment.start_period`.
 - A one-time adjustment is active only when
@@ -478,8 +477,8 @@ names and amounts, muted source metadata, and right-aligned money.
   handled.
 - One-time additional income and planned outflows affect only their selected
   future periods.
-- Monthly planned outflows begin at `start_period` and continue through rolling
-  horizons.
+- Monthly additional income and planned outflows begin at `start_period` and
+  continue through rolling horizons.
 - Current-period custom adjustments are included as pending.
 - Mixed currencies and missing primary accounts return blocking states.
 - Thirteen ordered months are returned across year boundaries.
@@ -488,7 +487,7 @@ names and amounts, muted source metadata, and right-aligned money.
 
 - Settings upsert permits zero and rejects negative income.
 - Adjustment validation enforces positive amounts and non-empty names.
-- Additional income cannot be saved with monthly recurrence.
+- Both adjustment kinds can be saved with one-time or monthly recurrence.
 - User ownership is enforced for every settings and adjustment operation.
 - Successful actions update finance state and recompute the view model.
 - Failed actions preserve the previous state and return actionable messages.

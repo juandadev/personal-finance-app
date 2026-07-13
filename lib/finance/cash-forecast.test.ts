@@ -628,6 +628,7 @@ describe("buildCashForecast projection", () => {
           id: "adjustment-1",
           kind: "additional_income",
           start_period: "2026-07",
+          recurrence: "monthly",
           amount_cents: 500_000,
         }),
         makeAdjustment({
@@ -680,6 +681,13 @@ describe("buildCashForecast projection", () => {
             amount_cents: 50_000,
           }),
           makeAdjustment({
+            id: "adjustment-4",
+            kind: "additional_income",
+            start_period: "2026-08",
+            recurrence: "monthly",
+            amount_cents: 30_000,
+          }),
+          makeAdjustment({
             id: "adjustment-2",
             kind: "planned_outflow",
             start_period: "2026-09",
@@ -704,21 +712,23 @@ describe("buildCashForecast projection", () => {
     })
     expect(forecast.months[1]).toMatchObject({
       period: "2026-08",
-      additionalIncomeCents: 50_000,
-      endingBalanceCents: 150_000,
+      additionalIncomeCents: 80_000,
+      endingBalanceCents: 180_000,
     })
     expect(forecast.months[2]).toMatchObject({
       period: "2026-09",
+      additionalIncomeCents: 30_000,
       plannedOutflowCents: 20_000,
-      endingBalanceCents: 230_000,
+      endingBalanceCents: 290_000,
     })
     expect(forecast.months[3]).toMatchObject({
       period: "2026-10",
+      additionalIncomeCents: 30_000,
       plannedOutflowCents: 10_000,
-      endingBalanceCents: 320_000,
+      endingBalanceCents: 410_000,
     })
     expect(forecast.months.at(-1)?.period).toBe("2027-07")
-    expect(forecast.months.at(-1)?.endingBalanceCents).toBe(1_130_000)
+    expect(forecast.months.at(-1)?.endingBalanceCents).toBe(1_490_000)
   })
 
   test("keeps negative balances valid and carries them forward", () => {
