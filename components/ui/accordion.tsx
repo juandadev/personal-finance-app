@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import * as AccordionPrimitive from "@radix-ui/react-accordion"
-import CaretDownIcon from "@/components/icons/CaretDownIcon"
+import { CaretDownIcon } from "@phosphor-icons/react"
 
 import { cn } from "@/lib/utils"
 
@@ -41,7 +41,10 @@ function AccordionTrigger({
         {...props}
       >
         {children}
-        <CaretDownIcon className="text-muted-foreground pointer-events-none size-2 shrink-0 translate-y-0.5 transition-transform duration-200" />
+        <CaretDownIcon
+          weight="fill"
+          className="text-muted-foreground pointer-events-none size-2 shrink-0 translate-y-0.5 transition-transform duration-200"
+        />
       </AccordionPrimitive.Trigger>
     </AccordionPrimitive.Header>
   )

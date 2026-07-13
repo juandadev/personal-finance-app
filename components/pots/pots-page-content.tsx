@@ -1,6 +1,6 @@
 "use client"
 
-import { PiggyBank } from "lucide-react"
+import { TipJarIcon } from "@phosphor-icons/react"
 
 import { EmptyDataCard } from "@/components/empty-data-card"
 import { useFinance } from "@/hooks/use-finance"
@@ -15,7 +15,7 @@ export function PotsPageContent() {
       <div className="mt-6">
         <EmptyDataCard
           className="min-h-90"
-          icon={<PiggyBank className="size-5" aria-hidden />}
+          icon={<TipJarIcon className="size-5" aria-hidden />}
           surface="card"
           title="Start With Your First Pot"
           description="Create a savings pot for a goal, rainy day fund, or planned purchase. Your progress will appear here as you save."

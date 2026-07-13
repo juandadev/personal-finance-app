@@ -1,7 +1,6 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
-import CaretRightIcon from "@/components/icons/CaretRightIcon"
-import { MoreHorizontal } from "lucide-react"
+import { CaretRightIcon, DotsThreeIcon } from "@phosphor-icons/react"
 
 import { cn } from "@/lib/utils"
 
@@ -14,7 +13,7 @@ function BreadcrumbList({ className, ...props }: React.ComponentProps<"ol">) {
     <ol
       data-slot="breadcrumb-list"
       className={cn(
-        "text-muted-foreground flex flex-wrap items-center gap-1.5 text-sm break-words sm:gap-2.5",
+        "text-muted-foreground flex flex-wrap items-center gap-1.5 text-sm wrap-break-word sm:gap-2.5",
         className,
       )}
       {...props}
@@ -76,7 +75,7 @@ function BreadcrumbSeparator({
       className={cn("[&>svg]:size-3.5", className)}
       {...props}
     >
-      {children ?? <CaretRightIcon className="size-2" />}
+      {children ?? <CaretRightIcon weight="fill" className="size-2" />}
     </li>
   )
 }
@@ -93,7 +92,7 @@ function BreadcrumbEllipsis({
       className={cn("flex size-9 items-center justify-center", className)}
       {...props}
     >
-      <MoreHorizontal className="size-4" />
+      <DotsThreeIcon weight="bold" className="size-4" />
       <span className="sr-only">More</span>
     </span>
   )

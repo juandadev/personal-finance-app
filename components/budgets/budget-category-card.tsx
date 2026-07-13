@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { ItemActions } from "@/components/actions"
-import CaretRightIcon from "@/components/icons/CaretRightIcon"
+import { CaretRightIcon } from "@phosphor-icons/react"
 import {
   Card,
   CardAction,
@@ -125,7 +125,7 @@ export function BudgetCategoryCard({
               className={cardActionLinkClasses}
             >
               See All
-              <CaretRightIcon className="size-2" aria-hidden />
+              <CaretRightIcon weight="fill" className="size-2" aria-hidden />
             </Link>
           </CardAction>
         </CardHeader>

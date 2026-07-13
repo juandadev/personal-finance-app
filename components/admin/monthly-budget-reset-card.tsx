@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { RotateCcw } from "lucide-react"
+import { ArrowCounterClockwiseIcon } from "@phosphor-icons/react"
 
 import { resetBudgetsAction } from "@/app/(app)/admin/actions"
 import type { ResetBudgetsActionResult } from "@/app/(app)/admin/actions"
@@ -41,7 +41,11 @@ export function MonthlyBudgetResetCard() {
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <span className="bg-background text-destructive flex size-10 items-center justify-center rounded-full">
-                <RotateCcw className="size-5" aria-hidden />
+                <ArrowCounterClockwiseIcon
+                  weight="fill"
+                  className="size-5"
+                  aria-hidden
+                />
               </span>
               <CardTitle id="monthly-budget-reset-title">
                 Monthly Budget Reset

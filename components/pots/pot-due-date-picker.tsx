@@ -1,7 +1,7 @@
 "use client"
 
 import { format } from "date-fns"
-import { CalendarIcon } from "lucide-react"
+import { CalendarIcon } from "@phosphor-icons/react"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -49,7 +49,7 @@ export function PotDueDatePicker({
             aria-invalid={hasError ? "true" : "false"}
             aria-describedby={describedBy}
           >
-            <CalendarIcon className="size-4" aria-hidden />
+            <CalendarIcon weight="fill" className="size-4" aria-hidden />
             {selectedDate ? format(selectedDate, "PPP") : "Select a due date"}
           </Button>
         </PopoverTrigger>

@@ -1,7 +1,11 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { ReceiptText } from "lucide-react"
+import {
+  FunnelIcon,
+  ReceiptIcon,
+  ArrowsDownUpIcon,
+} from "@phosphor-icons/react"
 import { EmptyDataCard } from "@/components/empty-data-card"
 import { Card } from "@/components/ui/card"
 import { useFinance } from "@/hooks/use-finance"
@@ -10,9 +14,6 @@ import { SearchInput } from "./search-input"
 import { FilterDropdown } from "./filter-dropdown"
 import { TransactionsTable } from "./transactions-table"
 import { Pagination } from "./pagination"
-import FilterMobileIcon from "@/components/icons/FilterMobileIcon"
-import SortMobileIcon from "@/components/icons/SortMobileIcon"
-
 const ITEMS_PER_PAGE = 10
 
 const sortOptions: { value: SortOption; label: string }[] = [
@@ -115,14 +116,16 @@ export function TransactionsContent() {
             value={sortBy}
             options={sortOptions}
             onChange={handleSortChange}
-            icon={<SortMobileIcon className="size-4" aria-hidden />}
+            icon={
+              <ArrowsDownUpIcon weight="fill" className="size-4" aria-hidden />
+            }
           />
           <FilterDropdown
             label="Category"
             value={category}
             options={categoryOptions}
             onChange={handleCategoryChange}
-            icon={<FilterMobileIcon className="size-4" aria-hidden />}
+            icon={<FunnelIcon weight="fill" className="size-4" aria-hidden />}
           />
         </div>
       </div>
@@ -138,7 +141,7 @@ export function TransactionsContent() {
       ) : (
         <EmptyDataCard
           className="min-h-90"
-          icon={<ReceiptText className="size-5" aria-hidden />}
+          icon={<ReceiptIcon weight="fill" className="size-5" aria-hidden />}
           title={
             hasTransactions ? "No Matching Transactions" : "No Transactions Yet"
           }

@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import SearchIcon from "@/components/icons/SearchIcon"
+import { MagnifyingGlassIcon } from "@phosphor-icons/react"
 
 interface SearchInputProps {
   value: string
@@ -37,7 +37,7 @@ export function SearchInput({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
         />
-        <SearchIcon aria-hidden />
+        <MagnifyingGlassIcon weight="light" aria-hidden />
       </div>
     </div>
   )

@@ -1,6 +1,6 @@
 "use client"
 
-import { CreditCard } from "lucide-react"
+import { CreditCardIcon } from "@phosphor-icons/react"
 
 import { themeColorClasses, type ThemeColor } from "@/lib/theme-colors"
 import { cn } from "@/lib/utils"
@@ -30,7 +30,7 @@ export function CreditCardBadge({
     >
       <span className="sr-only">{nickname}</span>
       <span aria-hidden className="flex items-center gap-1">
-        <CreditCard className="size-3.5 text-white" />
+        <CreditCardIcon weight="fill" className="size-3.5 text-white" />
         {initials}
       </span>
     </div>

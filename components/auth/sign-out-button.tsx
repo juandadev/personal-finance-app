@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { DoorOpenIcon } from "lucide-react"
+import { DoorOpenIcon } from "@phosphor-icons/react"
 
 import { Button } from "@/components/ui/button"
 import { SidebarIconTooltip, SidebarLabel } from "@/components/ui/sidebar"
@@ -31,7 +31,11 @@ export function SignOutButton() {
         disabled={isSigningOut}
         onClick={() => void handleSignOut()}
       >
-        <DoorOpenIcon className="size-5 shrink-0" aria-hidden="true" />
+        <DoorOpenIcon
+          weight="fill"
+          className="size-5 shrink-0"
+          aria-hidden="true"
+        />
         <SidebarLabel className="font-bold">
           {isSigningOut ? "Signing out..." : "Sign Out"}
         </SidebarLabel>

@@ -65,7 +65,7 @@ export function BudgetsChart({ budgets, spent, limit }: BudgetsChartProps) {
       </ResponsiveContainer>
 
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-        <p className="text-foreground text-3xl font-bold tracking-tight">
+        <p className="text-foreground bg-card rounded-md px-1 text-3xl font-bold tracking-tight">
           {formatCurrency(spent)}
         </p>
         <p className="text-muted-foreground mt-1 text-xs">

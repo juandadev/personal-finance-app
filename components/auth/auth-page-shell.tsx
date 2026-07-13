@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, type ComponentProps, type ReactNode } from "react"
-import { Eye, EyeOff } from "lucide-react"
+import { EyeIcon, EyeSlashIcon } from "@phosphor-icons/react"
 
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -141,7 +141,7 @@ export function AuthPasswordField({
   ...props
 }: AuthPasswordFieldProps) {
   const [showPassword, setShowPassword] = useState(false)
-  const Icon = showPassword ? EyeOff : Eye
+  const Icon = showPassword ? EyeSlashIcon : EyeIcon
   const helperId = helperText ? `${id}-helper` : undefined
   const errorId = error ? `${id}-error` : undefined
 
@@ -174,7 +174,7 @@ export function AuthPasswordField({
           className="absolute top-1/2 right-1 -translate-y-1/2 rounded-full"
           onClick={() => setShowPassword((visible) => !visible)}
         >
-          <Icon className="size-5" aria-hidden="true" strokeWidth={3} />
+          <Icon className="size-5" aria-hidden="true" />
         </Button>
       </div>
       {error ? (

@@ -1,9 +1,9 @@
 import type { ComponentType } from "react"
-import type { LucideIcon } from "lucide-react"
+import type { Icon as PhosphorIcon } from "@phosphor-icons/react"
 import type { ThemeColor } from "@/lib/theme-colors"
 import type { IconProps } from "@/types"
 
-export type NavIcon = LucideIcon | ComponentType<IconProps>
+export type NavIcon = ComponentType<IconProps> | PhosphorIcon
 
 export interface NavItem {
   key: string

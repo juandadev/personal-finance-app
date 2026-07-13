@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useRef, useState, type KeyboardEvent } from "react"
-import { AlertTriangle } from "lucide-react"
+import { WarningIcon } from "@phosphor-icons/react"
 import { useReducedMotion } from "motion/react"
 import {
   Bar,
@@ -149,7 +149,11 @@ export function ForecastSummaryChart({
                 )}
               >
                 {isNegative ? (
-                  <AlertTriangle className="size-6 shrink-0" aria-hidden />
+                  <WarningIcon
+                    weight="fill"
+                    className="size-6 shrink-0"
+                    aria-hidden
+                  />
                 ) : null}
                 {formatCurrency(activeMonth.endingBalanceCents / 100, {
                   currency: report.currency,
@@ -326,7 +330,8 @@ export function ForecastSummaryChart({
                         <span className="flex items-center gap-1">
                           {datum?.shortLabel}
                           {month.endingBalanceCents < 0 ? (
-                            <AlertTriangle
+                            <WarningIcon
+                              weight="fill"
                               className="text-destructive size-3"
                               aria-hidden
                             />

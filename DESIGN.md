@@ -297,7 +297,9 @@ Finance data must stay readable on mobile.
 
 - Use the shared item-level icon-only ellipsis button for secondary actions on
   managed cards and list/table rows.
-- Icons should be Lucide icons at `size-4` or `size-5`.
+- Icons should be Phosphor filled icons imported directly from
+  `@phosphor-icons/react` using `Icon`-suffixed exports (e.g. `ReceiptIcon`)
+  with `weight="fill"`, sized at Tailwind `size-4` or `size-5`.
 - Icon-only buttons need an `aria-label`.
 - Menu items should use clear Title Case action labels.
 - Destructive menu items use destructive text.
@@ -319,7 +321,7 @@ Finance data must stay readable on mobile.
 ### shadcn and Radix
 
 This project uses shadcn `new-york` style, Radix primitives, Tailwind CSS v4,
-Lucide icons, and `cn()` for class merging.
+Phosphor filled icons (`@phosphor-icons/react`), and `cn()` for class merging.
 
 - Prefer components from `components/ui` before writing raw controls.
 - Extend owned shadcn components when a variant is reused across the app.
@@ -328,6 +330,18 @@ Lucide icons, and `cn()` for class merging.
 - Do not fork styling locally if the same need appears in multiple places.
 - Avoid raw `button`, `input`, `select`, or `dialog` for reusable UI. Product
   wrappers are acceptable when they encode a local pattern.
+
+### Icons
+
+- Import from `@phosphor-icons/react` using Phosphor's `Icon`-suffixed exports,
+  e.g. `import { ReceiptIcon } from "@phosphor-icons/react"`.
+- Set `weight="fill"` on every Phosphor icon except the loading spinner
+  (`CircleNotch`).
+- Size with Tailwind `size-4` / `size-5` or Phosphor's `size` prop.
+- Custom Figma SVG icons in `components/icons/` are reserved for navigation,
+  payment brand logos, and the sidebar collapse control only.
+- `components.json` uses `"iconLibrary": "phosphor"` for shadcn CLI installs.
+
 - Tooltip groups are mandatory for nearby controls, button groups, and repeated
   icon-only actions. Wrap the group in one shared `TooltipProvider` and set a
   `skipDelayDuration` so moving quickly between tooltips opens the next tooltip

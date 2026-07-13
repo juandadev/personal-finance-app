@@ -29,7 +29,7 @@ export function NavItem({ item, active = false }: NavItemProps) {
           aria-current={active ? "page" : undefined}
           aria-label={item.label}
         >
-          <Icon aria-hidden />
+          <Icon weight="fill" aria-hidden />
           <SidebarLabel>{item.label}</SidebarLabel>
         </Link>
       </SidebarMenuButton>

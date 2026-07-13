@@ -1,8 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { ReceiptText } from "lucide-react"
-import CaretRightIcon from "@/components/icons/CaretRightIcon"
+import { CaretRightIcon, ReceiptIcon } from "@phosphor-icons/react"
 import {
   Card,
   CardAction,
@@ -28,7 +27,7 @@ export function TransactionsCard() {
           <CardAction>
             <Link href="/transactions" className={cardActionLinkClasses}>
               View All
-              <CaretRightIcon className="size-2" aria-hidden />
+              <CaretRightIcon weight="fill" className="size-3" aria-hidden />
             </Link>
           </CardAction>
         </CardHeader>
@@ -42,7 +41,7 @@ export function TransactionsCard() {
         ) : (
           <EmptyDataCard
             className="mt-8 min-h-45 p-5 md:p-6"
-            icon={<ReceiptText className="size-5" aria-hidden />}
+            icon={<ReceiptIcon weight="fill" className="size-5" aria-hidden />}
             title="No Transactions Yet"
             description="There is no transaction data available to show yet."
           />

@@ -1,6 +1,6 @@
 "use client"
 
-import { ChartPie } from "lucide-react"
+import { ChartPieIcon } from "@phosphor-icons/react"
 
 import { EmptyDataCard } from "@/components/empty-data-card"
 import { useFinance } from "@/hooks/use-finance"
@@ -42,7 +42,9 @@ export function BudgetsPageContent() {
           ) : (
             <EmptyDataCard
               className="min-h-90"
-              icon={<ChartPie className="size-5" aria-hidden />}
+              icon={
+                <ChartPieIcon weight="fill" className="size-5" aria-hidden />
+              }
               surface="card"
               title="Build Your First Budget"
               description="Choose a category and set a monthly limit. Once transactions are assigned, this space will show spending progress and recent activity."

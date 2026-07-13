@@ -1,7 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { CircleAlert, CircleCheck, CreditCard, MinusCircle } from "lucide-react"
+import {
+  CheckCircleIcon,
+  CreditCardIcon,
+  MinusCircleIcon,
+  WarningCircleIcon,
+} from "@phosphor-icons/react"
 
 import { ItemActions } from "@/components/actions"
 import { ContactAvatar } from "@/components/contact-avatar"
@@ -85,19 +90,22 @@ function StatusIndicator({
         · <span className="font-semibold">{statusLabels[status]}</span>
       </span>
       {status === "paid" ? (
-        <CircleCheck
+        <CheckCircleIcon
+          weight="fill"
           className={cn("text-accent size-4", iconClassName)}
           aria-hidden
         />
       ) : null}
       {status === "skipped" ? (
-        <MinusCircle
+        <MinusCircleIcon
+          weight="fill"
           className={cn("text-muted-foreground size-4", iconClassName)}
           aria-hidden
         />
       ) : null}
       {isWarning(status) || status === "overdue" ? (
-        <CircleAlert
+        <WarningCircleIcon
+          weight="fill"
           className={cn(statusClassName(status), "size-4", iconClassName)}
           aria-hidden
         />
@@ -128,7 +136,11 @@ function BillIdentity({ bill }: { bill: RecurringBill }) {
         <span className="text-muted-foreground flex items-center gap-1 text-xs">
           {scheduleLabel(bill)}
           {bill.creditCardId ? (
-            <CreditCard className="size-3" aria-label="Charges to a card" />
+            <CreditCardIcon
+              weight="fill"
+              className="size-3"
+              aria-label="Charges to a card"
+            />
           ) : null}
         </span>
         <span className="text-muted-foreground text-xs font-semibold">

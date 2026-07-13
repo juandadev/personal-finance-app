@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { CreditCardIcon } from "lucide-react"
+import { CreditCardIcon } from "@phosphor-icons/react"
 
 import { ItemActions } from "@/components/actions"
 import { CloseCreditCardStatementDialog } from "@/components/credit-cards/close-credit-card-statement-dialog"
@@ -96,7 +96,7 @@ export function CreditCardsPageContent() {
         <EmptyDataCard
           surface="card"
           className="min-h-90"
-          icon={<CreditCardIcon className="size-5" aria-hidden />}
+          icon={<CreditCardIcon weight="fill" className="size-5" aria-hidden />}
           title="No Credit Cards Yet"
           description="Add your cards with safe identifying details so purchases can build statement balances and payment reminders."
         />

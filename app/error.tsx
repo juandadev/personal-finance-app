@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import Link from "next/link"
-import { TriangleAlert } from "lucide-react"
+import { WarningIcon } from "@phosphor-icons/react"
 
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -22,7 +22,7 @@ export default function AppError({
     <div className="bg-background flex min-h-svh items-center justify-center px-5 py-8">
       <Card padding="overview" className="w-full max-w-md text-center">
         <div className="bg-destructive/10 text-destructive mx-auto flex size-12 items-center justify-center rounded-full">
-          <TriangleAlert className="size-6" aria-hidden />
+          <WarningIcon weight="fill" className="size-6" aria-hidden />
         </div>
         <h1 className="text-foreground mt-6 text-xl font-bold tracking-tight">
           Something went wrong

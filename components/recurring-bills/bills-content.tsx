@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { ArrowUpDown, CalendarClock } from "lucide-react"
+import { ArrowsDownUpIcon, CalendarDotsIcon } from "@phosphor-icons/react"
 import { EmptyDataCard } from "@/components/empty-data-card"
 import { Card } from "@/components/ui/card"
 import type { RecurringBill, SortOption } from "@/lib/types"
@@ -85,7 +85,9 @@ export function BillsContent({ bills }: BillsContentProps) {
           value={sortBy}
           options={sortOptions}
           onChange={setSortBy}
-          icon={<ArrowUpDown className="size-5" aria-hidden />}
+          icon={
+            <ArrowsDownUpIcon weight="fill" className="size-5" aria-hidden />
+          }
         />
       </div>
 
@@ -104,7 +106,9 @@ export function BillsContent({ bills }: BillsContentProps) {
       ) : (
         <EmptyDataCard
           className="min-h-90"
-          icon={<CalendarClock className="size-5" aria-hidden />}
+          icon={
+            <CalendarDotsIcon weight="fill" className="size-5" aria-hidden />
+          }
           title={hasBills ? "No Matching Bills" : "No Recurring Bills Yet"}
           description={
             hasBills

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { AlertTriangle, Landmark, WalletCards } from "lucide-react"
+import { BankIcon, CardsIcon, WarningIcon } from "@phosphor-icons/react"
 
 import { ModuleHeaderActions } from "@/components/actions"
 import { EmptyDataCard } from "@/components/empty-data-card"
@@ -89,7 +89,7 @@ function ForecastBlockedState({
       <EmptyDataCard
         surface="card"
         className="min-h-96"
-        icon={<WalletCards className="size-5" aria-hidden />}
+        icon={<CardsIcon weight="fill" className="size-5" aria-hidden />}
         title="Set Up Your Forecast"
         description="Add your usual monthly income to unlock the current month plus 12 future months. A value of $0 is valid."
         action={<Button onClick={onSetIncome}>Set Monthly Income</Button>}
@@ -102,7 +102,7 @@ function ForecastBlockedState({
       <EmptyDataCard
         surface="card"
         className="min-h-96"
-        icon={<Landmark className="size-5" aria-hidden />}
+        icon={<BankIcon weight="fill" className="size-5" aria-hidden />}
         title="Primary Account Needed"
         description="Cash Forecast needs a checking or savings account with a current balance before it can calculate your projection."
       />
@@ -113,7 +113,7 @@ function ForecastBlockedState({
     <EmptyDataCard
       surface="card"
       className="min-h-96"
-      icon={<AlertTriangle className="size-5" aria-hidden />}
+      icon={<WarningIcon weight="fill" className="size-5" aria-hidden />}
       title="Mixed Currencies Are Not Supported"
       description="Your primary account, default currency, and recurring bills must use the same currency before Cash Forecast can combine them."
     />

@@ -1,9 +1,11 @@
 "use client"
 
 import * as React from "react"
-import CaretDownIcon from "@/components/icons/CaretDownIcon"
-import CaretLeftIcon from "@/components/icons/CaretLeftIcon"
-import CaretRightIcon from "@/components/icons/CaretRightIcon"
+import {
+  CaretDownIcon,
+  CaretLeftIcon,
+  CaretRightIcon,
+} from "@phosphor-icons/react"
 import { DayButton, DayPicker, getDefaultClassNames } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
@@ -134,18 +136,30 @@ function Calendar({
         Chevron: ({ className, orientation, ...props }) => {
           if (orientation === "left") {
             return (
-              <CaretLeftIcon className={cn("size-2", className)} {...props} />
+              <CaretLeftIcon
+                weight="fill"
+                className={cn("size-2", className)}
+                {...props}
+              />
             )
           }
 
           if (orientation === "right") {
             return (
-              <CaretRightIcon className={cn("size-2", className)} {...props} />
+              <CaretRightIcon
+                weight="fill"
+                className={cn("size-2", className)}
+                {...props}
+              />
             )
           }
 
           return (
-            <CaretDownIcon className={cn("size-2", className)} {...props} />
+            <CaretDownIcon
+              weight="fill"
+              className={cn("size-2", className)}
+              {...props}
+            />
           )
         },
         DayButton: CalendarDayButton,

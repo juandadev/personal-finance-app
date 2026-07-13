@@ -1,7 +1,7 @@
 "use client"
 
 import type { ReactNode } from "react"
-import EllipsisIcon from "@/components/icons/EllipsisIcon"
+import { DotsThreeIcon } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -28,7 +28,7 @@ function OverflowActions({ ariaLabel, children }: OverflowActionsProps) {
           <TooltipTrigger asChild>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon-lg" aria-label={ariaLabel}>
-                <EllipsisIcon className="size-4" aria-hidden />
+                <DotsThreeIcon weight="bold" className="size-4" aria-hidden />
               </Button>
             </DropdownMenuTrigger>
           </TooltipTrigger>

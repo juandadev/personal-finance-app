@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowLeft, LockKeyhole } from "lucide-react"
+import { ArrowLeftIcon, LockIcon } from "@phosphor-icons/react"
 
 import { CloseCreditCardStatementDialog } from "@/components/credit-cards/close-credit-card-statement-dialog"
 import { CreditCardBadge } from "@/components/credit-cards/credit-card-badge"
@@ -47,7 +47,7 @@ export function CreditCardDetailContent({
     return (
       <EmptyDataCard
         className="mt-6 min-h-90"
-        icon={<LockKeyhole className="size-5" aria-hidden />}
+        icon={<LockIcon weight="fill" className="size-5" aria-hidden />}
         title="Credit Card Not Found"
         description="This card may have been archived or removed."
       />
@@ -63,7 +63,7 @@ export function CreditCardDetailContent({
     <div className="mt-6 space-y-6">
       <Button asChild variant="ghost" size="sm" className="w-fit">
         <Link href="/credit-cards">
-          <ArrowLeft className="size-4" aria-hidden />
+          <ArrowLeftIcon weight="fill" className="size-4" aria-hidden />
           Back to Credit Cards
         </Link>
       </Button>
@@ -180,7 +180,11 @@ function StatementsCard({ creditCard }: { creditCard: CreditCard }) {
                   )}
                 >
                   {statement.lifecycleStatus === "paid" ? (
-                    <LockKeyhole className="mr-1 inline size-3" aria-hidden />
+                    <LockIcon
+                      weight="fill"
+                      className="mr-1 inline size-3"
+                      aria-hidden
+                    />
                   ) : null}
                   {statusLabels[statement.dueStatus]}
                 </p>

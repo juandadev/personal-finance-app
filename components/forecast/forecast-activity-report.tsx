@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronDown, CreditCard } from "lucide-react"
+import { CaretDownIcon, CreditCardIcon } from "@phosphor-icons/react"
 
 import { ItemActions } from "@/components/actions"
 import { DeleteForecastItemDialog } from "@/components/forecast/delete-forecast-item-dialog"
@@ -276,7 +276,7 @@ function DesktopActivityRows({
           <TableCell className="text-muted-foreground">
             <span className="flex items-center gap-2">
               {activity.sourceType === "credit_card_statement" ? (
-                <CreditCard className="size-4" aria-hidden />
+                <CreditCardIcon weight="fill" className="size-4" aria-hidden />
               ) : null}
               {sourceLabel(activity, adjustment)}
             </span>
@@ -412,7 +412,8 @@ function StatementDisclosure({
         className="-my-2 -ml-2 size-11"
         aria-label={`${open ? "Collapse" : "Expand"} ${label}, ${childCount} statement details`}
       >
-        <ChevronDown
+        <CaretDownIcon
+          weight="fill"
           className={cn(
             "size-4 transition-transform motion-reduce:transition-none",
             open && "rotate-180",

@@ -1,4 +1,4 @@
-import { ReceiptText } from "lucide-react"
+import { ReceiptIcon } from "@phosphor-icons/react"
 import { Card } from "@/components/ui/card"
 import { formatCurrency } from "@/lib/format"
 
@@ -14,7 +14,7 @@ export function TotalBillsCard({ amount }: TotalBillsCardProps) {
       variant="sidebar"
     >
       <div className="border-sidebar-primary-foreground/20 flex size-10 items-center justify-center rounded-lg border">
-        <ReceiptText className="size-5" aria-hidden />
+        <ReceiptIcon weight="fill" className="size-5" aria-hidden />
       </div>
       <div className="mt-6 md:mt-0 lg:@[829px]/main:mt-6">
         <p className="text-sidebar-primary-foreground/80 text-sm">

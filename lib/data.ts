@@ -1,10 +1,14 @@
 import type { NavItem } from "./types"
+import {
+  ChartLineUpIcon,
+  CreditCardIcon,
+  ShieldCheckIcon,
+} from "@phosphor-icons/react"
 import NavOverviewIcon from "@/components/icons/NavOverviewIcon"
 import NavTransactionsIcon from "@/components/icons/NavTransactionsIcon"
 import NavBudgetsIcon from "@/components/icons/NavBudgetsIcon"
 import NavPotsIcon from "@/components/icons/NavPotsIcon"
 import NavRecurringBillsIcon from "@/components/icons/NavRecurringBillsIcon"
-import { ChartNoAxesCombined, CreditCard, ShieldCheck } from "lucide-react"
 
 export const navItems: NavItem[] = [
   { key: "overview", label: "Overview", icon: NavOverviewIcon, href: "/" },
@@ -19,7 +23,7 @@ export const navItems: NavItem[] = [
   {
     key: "credit-cards",
     label: "Credit Cards",
-    icon: CreditCard,
+    icon: CreditCardIcon,
     href: "/credit-cards",
   },
   {
@@ -31,7 +35,7 @@ export const navItems: NavItem[] = [
   {
     key: "forecast",
     label: "Forecast",
-    icon: ChartNoAxesCombined,
+    icon: ChartLineUpIcon,
     href: "/forecast",
   },
 ]
@@ -39,7 +43,7 @@ export const navItems: NavItem[] = [
 const adminNavItem: NavItem = {
   key: "admin",
   label: "Admin",
-  icon: ShieldCheck,
+  icon: ShieldCheckIcon,
   href: "/admin",
 }
 

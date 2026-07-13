@@ -48,7 +48,7 @@ export function BottomNavItem({ item, active = false }: BottomNavItemProps) {
             : "text-sidebar-foreground hover:text-sidebar-primary-foreground",
         )}
       >
-        <Icon className="size-6 shrink-0" aria-hidden />
+        <Icon className="size-6 shrink-0" weight="fill" aria-hidden />
         <span className="sr-only md:not-sr-only md:whitespace-nowrap">
           {item.label}
         </span>
