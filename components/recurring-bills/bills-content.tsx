@@ -95,8 +95,8 @@ export function BillsContent({ bills }: BillsContentProps) {
   const hasVisibleBills = filteredAndSortedBills.length > 0
 
   return (
-    <Card className="min-w-0">
-      <div className="mb-6 flex items-end gap-3 md:gap-4">
+    <Card className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className="mb-6 flex shrink-0 items-end gap-3 md:gap-4">
         <SearchInput
           value={search}
           onChange={setSearch}
@@ -116,7 +116,7 @@ export function BillsContent({ bills }: BillsContentProps) {
       </div>
 
       {hasVisibleBills ? (
-        <div className="space-y-8">
+        <div className="min-h-0 flex-1 space-y-8 overflow-y-auto pr-3">
           {activeBills.length > 0 ? <BillsTable bills={activeBills} /> : null}
           {archivedBills.length > 0 ? (
             <div>

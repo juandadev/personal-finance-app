@@ -31,41 +31,47 @@ function BudgetCardSkeleton() {
 
 export default function BudgetsLoading() {
   return (
-    <div aria-label="Loading budgets data">
+    <div
+      aria-label="Loading budgets data"
+      className="flex min-h-0 flex-col gap-8 @[829px]/main:h-[calc(100dvh-var(--page-chrome-block))] @[829px]/main:overflow-hidden"
+    >
       <p className="sr-only">Loading budgets...</p>
-      <PageHeading title="Budgets" fixed>
+      <PageHeading title="Budgets" fixed className="shrink-0">
         <Skeleton className="h-11 w-32 rounded-lg" />
       </PageHeading>
 
-      <div className="space-y-6 lg:@[829px]/main:grid lg:@[829px]/main:grid-cols-[380px_minmax(0,1fr)] lg:@[829px]/main:gap-6 lg:@[829px]/main:space-y-0">
-        <div className="lg:@[829px]/main:top-24 lg:@[829px]/main:self-start">
-          <Card className="flex flex-col gap-8">
-            <div className="flex flex-col items-center gap-6">
-              <Skeleton className="size-60 max-w-full rounded-full" />
-              <div className="space-y-2 text-center">
-                <Skeleton className="mx-auto h-4 w-28" />
-                <Skeleton className="mx-auto h-8 w-36" />
-              </div>
-            </div>
-            <div className="divide-muted-foreground/10 flex flex-col divide-y">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <div key={index} className="flex items-center gap-4 py-4">
-                  <Skeleton className="h-10 w-1 rounded-full" />
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <Skeleton className="h-4 w-28" />
-                    <Skeleton className="h-3 w-20" />
-                  </div>
-                  <Skeleton className="h-5 w-16" />
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+        <Skeleton className="h-5 w-full max-w-xl shrink-0" />
+        <div className="grid min-h-0 flex-1 gap-6 lg:@[829px]/main:grid-cols-[380px_minmax(0,1fr)]">
+          <div className="lg:@[829px]/main:self-start">
+            <Card className="flex flex-col gap-8">
+              <div className="flex flex-col items-center gap-6">
+                <Skeleton className="size-60 max-w-full rounded-full" />
+                <div className="space-y-2 text-center">
+                  <Skeleton className="mx-auto h-4 w-28" />
+                  <Skeleton className="mx-auto h-8 w-36" />
                 </div>
-              ))}
-            </div>
-          </Card>
-        </div>
+              </div>
+              <div className="divide-muted-foreground/10 flex flex-col divide-y">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <div key={index} className="flex items-center gap-4 py-4">
+                    <Skeleton className="h-10 w-1 rounded-full" />
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-3 w-20" />
+                    </div>
+                    <Skeleton className="h-5 w-16" />
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
 
-        <div className="flex flex-col gap-6 lg:@[829px]/main:h-[calc(100dvh-160px)] lg:@[829px]/main:overflow-y-auto lg:@[829px]/main:rounded-xl lg:@[829px]/main:pr-3">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <BudgetCardSkeleton key={index} />
-          ))}
+          <div className="flex min-h-0 flex-col gap-6 overflow-y-auto rounded-xl pr-3">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <BudgetCardSkeleton key={index} />
+            ))}
+          </div>
         </div>
       </div>
     </div>

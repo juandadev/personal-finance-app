@@ -9,7 +9,7 @@ interface TotalBillsCardProps {
 export function TotalBillsCard({ amount }: TotalBillsCardProps) {
   return (
     <Card
-      className="flex gap-3 md:h-full md:items-center md:gap-5 lg:@[829px]/main:h-fit lg:@[829px]/main:flex-col lg:@[829px]/main:items-start lg:@[829px]/main:gap-0"
+      className="flex gap-3 md:items-center md:gap-5 lg:@[829px]/main:flex-col lg:@[829px]/main:items-start lg:@[829px]/main:gap-0"
       padding="fixed"
       variant="sidebar"
     >

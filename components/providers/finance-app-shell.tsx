@@ -28,8 +28,8 @@ export function FinanceAppShell({
     <FinanceProvider initialState={initialState}>
       <AppSidebar activeKey={pathname} navItems={navItems} />
       <BottomNav activeKey={pathname} navItems={navItems} />
-      <SidebarInset className="@container/main px-4 py-6 pb-24 md:px-10 md:py-8 md:pb-25 lg:pb-10">
-        <div className="flex flex-col gap-8">{children}</div>
+      <SidebarInset className="@container/main px-4 py-6 pb-24 [--page-chrome-block:calc(var(--spacing)*6+var(--spacing)*24)] md:px-10 md:py-8 md:pb-25 md:[--page-chrome-block:calc(var(--spacing)*8+var(--spacing)*25)] lg:pb-10 lg:[--page-chrome-block:calc(var(--spacing)*8+var(--spacing)*10)]">
+        <div className="flex min-h-0 flex-col gap-8">{children}</div>
       </SidebarInset>
     </FinanceProvider>
   )
