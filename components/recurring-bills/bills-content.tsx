@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { ArrowsDownUpIcon, CalendarDotsIcon } from "@phosphor-icons/react"
+import { CalendarDotsIcon, SortAscendingIcon } from "@phosphor-icons/react"
 import { EmptyDataCard } from "@/components/empty-data-card"
 import { Card } from "@/components/ui/card"
 import type { RecurringBill, SortOption } from "@/lib/types"
@@ -26,6 +26,30 @@ function nextDueDate(bill: RecurringBill) {
   return bill.currentOccurrence?.dueDate ?? bill.firstDueDate
 }
 
+const latestSortStatusPriority: Partial<
+  Record<RecurringBill["status"], number>
+> = {
+  overdue: 0,
+  "due-today": 1,
+  "due-soon": 2,
+  upcoming: 3,
+}
+
+function latestSortStatusRank(bill: RecurringBill) {
+  return latestSortStatusPriority[bill.status] ?? Number.POSITIVE_INFINITY
+}
+
+function compareLatestBills(left: RecurringBill, right: RecurringBill) {
+  const statusComparison =
+    latestSortStatusRank(left) - latestSortStatusRank(right)
+
+  if (statusComparison !== 0) {
+    return statusComparison
+  }
+
+  return nextDueDate(right).localeCompare(nextDueDate(left))
+}
+
 export function BillsContent({ bills }: BillsContentProps) {
   const [search, setSearch] = useState("")
   const [sortBy, setSortBy] = useState<SortOption>("latest")
@@ -42,7 +66,7 @@ export function BillsContent({ bills }: BillsContentProps) {
 
     switch (sortBy) {
       case "latest":
-        result.sort((a, b) => nextDueDate(b).localeCompare(nextDueDate(a)))
+        result.sort(compareLatestBills)
         break
       case "oldest":
         result.sort((a, b) => nextDueDate(a).localeCompare(nextDueDate(b)))
@@ -71,7 +95,7 @@ export function BillsContent({ bills }: BillsContentProps) {
   const hasVisibleBills = filteredAndSortedBills.length > 0
 
   return (
-    <Card>
+    <Card className="min-w-0">
       <div className="mb-6 flex items-end gap-3 md:gap-4">
         <SearchInput
           value={search}
@@ -86,7 +110,7 @@ export function BillsContent({ bills }: BillsContentProps) {
           options={sortOptions}
           onChange={setSortBy}
           icon={
-            <ArrowsDownUpIcon weight="fill" className="size-5" aria-hidden />
+            <SortAscendingIcon weight="fill" className="size-5" aria-hidden />
           }
         />
       </div>

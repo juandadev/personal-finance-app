@@ -32,14 +32,14 @@ export function BottomNavItem({ item, active = false }: BottomNavItemProps) {
         href={item.href}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "flex min-h-11 min-w-11 shrink-0 flex-col items-center gap-1 rounded-lg px-5 py-3 text-xs font-bold transition-colors md:px-3 md:py-2",
+          "flex min-h-11 min-w-11 shrink-0 flex-col items-center gap-1 rounded-lg px-5 py-3 text-xs font-bold transition-colors md:w-full md:min-w-28 md:px-3 md:py-2",
           active
             ? "text-sidebar-primary"
             : "text-sidebar-foreground hover:text-sidebar-primary-foreground",
         )}
       >
         <Icon className="size-6 shrink-0" weight="fill" aria-hidden />
-        <span className="sr-only md:whitespace-nowrap lg:not-sr-only">
+        <span className="sr-only md:not-sr-only md:whitespace-nowrap">
           {item.label}
         </span>
       </Link>

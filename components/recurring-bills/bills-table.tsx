@@ -21,8 +21,8 @@ export function BillsTable({ bills }: BillsTableProps) {
         ))}
       </ul>
 
-      <div className="hidden md:block">
-        <Table>
+      <div className="hidden min-w-0 md:block">
+        <Table className="min-w-max">
           <TableHeader>
             <TableRow>
               <TableHead>Bill Title</TableHead>

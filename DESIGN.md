@@ -447,8 +447,16 @@ Button labels should be action-specific: `Add Money`, `Create Budget`,
   (check, `accent`), `Skipped` (muted), `Upcoming` (muted foreground),
   `Due Soon` and `Due Today` (warning icon, `warning` text), `Overdue`
   (warning icon, `destructive` text).
-- Finite bills show progress as `Payment N of M`; indefinite bills show the
-  frequency (`Monthly` / `Yearly`) instead.
+- Bill title rows show the contact avatar, concept, contact name, and a card
+  icon when the bill charges to a credit card.
+- The due-date column shows the schedule label (`Monthly`, `Yearly`, or
+  `Payment N of M` for finite bills) with a short anchor date (`1st`,
+  `Aug 15th`, etc.) plus the occurrence status label and icon.
+- `Latest` sort keeps the due-date ordering, but surfaces actionable bills
+  first in this order: `Overdue`, `Due Today`, `Due Soon`, then `Upcoming`.
+- Mobile bill rows stay compact: avatar, concept, contact, a short schedule line
+  (`Monthly - 1st`, `Yearly - Aug 15th`) with the status icon, amount, and an
+  overflow menu. `Pay Bill` and `Skip` live in that menu on mobile.
 - The bill dialog locks `frequency` and `first due date` once a bill has any
   settled payment. Locked fields render disabled with helper text explaining
   to archive and recreate the bill to reschedule.

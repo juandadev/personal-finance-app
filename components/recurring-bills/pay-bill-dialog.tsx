@@ -35,19 +35,25 @@ interface PayBillDialogProps {
   bill: RecurringBill
   occurrence: RecurringBillOccurrence
   trigger?: ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 export function PayBillDialog({
   bill,
   occurrence,
   trigger,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: PayBillDialogProps) {
   const { actions, state } = useFinance()
   const localToday = getForecastLocalDate(
     new Date(),
     state.preferences.timezone,
   )
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = controlledOpen ?? internalOpen
+  const setOpen = controlledOnOpenChange ?? setInternalOpen
   const [sourceValue, setSourceValue] = useState(bankAccountValue)
   const [paidAt, setPaidAt] = useState(localToday)
   const [statusMessage, setStatusMessage] = useState("")
@@ -91,9 +97,13 @@ export function PayBillDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={handleOpenChange}>
-      <AlertDialogTrigger asChild>
-        {trigger ?? <Button size="sm">Pay Bill</Button>}
-      </AlertDialogTrigger>
+      {trigger ? (
+        <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
+      ) : controlledOpen === undefined ? (
+        <AlertDialogTrigger asChild>
+          <Button size="sm">Pay Bill</Button>
+        </AlertDialogTrigger>
+      ) : null}
       <AlertDialogContent variant="finance">
         <AlertDialogHeader className="text-left">
           <AlertDialogCloseButton aria-label="Close pay bill dialog" />

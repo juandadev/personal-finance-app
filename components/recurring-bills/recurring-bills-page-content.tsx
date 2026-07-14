@@ -15,7 +15,7 @@ export function RecurringBillsPageContent() {
         <TotalBillsCard amount={totalBillsAmount} />
         <BillsSummaryCard summary={recurringBillsSummary} />
       </div>
-      <div className="flex-1">
+      <div className="min-w-0 flex-1">
         <BillsContent bills={recurringBills} />
       </div>
     </div>

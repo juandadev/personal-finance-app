@@ -92,3 +92,16 @@ export function formatDisplayDateRange(
 ) {
   return `${formatDisplayDate(startIsoDate, "dd/MM/yyyy")} - ${formatDisplayDate(endIsoDate, "dd/MM/yyyy")}`
 }
+
+export function formatBillScheduleShortDate(
+  isoDate: string,
+  frequency: "monthly" | "yearly",
+): string {
+  const date = parseIsoDateAsLocalDate(isoDate)
+
+  if (frequency === "yearly") {
+    return formatDateFns(date, "MMM do")
+  }
+
+  return formatDateFns(date, "do")
+}

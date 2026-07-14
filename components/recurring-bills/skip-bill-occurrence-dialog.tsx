@@ -23,15 +23,21 @@ interface SkipBillOccurrenceDialogProps {
   bill: RecurringBill
   occurrence: RecurringBillOccurrence
   trigger?: ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 export function SkipBillOccurrenceDialog({
   bill,
   occurrence,
   trigger,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: SkipBillOccurrenceDialogProps) {
   const { actions } = useFinance()
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = controlledOpen ?? internalOpen
+  const setOpen = controlledOnOpenChange ?? setInternalOpen
   const [statusMessage, setStatusMessage] = useState("")
   const [isSkipping, setIsSkipping] = useState(false)
 
@@ -56,13 +62,15 @@ export function SkipBillOccurrenceDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger asChild>
-        {trigger ?? (
+      {trigger ? (
+        <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
+      ) : controlledOpen === undefined ? (
+        <AlertDialogTrigger asChild>
           <Button variant="ghost" size="sm">
             Skip
           </Button>
-        )}
-      </AlertDialogTrigger>
+        </AlertDialogTrigger>
+      ) : null}
       <AlertDialogContent variant="finance">
         <AlertDialogHeader className="text-left">
           <AlertDialogCloseButton aria-label="Close skip bill dialog" />
