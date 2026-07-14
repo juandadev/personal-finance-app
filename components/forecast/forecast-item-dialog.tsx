@@ -51,15 +51,30 @@ interface ForecastItemDialogProps {
   onOpenChange?: (open: boolean) => void
 }
 
-export function AddForecastItemDialog({ periods }: { periods: string[] }) {
+export function AddForecastItemDialog({
+  periods,
+  trigger,
+  open,
+  onOpenChange,
+}: {
+  periods: string[]
+  trigger?: ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+}) {
   return (
     <ForecastItemDialog
       periods={periods}
+      open={open}
+      onOpenChange={onOpenChange}
       trigger={
-        <Button aria-label="Add Forecast Item">
-          <span className="sm:hidden">Add Item</span>
-          <span className="hidden sm:inline">Add Forecast Item</span>
-        </Button>
+        trigger ??
+        (open === undefined ? (
+          <Button aria-label="Add Forecast Item">
+            <span className="sm:hidden">Add Item</span>
+            <span className="hidden sm:inline">Add Forecast Item</span>
+          </Button>
+        ) : undefined)
       }
     />
   )

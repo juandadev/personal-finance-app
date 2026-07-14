@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { BankIcon, CardsIcon, WarningIcon } from "@phosphor-icons/react"
 
-import { ModuleHeaderActions } from "@/components/actions"
+import { HeaderMenuItem, ModuleHeaderActions } from "@/components/actions"
 import { EmptyDataCard } from "@/components/empty-data-card"
 import { ForecastActivityReport } from "@/components/forecast/forecast-activity-report"
 import { AddForecastItemDialog } from "@/components/forecast/forecast-item-dialog"
@@ -26,6 +26,7 @@ export function ForecastPageContent() {
   const [incomeDialogOpen, setIncomeDialogOpen] = useState(
     state.cashForecastSettings === null,
   )
+  const [addItemDialogOpen, setAddItemDialogOpen] = useState(false)
   const readyReport = report?.status === "ready" ? report : null
   const periods = readyReport?.months.map((month) => month.period) ?? []
 
@@ -36,12 +37,27 @@ export function ForecastPageContent() {
           ariaLabel="More cash forecast actions"
           primaryAction={
             readyReport ? (
-              <AddForecastItemDialog periods={periods} />
+              <Button
+                aria-label="Add Forecast Item"
+                onClick={() => setAddItemDialogOpen(true)}
+              >
+                <span className="sm:hidden">Add Item</span>
+                <span className="hidden sm:inline">Add Forecast Item</span>
+              </Button>
             ) : (
               <Button disabled aria-label="Add Forecast Item">
                 <span className="sm:hidden">Add Item</span>
                 <span className="hidden sm:inline">Add Forecast Item</span>
               </Button>
+            )
+          }
+          primaryMenuItem={
+            readyReport ? (
+              <HeaderMenuItem onSelect={() => setAddItemDialogOpen(true)}>
+                Add Forecast Item
+              </HeaderMenuItem>
+            ) : (
+              <HeaderMenuItem disabled>Add Forecast Item</HeaderMenuItem>
             )
           }
         >
@@ -73,6 +89,13 @@ export function ForecastPageContent() {
         open={incomeDialogOpen}
         onOpenChange={setIncomeDialogOpen}
       />
+      {readyReport ? (
+        <AddForecastItemDialog
+          periods={periods}
+          open={addItemDialogOpen}
+          onOpenChange={setAddItemDialogOpen}
+        />
+      ) : null}
     </div>
   )
 }

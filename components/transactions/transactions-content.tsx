@@ -4,7 +4,7 @@ import { useMemo, useState } from "react"
 import {
   FunnelIcon,
   ReceiptIcon,
-  ArrowsDownUpIcon,
+  SortAscendingIcon,
 } from "@phosphor-icons/react"
 import { EmptyDataCard } from "@/components/empty-data-card"
 import { Card } from "@/components/ui/card"
@@ -14,6 +14,7 @@ import { SearchInput } from "./search-input"
 import { FilterDropdown } from "./filter-dropdown"
 import { TransactionsTable } from "./transactions-table"
 import { Pagination } from "./pagination"
+
 const ITEMS_PER_PAGE = 10
 
 const sortOptions: { value: SortOption; label: string }[] = [
@@ -117,7 +118,7 @@ export function TransactionsContent() {
             options={sortOptions}
             onChange={handleSortChange}
             icon={
-              <ArrowsDownUpIcon weight="fill" className="size-4" aria-hidden />
+              <SortAscendingIcon weight="fill" className="size-5" aria-hidden />
             }
           />
           <FilterDropdown
@@ -125,7 +126,7 @@ export function TransactionsContent() {
             value={category}
             options={categoryOptions}
             onChange={handleCategoryChange}
-            icon={<FunnelIcon weight="fill" className="size-4" aria-hidden />}
+            icon={<FunnelIcon weight="fill" className="size-5" aria-hidden />}
           />
         </div>
       </div>

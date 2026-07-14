@@ -101,8 +101,22 @@ interface TransactionDialogProps {
   onOpenChange?: (open: boolean) => void
 }
 
-export function AddTransactionDialog() {
-  return <TransactionDialog trigger={<Button>Add Transaction</Button>} />
+export function AddTransactionDialog({
+  trigger,
+  open,
+  onOpenChange,
+}: {
+  trigger?: ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+}) {
+  return (
+    <TransactionDialog
+      trigger={trigger}
+      open={open}
+      onOpenChange={onOpenChange}
+    />
+  )
 }
 
 export function EditTransactionDialog({

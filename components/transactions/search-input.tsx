@@ -24,7 +24,7 @@ export function SearchInput({
     <div className={cn("space-y-2", className)}>
       <Label
         htmlFor="search-txn"
-        className="text-muted-foreground text-xs font-bold"
+        className="text-muted-foreground hidden text-xs font-bold md:block"
       >
         {label}
       </Label>
@@ -32,6 +32,7 @@ export function SearchInput({
         <Input
           id="search-txn"
           name="search-txn"
+          aria-label={label}
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
