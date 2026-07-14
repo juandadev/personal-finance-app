@@ -14,7 +14,7 @@ export function TransactionsPageHeader() {
 
   return (
     <>
-      <PageHeading title="Transactions">
+      <PageHeading title="Transactions" fixed className="shrink-0">
         <ModuleHeaderActions
           primaryAction={
             <Button onClick={() => setAddDialogOpen(true)}>

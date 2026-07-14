@@ -193,6 +193,13 @@ mobile.
   documented reason to break out.
 - Page headings should sit above the main content and use `PageHeading`.
 
+### Page Headings
+
+Use `PageHeading` for module titles and header actions. On mobile, pass `fixed`
+so the heading stays pinned while the page scrolls beneath it. At `lg`, the
+heading returns to normal flow inside the shell. Adding `fixed` does not require
+changing the page's existing layout, grid, or scroll behavior.
+
 ### Page Composition
 
 Common product page structure:

@@ -93,8 +93,8 @@ export function TransactionsContent() {
   }
 
   return (
-    <Card className="@container/transactions flex flex-col gap-6">
-      <div className="flex items-center gap-6 self-stretch @[806px]/transactions:justify-between">
+    <Card className="@container/transactions flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className="mb-6 flex shrink-0 items-center gap-6 self-stretch @[806px]/transactions:justify-between">
         <SearchInput
           value={filters.q}
           onChange={handleSearchChange}
@@ -124,7 +124,9 @@ export function TransactionsContent() {
       </div>
       {hasVisibleTransactions ? (
         <>
-          <TransactionsTable transactions={paginatedTransactions} />
+          <div className="min-h-0 flex-1 overflow-y-auto pr-3">
+            <TransactionsTable transactions={paginatedTransactions} />
+          </div>
           <Pagination
             currentPage={pagination.safePage}
             totalPages={pagination.totalPages}

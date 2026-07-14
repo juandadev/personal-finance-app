@@ -11,7 +11,7 @@ export function RecurringBillsPageContent() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-hidden lg:@[829px]/main:flex-row">
-      <div className="grid shrink-0 content-start gap-4 self-start md:grid-cols-2 lg:@[829px]/main:w-85 lg:@[829px]/main:grid-cols-1 lg:@[829px]/main:gap-6">
+      <div className="grid shrink-0 content-start gap-4 md:grid-cols-2 lg:@[829px]/main:w-85 lg:@[829px]/main:grid-cols-1 lg:@[829px]/main:gap-6 lg:@[829px]/main:self-start">
         <TotalBillsCard amount={totalBillsAmount} />
         <BillsSummaryCard summary={recurringBillsSummary} />
       </div>

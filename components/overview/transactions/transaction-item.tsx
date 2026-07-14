@@ -16,9 +16,14 @@ export function TransactionItem({ transaction }: TransactionItemProps) {
         color={transaction.contactColor}
         avatarUrl={transaction.avatarUrl}
       />
-      <p className="text-foreground flex-1 truncate text-sm font-bold">
-        {transaction.name}
-      </p>
+      <div className="min-w-0 flex-1">
+        <p className="text-foreground truncate text-sm font-bold">
+          {transaction.concept}
+        </p>
+        <p className="text-muted-foreground truncate text-xs">
+          {transaction.name}
+        </p>
+      </div>
       <div className="text-right">
         <p
           className={cn(

@@ -30,7 +30,7 @@ export function BudgetsPageContent() {
         <div className="lg:@[829px]/main:self-start">
           <SpendingSummary />
         </div>
-        <div className="flex min-h-0 flex-col gap-6 overflow-y-auto rounded-xl pr-3">
+        <div className="flex min-h-0 flex-col gap-6 overflow-y-auto rounded-xl lg:pr-3">
           {budgets.length > 0 ? (
             budgets.map((budget) => (
               <BudgetCategoryCard
