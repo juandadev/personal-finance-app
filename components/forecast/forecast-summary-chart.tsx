@@ -134,7 +134,7 @@ export function ForecastSummaryChart({
     <Card asChild>
       <section aria-labelledby="forecast-summary-title">
         <div className="flex flex-col gap-6">
-          <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+          <div className="flex flex-col-reverse gap-6 xl:flex-row xl:items-end xl:justify-between">
             <div className="min-w-0">
               <p
                 id="forecast-summary-title"

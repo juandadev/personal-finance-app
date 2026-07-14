@@ -97,6 +97,10 @@ export function MonthlyIncomeDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent variant="finance" showCloseButton={false}>
         <DialogHeader className="text-left">
+          <DialogCloseButton
+            aria-label="Close monthly income dialog"
+            className="relative top-0 right-0 self-end"
+          />
           <DialogTitle variant="finance">
             {isSetup ? "Set Monthly Income" : "Edit Monthly Income"}
           </DialogTitle>
@@ -105,7 +109,6 @@ export function MonthlyIncomeDialog({
             used for planning and does not create income transactions.
           </DialogDescription>
         </DialogHeader>
-        <DialogCloseButton aria-label="Close monthly income dialog" />
 
         <DialogFinanceForm
           onSubmit={form.handleSubmit}

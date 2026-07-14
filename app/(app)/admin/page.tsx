@@ -20,7 +20,9 @@ export default async function AdminPage() {
   return (
     <>
       <PageHeading title="Admin" fixed />
-      <MonthlyBudgetResetCard />
+      <div className="mt-6">
+        <MonthlyBudgetResetCard />
+      </div>
     </>
   )
 }
