@@ -121,7 +121,7 @@ export function BudgetCategoryCard({
           </CardTitle>
           <CardAction>
             <Link
-              href={`/transactions?budgetId=${encodeURIComponent(budget.id)}`}
+              href={`/transactions?budget=${encodeURIComponent(budget.id)}`}
               className={cardActionLinkClasses}
             >
               See All

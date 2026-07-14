@@ -1,0 +1,236 @@
+import { describe, expect, test } from "bun:test"
+import type { RecurringBill, Transaction } from "@/lib/types"
+import {
+  normalizeRecurringBillFilters,
+  normalizeTransactionFilters,
+} from "./normalize"
+import { getFilteredPagination } from "./pagination"
+import { filterRecurringBills } from "./recurring-bill-filters"
+import {
+  recurringBillQueryParsers,
+  transactionQueryParsers,
+} from "./query-state"
+import { filterTransactions } from "./transaction-filters"
+
+function makeTransaction(overrides: Partial<Transaction> = {}): Transaction {
+  return {
+    id: "transaction-1",
+    name: "Groceries Market",
+    avatarUrl: "",
+    contactColor: "chart-1",
+    contactInitials: "GM",
+    amount: -42,
+    accountId: "account-1",
+    counterpartyId: "counterparty-1",
+    categoryId: "category-1",
+    concept: "Weekly groceries",
+    date: "Jul 10, 2026",
+    postedAt: "2026-07-10",
+    isVoucherExpense: false,
+    paymentMethod: "bank_account",
+    paymentMethodLabel: "Bank Account",
+    category: "Groceries",
+    budgetId: "budget-1",
+    ...overrides,
+  }
+}
+
+function makeBill(overrides: Partial<RecurringBill> = {}): RecurringBill {
+  return {
+    id: "bill-1",
+    name: "Internet Provider",
+    concept: "Home internet",
+    avatarUrl: "",
+    contactColor: "chart-1",
+    contactInitials: "IP",
+    counterpartyId: "counterparty-1",
+    amount: 60,
+    frequency: "monthly",
+    firstDueDate: "2026-01-15",
+    settledCount: 1,
+    categoryId: "category-1",
+    category: "Utilities",
+    occurrences: [],
+    currentOccurrence: {
+      dueDate: "2026-07-15",
+      sequence: 7,
+      amount: 60,
+      status: "due-soon",
+    },
+    status: "due-soon",
+    hasPayments: true,
+    ...overrides,
+  }
+}
+
+describe("query parsers and normalization", () => {
+  test("rejects invalid enum values and normalizes unsafe filter values", () => {
+    expect(transactionQueryParsers.sort.parse("invalid")).toBeNull()
+    expect(recurringBillQueryParsers.lifecycle.parse("hidden")).toBeNull()
+
+    const filters = normalizeTransactionFilters({
+      q: "  groceries ",
+      sort: "latest",
+      page: 0,
+      category: ["category-1", "category-1", "  "],
+      budget: [],
+      account: [],
+      counterparty: [],
+      method: [],
+      card: [],
+      direction: null,
+      from: "2026-07-20",
+      to: "2026-07-10",
+      minAmount: -2,
+      maxAmount: Number.NaN,
+    })
+
+    expect(filters).toMatchObject({
+      q: "groceries",
+      page: 1,
+      category: ["category-1"],
+      dateRange: {},
+      amountRange: {},
+    })
+  })
+
+  test("keeps inclusive recurring bill bounds when valid", () => {
+    const filters = normalizeRecurringBillFilters({
+      q: "",
+      sort: "latest",
+      category: [],
+      counterparty: [],
+      frequency: [],
+      status: [],
+      dueFrom: "2026-07-01",
+      dueTo: "2026-07-31",
+      minAmount: 5,
+      maxAmount: 25,
+      source: [],
+      card: [],
+      lifecycle: "all",
+      schedule: null,
+    })
+
+    expect(filters.dueDateRange).toEqual({
+      from: "2026-07-01",
+      to: "2026-07-31",
+    })
+    expect(filters.amountRange).toEqual({ min: 5, max: 25 })
+  })
+})
+
+describe("transaction filters", () => {
+  test("combines groups with AND and values in a group with OR", () => {
+    const matching = makeTransaction()
+    const anotherCategory = makeTransaction({
+      id: "transaction-2",
+      categoryId: "category-2",
+      budgetId: undefined,
+      amount: -20,
+    })
+    const wrongAccount = makeTransaction({
+      id: "transaction-3",
+      accountId: "account-2",
+    })
+    const filters = normalizeTransactionFilters({
+      q: "",
+      sort: "latest",
+      page: 1,
+      category: ["category-1", "category-2"],
+      budget: ["budget-1", "unassigned"],
+      account: ["account-1"],
+      counterparty: [],
+      method: [],
+      card: [],
+      direction: "expense",
+      from: "2026-07-01",
+      to: "2026-07-31",
+      minAmount: 20,
+      maxAmount: 50,
+    })
+
+    expect(
+      filterTransactions(
+        [matching, anotherCategory, wrongAccount],
+        filters,
+      ).map((transaction) => transaction.id),
+    ).toEqual(["transaction-1", "transaction-2"])
+  })
+
+  test("matches text in descriptions and absolute amount ranges", () => {
+    const income = makeTransaction({
+      id: "income",
+      name: "Payroll",
+      amount: 120,
+      description: "July bonus",
+      budgetId: undefined,
+    })
+    const filters = normalizeTransactionFilters({
+      q: "bonus",
+      sort: "latest",
+      page: 1,
+      category: [],
+      budget: ["unassigned"],
+      account: [],
+      counterparty: [],
+      method: [],
+      card: [],
+      direction: "income",
+      from: null,
+      to: null,
+      minAmount: 100,
+      maxAmount: 120,
+    })
+
+    expect(filterTransactions([income], filters)).toEqual([income])
+  })
+})
+
+describe("recurring bill filters", () => {
+  test("filters computed bill state, lifecycle, schedule, and source", () => {
+    const matching = makeBill({
+      totalPayments: 12,
+      creditCardId: "card-1",
+    })
+    const archived = makeBill({
+      id: "archived",
+      archivedAt: "2026-07-01",
+      status: "paid",
+    })
+    const filters = normalizeRecurringBillFilters({
+      q: "internet",
+      sort: "latest",
+      category: ["category-1"],
+      counterparty: [],
+      frequency: ["monthly"],
+      status: ["due-soon"],
+      dueFrom: "2026-07-15",
+      dueTo: "2026-07-15",
+      minAmount: 60,
+      maxAmount: 60,
+      source: ["credit_card"],
+      card: ["card-1"],
+      lifecycle: "active",
+      schedule: "finite",
+    })
+
+    expect(filterRecurringBills([matching, archived], filters)).toEqual([
+      matching,
+    ])
+  })
+})
+
+describe("filtered pagination", () => {
+  test("keeps zero results on the no-results path and caps stale pages", () => {
+    expect(getFilteredPagination(0, 10)).toMatchObject({
+      totalPages: 0,
+      safePage: 1,
+    })
+    expect(getFilteredPagination(21, 99)).toMatchObject({
+      totalPages: 3,
+      safePage: 3,
+      startIndex: 20,
+    })
+  })
+})

@@ -363,6 +363,9 @@ Phosphor filled icons (`@phosphor-icons/react`), and `cn()` for class merging.
   regular form inputs, such as date picker triggers.
 - Icon-only action: `size-9` to `size-11`, rounded full, with a visible focus
   ring and an accessible name
+- Filter rows may expose a low-emphasis reset action only when their state
+  differs from its defaults. Use an icon-only ghost button at every breakpoint
+  with a descriptive `aria-label` and the shared tooltip pattern.
 
 Button labels should be action-specific: `Add Money`, `Create Budget`,
 `Delete Pot`, `Save Changes`.
