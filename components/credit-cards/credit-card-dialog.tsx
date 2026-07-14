@@ -14,6 +14,7 @@ import {
   DialogCloseButton,
   DialogContent,
   DialogDescription,
+  DialogFinanceForm,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -219,7 +220,33 @@ function CreditCardDialog({
         </DialogHeader>
         <DialogCloseButton aria-label="Close credit card dialog" />
 
-        <form className="mt-6 space-y-5" onSubmit={form.handleSubmit}>
+        <DialogFinanceForm
+          onSubmit={form.handleSubmit}
+          actions={
+            <>
+              {form.status?.message ? (
+                <FormStatusMessage variant={form.status.variant}>
+                  {form.status.message}
+                </FormStatusMessage>
+              ) : null}
+              <form.form.Subscribe selector={(state) => state.isSubmitting}>
+                {(isSubmitting) => (
+                  <Button
+                    type="submit"
+                    size="finance-submit"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting
+                      ? "Saving..."
+                      : isEditing
+                        ? "Save Credit Card"
+                        : "Add Credit Card"}
+                  </Button>
+                )}
+              </form.form.Subscribe>
+            </>
+          }
+        >
           <FormTextField
             form={form}
             name="nickname"
@@ -310,27 +337,7 @@ function CreditCardDialog({
               />
             )}
           </form.form.Field>
-          {form.status?.message ? (
-            <FormStatusMessage variant={form.status.variant}>
-              {form.status.message}
-            </FormStatusMessage>
-          ) : null}
-          <form.form.Subscribe selector={(state) => state.isSubmitting}>
-            {(isSubmitting) => (
-              <Button
-                type="submit"
-                size="finance-submit"
-                disabled={isSubmitting}
-              >
-                {isSubmitting
-                  ? "Saving..."
-                  : isEditing
-                    ? "Save Credit Card"
-                    : "Add Credit Card"}
-              </Button>
-            )}
-          </form.form.Subscribe>
-        </form>
+        </DialogFinanceForm>
       </DialogContent>
     </Dialog>
   )

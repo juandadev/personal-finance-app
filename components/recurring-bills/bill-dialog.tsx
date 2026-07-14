@@ -13,6 +13,7 @@ import {
   DialogCloseButton,
   DialogContent,
   DialogDescription,
+  DialogFinanceForm,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -274,7 +275,55 @@ function BillDialog({
         </DialogHeader>
         <DialogCloseButton aria-label="Close recurring bill dialog" />
 
-        <form className="mt-6 space-y-5" onSubmit={form.handleSubmit}>
+        <DialogFinanceForm
+          onSubmit={form.handleSubmit}
+          actions={
+            <>
+              {form.status?.message ? (
+                <FormStatusMessage variant={form.status.variant}>
+                  {form.status.message}
+                </FormStatusMessage>
+              ) : null}
+
+              <form.form.Subscribe
+                selector={(formState) => formState.isSubmitting}
+              >
+                {(isSubmitting) => (
+                  <Button
+                    type="submit"
+                    size="finance-submit"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting
+                      ? "Saving..."
+                      : isEditing
+                        ? "Save Recurring Bill"
+                        : "Add Recurring Bill"}
+                  </Button>
+                )}
+              </form.form.Subscribe>
+
+              {bill && !bill.hasPayments ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="finance-submit"
+                    disabled={isDeleting}
+                    onClick={handleDelete}
+                  >
+                    {isDeleting ? "Deleting..." : "Delete Recurring Bill"}
+                  </Button>
+                  {deleteStatusMessage ? (
+                    <FormStatusMessage variant="error">
+                      {deleteStatusMessage}
+                    </FormStatusMessage>
+                  ) : null}
+                </>
+              ) : null}
+            </>
+          }
+        >
           <form.form.Field name="counterpartyId">
             {(field) => (
               <ContactSelectWithQuickCreate
@@ -433,48 +482,7 @@ function BillDialog({
               />
             )}
           </form.form.Field>
-
-          {form.status?.message ? (
-            <FormStatusMessage variant={form.status.variant}>
-              {form.status.message}
-            </FormStatusMessage>
-          ) : null}
-
-          <form.form.Subscribe selector={(formState) => formState.isSubmitting}>
-            {(isSubmitting) => (
-              <Button
-                type="submit"
-                size="finance-submit"
-                disabled={isSubmitting}
-              >
-                {isSubmitting
-                  ? "Saving..."
-                  : isEditing
-                    ? "Save Recurring Bill"
-                    : "Add Recurring Bill"}
-              </Button>
-            )}
-          </form.form.Subscribe>
-
-          {bill && !bill.hasPayments ? (
-            <>
-              <Button
-                type="button"
-                variant="destructive"
-                size="finance-submit"
-                disabled={isDeleting}
-                onClick={handleDelete}
-              >
-                {isDeleting ? "Deleting..." : "Delete Recurring Bill"}
-              </Button>
-              {deleteStatusMessage ? (
-                <FormStatusMessage variant="error">
-                  {deleteStatusMessage}
-                </FormStatusMessage>
-              ) : null}
-            </>
-          ) : null}
-        </form>
+        </DialogFinanceForm>
       </DialogContent>
     </Dialog>
   )

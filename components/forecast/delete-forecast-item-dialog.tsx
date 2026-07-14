@@ -62,6 +62,7 @@ export function DeleteForecastItemDialog({
     <AlertDialog open={open} onOpenChange={handleOpenChange}>
       <AlertDialogContent variant="finance">
         <AlertDialogHeader className="text-left">
+          <AlertDialogCloseButton aria-label="Close delete forecast item dialog" />
           <AlertDialogTitle variant="finance">
             Delete &lsquo;{adjustment.name}&rsquo;?
           </AlertDialogTitle>
@@ -70,7 +71,6 @@ export function DeleteForecastItemDialog({
             not change transactions or account balances.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogCloseButton aria-label="Close delete forecast item dialog" />
 
         <div className="mt-5 flex flex-col gap-5">
           {errorMessage ? (

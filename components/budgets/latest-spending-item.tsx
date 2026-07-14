@@ -21,7 +21,7 @@ export function LatestSpendingItem({ transaction }: LatestSpendingItemProps) {
         />
         <span className="flex min-w-0 flex-col gap-1">
           <span className="text-foreground truncate text-sm font-bold">
-            {transaction.name}
+            {transaction.concept}
           </span>
           {transaction.isVoucherExpense ? (
             <Badge variant="secondary">Voucher</Badge>

@@ -82,12 +82,12 @@ function AlertDialogCloseButton({
         variant="ghost"
         size="icon-lg"
         className={cn(
-          "text-muted-foreground hover:text-foreground absolute top-8 right-7 border border-current",
+          "text-muted-foreground hover:text-foreground self-end border border-current md:absolute md:top-8 md:right-7",
           className,
         )}
         {...props}
       >
-        {children ?? <XIcon className="size-4" weight="fill" aria-hidden />}
+        {children ?? <XIcon className="size-4" weight="bold" aria-hidden />}
       </Button>
     </AlertDialogPrimitive.Cancel>
   )

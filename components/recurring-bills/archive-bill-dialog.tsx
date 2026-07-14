@@ -74,6 +74,7 @@ export function ArchiveBillDialog({
       ) : null}
       <AlertDialogContent variant="finance">
         <AlertDialogHeader className="text-left">
+          <AlertDialogCloseButton aria-label="Close archive bill dialog" />
           <AlertDialogTitle variant="finance">
             Archive {bill.name}?
           </AlertDialogTitle>
@@ -82,7 +83,6 @@ export function ArchiveBillDialog({
             be scheduled, and its payment history and transactions stay intact.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogCloseButton aria-label="Close archive bill dialog" />
         <div className="mt-5 space-y-5">
           {statusMessage ? (
             <FormStatusMessage variant="error">

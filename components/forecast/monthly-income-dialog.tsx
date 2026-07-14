@@ -10,6 +10,7 @@ import {
   DialogCloseButton,
   DialogContent,
   DialogDescription,
+  DialogFinanceForm,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -106,7 +107,30 @@ export function MonthlyIncomeDialog({
         </DialogHeader>
         <DialogCloseButton aria-label="Close monthly income dialog" />
 
-        <form className="mt-6 space-y-5" onSubmit={form.handleSubmit}>
+        <DialogFinanceForm
+          onSubmit={form.handleSubmit}
+          actions={
+            <>
+              {form.status?.message ? (
+                <FormStatusMessage variant={form.status.variant}>
+                  {form.status.message}
+                </FormStatusMessage>
+              ) : null}
+
+              <form.form.Subscribe selector={(state) => state.isSubmitting}>
+                {(isSubmitting) => (
+                  <Button
+                    type="submit"
+                    size="finance-submit"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? "Saving monthly income..." : "Save Income"}
+                  </Button>
+                )}
+              </form.form.Subscribe>
+            </>
+          }
+        >
           <form.form.Field name="monthlyIncome">
             {(field) => (
               <FormField
@@ -130,25 +154,7 @@ export function MonthlyIncomeDialog({
               </FormField>
             )}
           </form.form.Field>
-
-          {form.status?.message ? (
-            <FormStatusMessage variant={form.status.variant}>
-              {form.status.message}
-            </FormStatusMessage>
-          ) : null}
-
-          <form.form.Subscribe selector={(state) => state.isSubmitting}>
-            {(isSubmitting) => (
-              <Button
-                type="submit"
-                size="finance-submit"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? "Saving monthly income..." : "Save Income"}
-              </Button>
-            )}
-          </form.form.Subscribe>
-        </form>
+        </DialogFinanceForm>
       </DialogContent>
     </Dialog>
   )

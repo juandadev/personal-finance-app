@@ -267,6 +267,9 @@ Finance data must stay readable on mobile.
   above the primary submit button.
 - Primary submit actions should be full-width on auth forms and right-aligned or
   grouped in dialogs.
+- Long finance dialog forms should use `DialogFinanceForm` so submit actions,
+  status messages, and destructive buttons stay pinned at the bottom while
+  fields scroll independently inside `DialogBody`.
 - Destructive actions must use destructive color and explicit labels like
   `Delete Budget`, not vague labels like `OK`.
 - Auth and API-backed forms should show inline status messages near the submit

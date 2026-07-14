@@ -8,6 +8,7 @@ import {
   DialogCloseButton,
   DialogContent,
   DialogDescription,
+  DialogFinanceForm,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -135,7 +136,31 @@ export function AddBudgetDialog() {
 
         <DialogCloseButton aria-label="Close add budget dialog" />
 
-        <form className="mt-6 space-y-5" onSubmit={standardForm.handleSubmit}>
+        <DialogFinanceForm
+          onSubmit={standardForm.handleSubmit}
+          actions={
+            <>
+              {standardForm.status?.message ? (
+                <FormStatusMessage variant={standardForm.status.variant}>
+                  {standardForm.status.message}
+                </FormStatusMessage>
+              ) : null}
+              <standardForm.form.Subscribe
+                selector={(state) => state.isSubmitting}
+              >
+                {(isSubmitting) => (
+                  <Button
+                    type="submit"
+                    size="finance-submit"
+                    disabled={availableCategories.length === 0 || isSubmitting}
+                  >
+                    {isSubmitting ? "Saving..." : "Add Budget"}
+                  </Button>
+                )}
+              </standardForm.form.Subscribe>
+            </>
+          }
+        >
           <standardForm.form.Field name="categoryId">
             {(field) => (
               <FormField
@@ -239,24 +264,7 @@ export function AddBudgetDialog() {
               />
             )}
           </standardForm.form.Field>
-
-          {standardForm.status?.message ? (
-            <FormStatusMessage variant={standardForm.status.variant}>
-              {standardForm.status.message}
-            </FormStatusMessage>
-          ) : null}
-          <standardForm.form.Subscribe selector={(state) => state.isSubmitting}>
-            {(isSubmitting) => (
-              <Button
-                type="submit"
-                size="finance-submit"
-                disabled={availableCategories.length === 0 || isSubmitting}
-              >
-                {isSubmitting ? "Saving..." : "Add Budget"}
-              </Button>
-            )}
-          </standardForm.form.Subscribe>
-        </form>
+        </DialogFinanceForm>
       </DialogContent>
     </Dialog>
   )

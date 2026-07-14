@@ -96,13 +96,13 @@ export function PayBillDialog({
       </AlertDialogTrigger>
       <AlertDialogContent variant="finance">
         <AlertDialogHeader className="text-left">
+          <AlertDialogCloseButton aria-label="Close pay bill dialog" />
           <AlertDialogTitle variant="finance">Pay Bill?</AlertDialogTitle>
           <AlertDialogDescription variant="finance">
             Paying from the bank account reduces your current balance now.
             Charging a credit card adds it to that card&apos;s open statement.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogCloseButton aria-label="Close pay bill dialog" />
         <div className="mt-5 space-y-5">
           <dl className="bg-background grid gap-3 rounded-lg p-4 text-sm">
             <div className="flex justify-between gap-4">

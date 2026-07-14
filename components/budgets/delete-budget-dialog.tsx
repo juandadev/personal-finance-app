@@ -51,6 +51,7 @@ export function DeleteBudgetDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent variant="finance">
         <AlertDialogHeader className="text-left">
+          <AlertDialogCloseButton aria-label="Close delete budget dialog" />
           <AlertDialogTitle variant="finance">
             Delete &lsquo;{budget.category}&rsquo;?
           </AlertDialogTitle>
@@ -59,8 +60,6 @@ export function DeleteBudgetDialog({
             reversed, and all the data inside it will be removed forever.
           </AlertDialogDescription>
         </AlertDialogHeader>
-
-        <AlertDialogCloseButton aria-label="Close delete budget dialog" />
 
         <div className="mt-5 flex flex-col gap-5">
           <AlertDialogAction

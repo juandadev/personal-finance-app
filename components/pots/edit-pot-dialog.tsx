@@ -11,6 +11,7 @@ import {
   DialogCloseButton,
   DialogContent,
   DialogDescription,
+  DialogFinanceForm,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -146,7 +147,31 @@ export function EditPotDialog({ pot, open, onOpenChange }: EditPotDialogProps) {
 
         <DialogCloseButton aria-label="Close edit pot dialog" />
 
-        <form className="mt-6 space-y-5" onSubmit={standardForm.handleSubmit}>
+        <DialogFinanceForm
+          onSubmit={standardForm.handleSubmit}
+          actions={
+            <>
+              {standardForm.status?.message ? (
+                <FormStatusMessage variant={standardForm.status.variant}>
+                  {standardForm.status.message}
+                </FormStatusMessage>
+              ) : null}
+              <standardForm.form.Subscribe
+                selector={(state) => state.isSubmitting}
+              >
+                {(isSubmitting) => (
+                  <Button
+                    type="submit"
+                    size="finance-submit"
+                    disabled={!currentPot || isSubmitting}
+                  >
+                    {isSubmitting ? "Saving..." : "Save Changes"}
+                  </Button>
+                )}
+              </standardForm.form.Subscribe>
+            </>
+          }
+        >
           <standardForm.form.Field name="name">
             {(field) => (
               <FormField
@@ -227,24 +252,7 @@ export function EditPotDialog({ pot, open, onOpenChange }: EditPotDialogProps) {
               />
             )}
           </standardForm.form.Field>
-
-          {standardForm.status?.message ? (
-            <FormStatusMessage variant={standardForm.status.variant}>
-              {standardForm.status.message}
-            </FormStatusMessage>
-          ) : null}
-          <standardForm.form.Subscribe selector={(state) => state.isSubmitting}>
-            {(isSubmitting) => (
-              <Button
-                type="submit"
-                size="finance-submit"
-                disabled={!currentPot || isSubmitting}
-              >
-                {isSubmitting ? "Saving..." : "Save Changes"}
-              </Button>
-            )}
-          </standardForm.form.Subscribe>
-        </form>
+        </DialogFinanceForm>
       </DialogContent>
     </Dialog>
   )

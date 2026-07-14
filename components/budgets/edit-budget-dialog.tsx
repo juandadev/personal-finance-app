@@ -8,6 +8,7 @@ import {
   DialogCloseButton,
   DialogContent,
   DialogDescription,
+  DialogFinanceForm,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -144,7 +145,31 @@ export function EditBudgetDialog({
 
         <DialogCloseButton aria-label="Close edit budget dialog" />
 
-        <form className="mt-6 space-y-5" onSubmit={standardForm.handleSubmit}>
+        <DialogFinanceForm
+          onSubmit={standardForm.handleSubmit}
+          actions={
+            <>
+              {standardForm.status?.message ? (
+                <FormStatusMessage variant={standardForm.status.variant}>
+                  {standardForm.status.message}
+                </FormStatusMessage>
+              ) : null}
+              <standardForm.form.Subscribe
+                selector={(state) => state.isSubmitting}
+              >
+                {(isSubmitting) => (
+                  <Button
+                    type="submit"
+                    size="finance-submit"
+                    disabled={!currentBudget || isSubmitting}
+                  >
+                    {isSubmitting ? "Saving..." : "Save Changes"}
+                  </Button>
+                )}
+              </standardForm.form.Subscribe>
+            </>
+          }
+        >
           <standardForm.form.Field name="categoryId">
             {(field) => (
               <FormField
@@ -234,24 +259,7 @@ export function EditBudgetDialog({
               />
             )}
           </standardForm.form.Field>
-
-          {standardForm.status?.message ? (
-            <FormStatusMessage variant={standardForm.status.variant}>
-              {standardForm.status.message}
-            </FormStatusMessage>
-          ) : null}
-          <standardForm.form.Subscribe selector={(state) => state.isSubmitting}>
-            {(isSubmitting) => (
-              <Button
-                type="submit"
-                size="finance-submit"
-                disabled={!currentBudget || isSubmitting}
-              >
-                {isSubmitting ? "Saving..." : "Save Changes"}
-              </Button>
-            )}
-          </standardForm.form.Subscribe>
-        </form>
+        </DialogFinanceForm>
       </DialogContent>
     </Dialog>
   )

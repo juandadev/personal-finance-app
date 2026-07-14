@@ -10,6 +10,7 @@ import {
   DialogCloseButton,
   DialogContent,
   DialogDescription,
+  DialogFinanceForm,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -139,7 +140,32 @@ export function PotTransferDialog({
 
         <DialogCloseButton aria-label={`Close ${copy.title} dialog`} />
 
-        <form className="mt-8" onSubmit={standardForm.handleSubmit}>
+        <DialogFinanceForm
+          className="mt-8"
+          onSubmit={standardForm.handleSubmit}
+          actions={
+            <>
+              {standardForm.status?.message ? (
+                <FormStatusMessage variant={standardForm.status.variant}>
+                  {standardForm.status.message}
+                </FormStatusMessage>
+              ) : null}
+              <standardForm.form.Subscribe
+                selector={(state) => state.isSubmitting}
+              >
+                {(isSubmitting) => (
+                  <Button
+                    type="submit"
+                    size="finance-submit"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? "Saving..." : copy.button}
+                  </Button>
+                )}
+              </standardForm.form.Subscribe>
+            </>
+          }
+        >
           <standardForm.form.Subscribe
             selector={(state) => state.values.amount}
           >
@@ -233,27 +259,7 @@ export function PotTransferDialog({
               </FormField>
             )}
           </standardForm.form.Field>
-
-          {standardForm.status?.message ? (
-            <div className="mt-5">
-              <FormStatusMessage variant={standardForm.status.variant}>
-                {standardForm.status.message}
-              </FormStatusMessage>
-            </div>
-          ) : null}
-          <standardForm.form.Subscribe selector={(state) => state.isSubmitting}>
-            {(isSubmitting) => (
-              <Button
-                type="submit"
-                size="finance-submit"
-                className="mt-5"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? "Saving..." : copy.button}
-              </Button>
-            )}
-          </standardForm.form.Subscribe>
-        </form>
+        </DialogFinanceForm>
       </DialogContent>
     </Dialog>
   )

@@ -56,6 +56,7 @@ export function DeletePotDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent variant="finance">
         <AlertDialogHeader className="text-left">
+          <AlertDialogCloseButton aria-label="Close delete pot dialog" />
           <AlertDialogTitle variant="finance">
             Delete &lsquo;{pot.name}&rsquo;?
           </AlertDialogTitle>
@@ -64,8 +65,6 @@ export function DeletePotDialog({
             reversed, and all the data inside it will be removed forever.
           </AlertDialogDescription>
         </AlertDialogHeader>
-
-        <AlertDialogCloseButton aria-label="Close delete pot dialog" />
 
         <div className="mt-5 flex flex-col gap-5">
           <AlertDialogAction

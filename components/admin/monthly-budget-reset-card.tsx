@@ -77,6 +77,7 @@ export function MonthlyBudgetResetCard() {
             </AlertDialogTrigger>
             <AlertDialogContent variant="finance">
               <AlertDialogHeader className="text-left">
+                <AlertDialogCloseButton aria-label="Close reset budgets dialog" />
                 <AlertDialogTitle variant="finance">
                   Reset Budgets?
                 </AlertDialogTitle>
@@ -87,8 +88,6 @@ export function MonthlyBudgetResetCard() {
                   manually.
                 </AlertDialogDescription>
               </AlertDialogHeader>
-
-              <AlertDialogCloseButton aria-label="Close reset budgets dialog" />
 
               <div className="mt-5 flex flex-col gap-5">
                 <AlertDialogAction

@@ -13,6 +13,7 @@ import {
   DialogCloseButton,
   DialogContent,
   DialogDescription,
+  DialogFinanceForm,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -329,7 +330,53 @@ function TransactionDialog({
 
         <DialogCloseButton aria-label="Close transaction dialog" />
 
-        <form className="mt-6 space-y-5" onSubmit={mainForm.handleSubmit}>
+        <DialogFinanceForm
+          onSubmit={mainForm.handleSubmit}
+          actions={
+            <>
+              {mainForm.status?.message ? (
+                <FormStatusMessage variant={mainForm.status.variant}>
+                  {mainForm.status.message}
+                </FormStatusMessage>
+              ) : null}
+
+              <mainForm.form.Subscribe selector={(state) => state.isSubmitting}>
+                {(isSubmitting) => (
+                  <Button
+                    type="submit"
+                    size="finance-submit"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting
+                      ? "Saving..."
+                      : isEditing
+                        ? "Save Transaction"
+                        : "Add Transaction"}
+                  </Button>
+                )}
+              </mainForm.form.Subscribe>
+
+              {transaction ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="finance-submit"
+                    disabled={isDeleting}
+                    onClick={handleDelete}
+                  >
+                    {isDeleting ? "Deleting..." : "Delete Transaction"}
+                  </Button>
+                  {deleteStatusMessage ? (
+                    <FormStatusMessage variant="error">
+                      {deleteStatusMessage}
+                    </FormStatusMessage>
+                  ) : null}
+                </>
+              ) : null}
+            </>
+          }
+        >
           <div className="grid gap-4 sm:grid-cols-2">
             <mainForm.form.Field name="transactionType">
               {(field) => (
@@ -611,48 +658,7 @@ function TransactionDialog({
               </FormField>
             )}
           </mainForm.form.Field>
-
-          {mainForm.status?.message ? (
-            <FormStatusMessage variant={mainForm.status.variant}>
-              {mainForm.status.message}
-            </FormStatusMessage>
-          ) : null}
-
-          <mainForm.form.Subscribe selector={(state) => state.isSubmitting}>
-            {(isSubmitting) => (
-              <Button
-                type="submit"
-                size="finance-submit"
-                disabled={isSubmitting}
-              >
-                {isSubmitting
-                  ? "Saving..."
-                  : isEditing
-                    ? "Save Transaction"
-                    : "Add Transaction"}
-              </Button>
-            )}
-          </mainForm.form.Subscribe>
-
-          {transaction ? (
-            <>
-              <Button
-                type="button"
-                variant="destructive"
-                size="finance-submit"
-                disabled={isDeleting}
-                onClick={handleDelete}
-              >
-                {isDeleting ? "Deleting..." : "Delete Transaction"}
-              </Button>
-              {deleteStatusMessage ? (
-                <FormStatusMessage variant="error">
-                  {deleteStatusMessage}
-                </FormStatusMessage>
-              ) : null}
-            </>
-          ) : null}
-        </form>
+        </DialogFinanceForm>
       </DialogContent>
     </Dialog>
   )

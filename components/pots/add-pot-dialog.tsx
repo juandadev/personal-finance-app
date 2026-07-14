@@ -11,6 +11,7 @@ import {
   DialogCloseButton,
   DialogContent,
   DialogDescription,
+  DialogFinanceForm,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -129,7 +130,31 @@ export function AddPotDialog() {
 
         <DialogCloseButton aria-label="Close add pot dialog" />
 
-        <form className="mt-6 space-y-5" onSubmit={standardForm.handleSubmit}>
+        <DialogFinanceForm
+          onSubmit={standardForm.handleSubmit}
+          actions={
+            <>
+              {standardForm.status?.message ? (
+                <FormStatusMessage variant={standardForm.status.variant}>
+                  {standardForm.status.message}
+                </FormStatusMessage>
+              ) : null}
+              <standardForm.form.Subscribe
+                selector={(state) => state.isSubmitting}
+              >
+                {(isSubmitting) => (
+                  <Button
+                    type="submit"
+                    size="finance-submit"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? "Saving..." : "Add Pot"}
+                  </Button>
+                )}
+              </standardForm.form.Subscribe>
+            </>
+          }
+        >
           <standardForm.form.Field name="name">
             {(field) => (
               <FormField
@@ -212,24 +237,7 @@ export function AddPotDialog() {
               />
             )}
           </standardForm.form.Field>
-
-          {standardForm.status?.message ? (
-            <FormStatusMessage variant={standardForm.status.variant}>
-              {standardForm.status.message}
-            </FormStatusMessage>
-          ) : null}
-          <standardForm.form.Subscribe selector={(state) => state.isSubmitting}>
-            {(isSubmitting) => (
-              <Button
-                type="submit"
-                size="finance-submit"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? "Saving..." : "Add Pot"}
-              </Button>
-            )}
-          </standardForm.form.Subscribe>
-        </form>
+        </DialogFinanceForm>
       </DialogContent>
     </Dialog>
   )

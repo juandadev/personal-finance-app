@@ -118,7 +118,7 @@ function CreditCardTile({ creditCard }: { creditCard: CreditCard }) {
   return (
     <Card className="flex flex-col justify-between gap-5" padding="fixed">
       <div className="space-y-5">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col-reverse items-start justify-between gap-4 md:flex-row">
           <div className="flex items-center gap-3">
             <CreditCardBadge
               nickname={creditCard.nickname}
@@ -135,7 +135,7 @@ function CreditCardTile({ creditCard }: { creditCard: CreditCard }) {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 self-end md:self-start">
             <span
               className={cn("text-sm font-semibold", statusClassName(status))}
             >
@@ -302,6 +302,7 @@ function ArchiveCreditCardDialog({
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogContent variant="finance">
         <AlertDialogHeader className="text-left">
+          <AlertDialogCloseButton aria-label="Close archive credit card dialog" />
           <AlertDialogTitle variant="finance">
             Archive {creditCard.nickname}?
           </AlertDialogTitle>
@@ -310,7 +311,6 @@ function ArchiveCreditCardDialog({
             statement and transaction history.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogCloseButton aria-label="Close archive credit card dialog" />
         <div className="mt-5 flex flex-col gap-5">
           {statusMessage ? (
             <FormStatusMessage variant="error">

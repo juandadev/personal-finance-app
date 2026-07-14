@@ -65,6 +65,7 @@ export function SkipBillOccurrenceDialog({
       </AlertDialogTrigger>
       <AlertDialogContent variant="finance">
         <AlertDialogHeader className="text-left">
+          <AlertDialogCloseButton aria-label="Close skip bill dialog" />
           <AlertDialogTitle variant="finance">
             Skip This Payment?
           </AlertDialogTitle>
@@ -78,7 +79,6 @@ export function SkipBillOccurrenceDialog({
             marked as skipped and still counts toward the bill&apos;s progress.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogCloseButton aria-label="Close skip bill dialog" />
         <div className="mt-5 space-y-5">
           {statusMessage ? (
             <FormStatusMessage variant="error">

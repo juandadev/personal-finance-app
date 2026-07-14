@@ -23,6 +23,7 @@ import {
   DialogCloseButton,
   DialogContent,
   DialogDescription,
+  DialogFinanceForm,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -300,7 +301,35 @@ function CategoryDialog({
           </DialogDescription>
         </DialogHeader>
         <DialogCloseButton aria-label="Close category dialog" />
-        <form className="mt-6 space-y-5" onSubmit={standardForm.handleSubmit}>
+        <DialogFinanceForm
+          onSubmit={standardForm.handleSubmit}
+          actions={
+            <>
+              {standardForm.status?.message ? (
+                <FormStatusMessage variant={standardForm.status.variant}>
+                  {standardForm.status.message}
+                </FormStatusMessage>
+              ) : null}
+              <standardForm.form.Subscribe
+                selector={(state) => state.isSubmitting}
+              >
+                {(isSubmitting) => (
+                  <Button
+                    type="submit"
+                    size="finance-submit"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting
+                      ? "Saving..."
+                      : category
+                        ? "Save Category"
+                        : "Add Category"}
+                  </Button>
+                )}
+              </standardForm.form.Subscribe>
+            </>
+          }
+        >
           <standardForm.form.Field name="name">
             {(field) => (
               <FormField
@@ -332,27 +361,7 @@ function CategoryDialog({
               />
             )}
           </standardForm.form.Field>
-          {standardForm.status?.message ? (
-            <FormStatusMessage variant={standardForm.status.variant}>
-              {standardForm.status.message}
-            </FormStatusMessage>
-          ) : null}
-          <standardForm.form.Subscribe selector={(state) => state.isSubmitting}>
-            {(isSubmitting) => (
-              <Button
-                type="submit"
-                size="finance-submit"
-                disabled={isSubmitting}
-              >
-                {isSubmitting
-                  ? "Saving..."
-                  : category
-                    ? "Save Category"
-                    : "Add Category"}
-              </Button>
-            )}
-          </standardForm.form.Subscribe>
-        </form>
+        </DialogFinanceForm>
       </DialogContent>
     </Dialog>
   )
@@ -455,7 +464,35 @@ function ContactDialog({
           </DialogDescription>
         </DialogHeader>
         <DialogCloseButton aria-label="Close contact dialog" />
-        <form className="mt-6 space-y-5" onSubmit={standardForm.handleSubmit}>
+        <DialogFinanceForm
+          onSubmit={standardForm.handleSubmit}
+          actions={
+            <>
+              {standardForm.status?.message ? (
+                <FormStatusMessage variant={standardForm.status.variant}>
+                  {standardForm.status.message}
+                </FormStatusMessage>
+              ) : null}
+              <standardForm.form.Subscribe
+                selector={(state) => state.isSubmitting}
+              >
+                {(isSubmitting) => (
+                  <Button
+                    type="submit"
+                    size="finance-submit"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting
+                      ? "Saving..."
+                      : counterparty
+                        ? "Save Contact"
+                        : "Add Contact"}
+                  </Button>
+                )}
+              </standardForm.form.Subscribe>
+            </>
+          }
+        >
           <standardForm.form.Field name="displayName">
             {(field) => (
               <FormField
@@ -541,27 +578,7 @@ function ContactDialog({
               </FormField>
             )}
           </standardForm.form.Field>
-          {standardForm.status?.message ? (
-            <FormStatusMessage variant={standardForm.status.variant}>
-              {standardForm.status.message}
-            </FormStatusMessage>
-          ) : null}
-          <standardForm.form.Subscribe selector={(state) => state.isSubmitting}>
-            {(isSubmitting) => (
-              <Button
-                type="submit"
-                size="finance-submit"
-                disabled={isSubmitting}
-              >
-                {isSubmitting
-                  ? "Saving..."
-                  : counterparty
-                    ? "Save Contact"
-                    : "Add Contact"}
-              </Button>
-            )}
-          </standardForm.form.Subscribe>
-        </form>
+        </DialogFinanceForm>
       </DialogContent>
     </Dialog>
   )
@@ -632,6 +649,9 @@ function DeleteLibraryRecordDialog({
       ) : null}
       <AlertDialogContent variant="finance">
         <AlertDialogHeader className="text-left">
+          <AlertDialogCloseButton
+            aria-label={`Close delete ${recordType} dialog`}
+          />
           <AlertDialogTitle variant="finance">
             Delete {recordType}?
           </AlertDialogTitle>
@@ -640,9 +660,6 @@ function DeleteLibraryRecordDialog({
             only allowed when it is not used by finance records.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogCloseButton
-          aria-label={`Close delete ${recordType} dialog`}
-        />
         <div className="mt-5 flex flex-col gap-5">
           <AlertDialogAction
             variant="destructive"
