@@ -8,15 +8,17 @@ import { RecurringBillsCard } from "@/components/overview/recurring-bills/recurr
 
 export default function OverviewPage() {
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
-      <PageHeading title="Overview" />
-      <SummaryCards />
-      <div className="grid gap-6 lg:@[829px]/main:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+    <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-col gap-8 @[829px]/main:h-[calc(100dvh-var(--page-chrome-block))] @[829px]/main:overflow-hidden">
+      <PageHeading title="Overview" className="shrink-0" />
+      <div className="shrink-0">
+        <SummaryCards />
+      </div>
+      <div className="grid min-h-0 flex-1 gap-6 lg:@[829px]/main:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <div className="flex flex-col gap-6">
           <PotsCard />
           <TransactionsCard />
         </div>
-        <div className="flex flex-col gap-4">
+        <div className="flex min-h-0 flex-col gap-4 overflow-y-auto rounded-xl lg:@[829px]/main:pr-3">
           <BudgetsCard />
           <CreditCardsCard />
           <RecurringBillsCard />

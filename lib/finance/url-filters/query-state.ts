@@ -90,6 +90,7 @@ export const recurringBillQueryParsers = {
   sort: parseAsStringLiteral(sortValues)
     .withDefault("latest")
     .withOptions(queryOptions),
+  page: parseAsInteger.withDefault(1).withOptions(queryOptions),
   category: parseAsNativeArrayOf(parseAsString).withOptions(queryOptions),
   counterparty: parseAsNativeArrayOf(parseAsString).withOptions(queryOptions),
   frequency: parseAsNativeArrayOf(
@@ -115,6 +116,7 @@ export const recurringBillQueryParsers = {
 export type RecurringBillQueryState = {
   q: string
   sort: SortOption
+  page: number
   category: string[]
   counterparty: string[]
   frequency: (typeof billFrequencyValues)[number][]
@@ -152,6 +154,7 @@ export function hasActiveRecurringBillQuery(query: RecurringBillQueryState) {
   return (
     query.q !== "" ||
     query.sort !== "latest" ||
+    query.page !== 1 ||
     query.category.length > 0 ||
     query.counterparty.length > 0 ||
     query.frequency.length > 0 ||

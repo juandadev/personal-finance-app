@@ -8,18 +8,22 @@ import { ResetUrlFiltersButton } from "@/components/reset-url-filters-button"
 import { Card } from "@/components/ui/card"
 import {
   filterRecurringBills,
+  getFilteredPagination,
   hasActiveRecurringBillQuery,
   normalizeRecurringBillFilters,
   recurringBillQueryParsers,
 } from "@/lib/finance/url-filters"
 import type { RecurringBill, SortOption } from "@/lib/types"
-import { SearchInput } from "../transactions/search-input"
 import { FilterDropdown } from "../transactions/filter-dropdown"
+import { Pagination } from "../transactions/pagination"
+import { SearchInput } from "../transactions/search-input"
 import { BillsTable } from "./bills-table"
 
 interface BillsContentProps {
   bills: RecurringBill[]
 }
+
+const ITEMS_PER_PAGE = 10
 
 const sortOptions: { value: SortOption; label: string }[] = [
   { value: "latest", label: "Latest" },
@@ -38,19 +42,32 @@ export function BillsContent({ bills }: BillsContentProps) {
     () => filterRecurringBills(bills, filters),
     [bills, filters],
   )
-  const activeBills = filteredAndSortedBills.filter((bill) => !bill.archivedAt)
-  const archivedBills = filteredAndSortedBills.filter((bill) =>
+  const pagination = getFilteredPagination(
+    filteredAndSortedBills.length,
+    filters.page,
+    ITEMS_PER_PAGE,
+  )
+  const paginatedBills = filteredAndSortedBills.slice(
+    pagination.startIndex,
+    pagination.endIndex,
+  )
+  const activeBills = paginatedBills.filter((bill) => !bill.archivedAt)
+  const archivedBills = paginatedBills.filter((bill) =>
     Boolean(bill.archivedAt),
   )
   const hasBills = bills.length > 0
   const hasVisibleBills = filteredAndSortedBills.length > 0
 
   const handleSearchChange = (value: string) => {
-    void setQuery({ q: value || null })
+    void setQuery({ q: value || null, page: 1 })
   }
 
   const handleSortChange = (value: SortOption) => {
-    void setQuery({ sort: value })
+    void setQuery({ sort: value, page: 1 })
+  }
+
+  const handlePageChange = (page: number) => {
+    void setQuery({ page })
   }
 
   const handleReset = () => {
@@ -82,17 +99,24 @@ export function BillsContent({ bills }: BillsContentProps) {
       </div>
 
       {hasVisibleBills ? (
-        <div className="min-h-0 flex-1 space-y-8 overflow-y-auto pr-3">
-          {activeBills.length > 0 ? <BillsTable bills={activeBills} /> : null}
-          {archivedBills.length > 0 ? (
-            <div>
-              <h3 className="text-muted-foreground text-sm font-bold">
-                Archived
-              </h3>
-              <BillsTable bills={archivedBills} />
-            </div>
-          ) : null}
-        </div>
+        <>
+          <div className="min-h-0 flex-1 space-y-8 overflow-y-auto pr-3">
+            {activeBills.length > 0 ? <BillsTable bills={activeBills} /> : null}
+            {archivedBills.length > 0 ? (
+              <div>
+                <h3 className="text-muted-foreground text-sm font-bold">
+                  Archived
+                </h3>
+                <BillsTable bills={archivedBills} />
+              </div>
+            ) : null}
+          </div>
+          <Pagination
+            currentPage={pagination.safePage}
+            totalPages={pagination.totalPages}
+            onPageChange={handlePageChange}
+          />
+        </>
       ) : (
         <EmptyDataCard
           className="min-h-90"

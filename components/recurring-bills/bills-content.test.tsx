@@ -58,6 +58,22 @@ const bills: RecurringBill[] = [
   },
 ]
 
+const paginatedBills: RecurringBill[] = Array.from(
+  { length: 11 },
+  (_, index) => ({
+    ...bills[0],
+    id: `paginated-bill-${index + 1}`,
+    name: `Paginated Bill ${index + 1}`,
+    concept: `Recurring payment ${index + 1}`,
+    currentOccurrence: {
+      dueDate: `2026-07-${String(index + 1).padStart(2, "0")}`,
+      sequence: 1,
+      amount: 60,
+      status: "due-soon",
+    },
+  }),
+)
+
 mock.module("@/components/reset-url-filters-button", () => ({
   ResetUrlFiltersButton: ({ onReset }: { onReset: () => void }) => (
     <button
@@ -127,6 +143,22 @@ mock.module("./bills-table", () => ({
   ),
 }))
 
+mock.module("../transactions/pagination", () => ({
+  Pagination: ({
+    currentPage,
+    totalPages,
+    onPageChange,
+  }: {
+    currentPage: number
+    totalPages: number
+    onPageChange: (page: number) => void
+  }) => (
+    <button type="button" onClick={() => onPageChange(currentPage + 1)}>
+      Page {currentPage} of {totalPages}
+    </button>
+  ),
+}))
+
 const { BillsContent } = await import("./bills-content")
 
 afterEach(cleanup)
@@ -148,12 +180,13 @@ describe("BillsContent URL state", () => {
     expect(screen.queryByText("Phone Service")).toBeNull()
   })
 
-  test("writes sort changes with replace history", async () => {
+  test("writes sort changes with replace history and resets the page", async () => {
     const user = userEvent.setup()
     const updates: Parameters<OnUrlUpdateFunction>[0][] = []
 
     render(<BillsContent bills={bills} />, {
       wrapper: withNuqsTestingAdapter({
+        searchParams: "?page=2",
         hasMemory: true,
         onUrlUpdate: (event) => updates.push(event),
       }),
@@ -168,8 +201,43 @@ describe("BillsContent URL state", () => {
       const update = updates.at(-1)
 
       expect(update?.searchParams.get("sort")).toBe("oldest")
+      expect(update?.searchParams.get("page")).toBeNull()
       expect(update?.options.history).toBe("replace")
     })
+  })
+
+  test("shows ten bills per page and writes page navigation to the URL", async () => {
+    const user = userEvent.setup()
+    const updates: Parameters<OnUrlUpdateFunction>[0][] = []
+
+    render(<BillsContent bills={paginatedBills} />, {
+      wrapper: withNuqsTestingAdapter({
+        hasMemory: true,
+        onUrlUpdate: (event) => updates.push(event),
+      }),
+    })
+
+    expect(screen.getAllByRole("listitem")).toHaveLength(10)
+
+    await user.click(screen.getByRole("button", { name: "Page 1 of 2" }))
+
+    await waitFor(() => {
+      const update = updates.at(-1)
+
+      expect(update?.searchParams.get("page")).toBe("2")
+      expect(update?.options.history).toBe("replace")
+    })
+  })
+
+  test("caps stale pages and renders the final bill page", () => {
+    render(<BillsContent bills={paginatedBills} />, {
+      wrapper: withNuqsTestingAdapter({
+        searchParams: "?page=99",
+      }),
+    })
+
+    expect(screen.getAllByRole("listitem")).toHaveLength(1)
+    expect(screen.getByRole("button", { name: "Page 2 of 2" })).toBeTruthy()
   })
 
   test("hides reset at defaults", () => {

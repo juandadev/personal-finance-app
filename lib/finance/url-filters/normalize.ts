@@ -34,6 +34,7 @@ export type TransactionFilters = {
 export type RecurringBillFilters = {
   q: string
   sort: SortOption
+  page: number
   category: string[]
   counterparty: string[]
   frequency: RecurringBillQueryState["frequency"]
@@ -134,6 +135,7 @@ export function normalizeRecurringBillFilters(
   return {
     q: query.q.trim(),
     sort: query.sort,
+    page: normalizePage(query.page),
     category: normalizeStringList(query.category),
     counterparty: normalizeStringList(query.counterparty),
     frequency: query.frequency,

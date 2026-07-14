@@ -16,7 +16,7 @@ export function RecurringBillsCard() {
   const { recurringBillsSummary } = useFinance()
 
   return (
-    <Card asChild padding="overview" className="flex-1">
+    <Card asChild padding="overview">
       <section>
         <CardHeader>
           <CardTitle>

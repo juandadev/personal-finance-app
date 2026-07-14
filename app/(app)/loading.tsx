@@ -41,19 +41,19 @@ function OverviewPanelSkeleton({ rows = 3 }: { rows?: number }) {
 export default function OverviewLoading() {
   return (
     <div
-      className="mx-auto flex w-full max-w-6xl flex-col gap-8"
+      className="mx-auto flex min-h-0 w-full max-w-6xl flex-col gap-8 @[829px]/main:h-[calc(100dvh-var(--page-chrome-block))] @[829px]/main:overflow-hidden"
       aria-label="Loading overview data"
     >
       <p className="sr-only">Loading overview...</p>
-      <PageHeading title="Overview" />
+      <PageHeading title="Overview" className="shrink-0" />
 
-      <div className="grid gap-3 md:grid-cols-3 md:gap-6">
+      <div className="grid shrink-0 gap-3 md:grid-cols-3 md:gap-6">
         <OverviewSummarySkeleton primary />
         <OverviewSummarySkeleton />
         <OverviewSummarySkeleton />
       </div>
 
-      <div className="grid gap-6 lg:@[829px]/main:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+      <div className="grid min-h-0 flex-1 gap-6 lg:@[829px]/main:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <div className="flex flex-col gap-6">
           <Card className="flex flex-col gap-6">
             <div className="flex items-center justify-between gap-4">
@@ -74,8 +74,9 @@ export default function OverviewLoading() {
           </Card>
           <OverviewPanelSkeleton />
         </div>
-        <div className="flex flex-col gap-4">
+        <div className="flex min-h-0 flex-col gap-4 overflow-y-auto lg:@[829px]/main:pr-3">
           <OverviewPanelSkeleton rows={4} />
+          <OverviewPanelSkeleton rows={3} />
           <OverviewPanelSkeleton rows={3} />
         </div>
       </div>

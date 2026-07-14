@@ -17,7 +17,7 @@ export function CreditCardsCard() {
   const { creditCardSummary } = useFinance()
 
   return (
-    <Card asChild padding="overview" className="flex-1">
+    <Card asChild padding="overview">
       <section>
         <CardHeader>
           <CardTitle>

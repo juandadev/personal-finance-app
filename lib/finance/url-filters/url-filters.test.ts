@@ -98,6 +98,7 @@ describe("query parsers and normalization", () => {
     const filters = normalizeRecurringBillFilters({
       q: "",
       sort: "latest",
+      page: 3,
       category: [],
       counterparty: [],
       frequency: [],
@@ -117,6 +118,29 @@ describe("query parsers and normalization", () => {
       to: "2026-07-31",
     })
     expect(filters.amountRange).toEqual({ min: 5, max: 25 })
+    expect(filters.page).toBe(3)
+  })
+
+  test("normalizes invalid recurring bill pages to the first page", () => {
+    const filters = normalizeRecurringBillFilters({
+      q: "",
+      sort: "latest",
+      page: 0,
+      category: [],
+      counterparty: [],
+      frequency: [],
+      status: [],
+      dueFrom: null,
+      dueTo: null,
+      minAmount: null,
+      maxAmount: null,
+      source: [],
+      card: [],
+      lifecycle: "all",
+      schedule: null,
+    })
+
+    expect(filters.page).toBe(1)
   })
 })
 
@@ -201,6 +225,7 @@ describe("recurring bill filters", () => {
     const filters = normalizeRecurringBillFilters({
       q: "internet",
       sort: "latest",
+      page: 1,
       category: ["category-1"],
       counterparty: [],
       frequency: ["monthly"],
