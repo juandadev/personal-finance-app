@@ -11,6 +11,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 const MIN_VISIBLE_PAGE_ITEMS = 5
 const PAGE_ITEM_GAP_WIDTH = 8
@@ -80,12 +81,15 @@ export function Pagination({
   totalPages,
   onPageChange,
 }: PaginationProps) {
+  const isMobile = useIsMobile()
   const paginationRef = useRef<HTMLElement>(null)
   const previousRef = useRef<HTMLAnchorElement>(null)
   const nextRef = useRef<HTMLAnchorElement>(null)
   const [maxVisibleItems, setMaxVisibleItems] = useState(MIN_VISIBLE_PAGE_ITEMS)
 
   useEffect(() => {
+    if (isMobile) return
+
     const pagination = paginationRef.current
 
     if (!pagination) return
@@ -116,7 +120,7 @@ export function Pagination({
     if (nextRef.current) resizeObserver.observe(nextRef.current)
 
     return () => resizeObserver.disconnect()
-  }, [totalPages])
+  }, [isMobile, totalPages])
 
   const paginationItems = useMemo(
     () => getPaginationItems(currentPage, totalPages, maxVisibleItems),
@@ -143,27 +147,39 @@ export function Pagination({
         onClick={handlePageChange(currentPage - 1)}
       />
 
-      <PaginationContent>
-        {paginationItems.map((item) => (
-          <PaginationItem key={item}>
-            {typeof item === "number" ? (
-              <PaginationLink
-                href="#"
-                size="sm"
-                isActive={item === currentPage}
-                aria-label={
-                  item === currentPage ? `Page ${item}` : `Go to page ${item}`
-                }
-                onClick={handlePageChange(item)}
-              >
-                {item}
-              </PaginationLink>
-            ) : (
-              <PaginationEllipsis />
-            )}
-          </PaginationItem>
-        ))}
-      </PaginationContent>
+      {isMobile ? (
+        <p
+          className="text-muted-foreground shrink-0 text-sm tabular-nums"
+          aria-live="polite"
+        >
+          <span className="sr-only">Page </span>
+          <span className="text-foreground font-semibold">{currentPage}</span>
+          <span aria-hidden> / </span>
+          {totalPages}
+        </p>
+      ) : (
+        <PaginationContent>
+          {paginationItems.map((item) => (
+            <PaginationItem key={item}>
+              {typeof item === "number" ? (
+                <PaginationLink
+                  href="#"
+                  size="sm"
+                  isActive={item === currentPage}
+                  aria-label={
+                    item === currentPage ? `Page ${item}` : `Go to page ${item}`
+                  }
+                  onClick={handlePageChange(item)}
+                >
+                  {item}
+                </PaginationLink>
+              ) : (
+                <PaginationEllipsis />
+              )}
+            </PaginationItem>
+          ))}
+        </PaginationContent>
+      )}
 
       <PaginationNext
         ref={nextRef}

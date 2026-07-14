@@ -16,7 +16,7 @@ export function BottomNav({ activeKey, navItems }: BottomNavProps) {
       className="bg-sidebar fixed inset-x-0 bottom-0 z-50 scrollbar-none overflow-x-auto overscroll-x-contain pt-2 pb-[env(safe-area-inset-bottom)] lg:hidden [&::-webkit-scrollbar]:hidden"
       aria-label="Main navigation"
     >
-      <ul className="mx-auto flex w-max min-w-full items-stretch justify-center gap-1 overflow-x-auto px-2">
+      <ul className="mx-auto flex w-max min-w-full items-stretch justify-center gap-2 overflow-x-auto px-2">
         {navItems.map((item) => (
           <li key={item.key} className="relative isolate shrink-0">
             <BottomNavItem

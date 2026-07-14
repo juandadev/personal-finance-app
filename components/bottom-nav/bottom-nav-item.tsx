@@ -39,7 +39,7 @@ export function BottomNavItem({ item, active = false }: BottomNavItemProps) {
         )}
       >
         <Icon className="size-6 shrink-0" weight="fill" aria-hidden />
-        <span className="sr-only md:not-sr-only md:whitespace-nowrap">
+        <span className="sr-only md:whitespace-nowrap lg:not-sr-only">
           {item.label}
         </span>
       </Link>

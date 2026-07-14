@@ -29,6 +29,15 @@ import {
 } from "@/components/ui/table"
 
 const UNASSIGNED_BUDGET_VALUE = "unassigned"
+const DESKTOP_TABLE_CELL = "px-6 first:pl-0"
+const DESKTOP_STICKY_AMOUNT_CELL =
+  "bg-card border-border/60 sticky right-13.5 z-10 min-w-24 border-l px-3 text-right"
+const DESKTOP_STICKY_ACTIONS_CELL =
+  "bg-card sticky -right-2 z-20 w-16 px-2 text-right"
+const DESKTOP_STICKY_AMOUNT_HEAD =
+  "bg-card border-border/60 sticky right-13.5 z-20 min-w-24 border-l px-3 text-right"
+const DESKTOP_STICKY_ACTIONS_HEAD =
+  "bg-card sticky -right-2 z-30 w-16 px-2 text-right"
 
 interface TransactionsTableProps {
   transactions: Transaction[]
@@ -70,24 +79,29 @@ export function TransactionsTable({ transactions }: TransactionsTableProps) {
           <MobileTransactionItem
             key={transaction.id}
             transaction={transaction}
-            budgets={budgets}
-            isPending={pendingTransactionId === transaction.id}
-            onBudgetChange={handleBudgetChange}
           />
         ))}
       </ul>
 
       <div className="hidden md:block">
-        <Table>
+        <Table className="min-w-max border-separate border-spacing-0">
           <TableHeader>
             <TableRow>
-              <TableHead>Recipient / Sender</TableHead>
-              <TableHead>Concept</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Budget</TableHead>
-              <TableHead>Transaction Date</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className={DESKTOP_TABLE_CELL}>
+                Recipient / Sender
+              </TableHead>
+              <TableHead className={DESKTOP_TABLE_CELL}>Concept</TableHead>
+              <TableHead className={DESKTOP_TABLE_CELL}>Category</TableHead>
+              <TableHead className={DESKTOP_TABLE_CELL}>Budget</TableHead>
+              <TableHead className={DESKTOP_TABLE_CELL}>
+                Transaction Date
+              </TableHead>
+              <TableHead className={DESKTOP_STICKY_AMOUNT_HEAD}>
+                Amount
+              </TableHead>
+              <TableHead className={DESKTOP_STICKY_ACTIONS_HEAD}>
+                Actions
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -114,66 +128,45 @@ interface TransactionItemProps {
   onBudgetChange: (transaction: Transaction, budgetId: string) => void
 }
 
-function MobileTransactionItem({
-  transaction,
-  budgets,
-  isPending,
-  onBudgetChange,
-}: TransactionItemProps) {
+function MobileTransactionItem({ transaction }: { transaction: Transaction }) {
   const [isEditOpen, setIsEditOpen] = useState(false)
 
   return (
-    <li className="flex flex-col gap-3 py-3">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <ContactAvatar
-            name={transaction.name}
-            initials={transaction.contactInitials}
-            color={transaction.contactColor}
-            avatarUrl={transaction.avatarUrl}
-          />
-          <div className="flex flex-col">
-            <span className="text-foreground text-sm font-bold">
-              {transaction.name}
-            </span>
-            <span className="text-muted-foreground text-xs">
-              {transaction.concept}
-            </span>
-            <span className="text-muted-foreground text-xs">
-              {transaction.category}
-            </span>
-            {transaction.paymentMethod !== "bank_account" ? (
-              <Badge variant="secondary" className="mt-1">
-                {transaction.paymentMethodLabel}
-              </Badge>
-            ) : null}
-          </div>
-        </div>
+    <li className="flex items-center gap-2 py-3">
+      <ContactAvatar
+        name={transaction.name}
+        initials={transaction.contactInitials}
+        color={transaction.contactColor}
+        avatarUrl={transaction.avatarUrl}
+        className="shrink-0"
+      />
+      <div className="min-w-0 flex-1">
+        <span className="text-foreground block truncate text-sm font-bold">
+          {transaction.concept}
+        </span>
+        <span className="text-muted-foreground block truncate text-xs">
+          {transaction.name}
+        </span>
+        {transaction.paymentMethod !== "bank_account" ? (
+          <Badge variant="secondary" className="mt-1 max-w-full truncate">
+            {transaction.paymentMethodLabel}
+          </Badge>
+        ) : null}
+      </div>
+      <div className="flex shrink-0 items-center gap-1">
         <div className="flex flex-col items-end">
           <span
             className={cn(
-              "text-sm font-bold",
+              "text-sm font-bold tabular-nums",
               transactionAmountClassName(transaction.amount),
             )}
           >
             {formatSignedAmount(transaction.amount)}
           </span>
-          <span className="text-muted-foreground text-xs">
+          <span className="text-muted-foreground text-xs whitespace-nowrap">
             {transaction.date}
           </span>
         </div>
-      </div>
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-muted-foreground text-xs">Budget</span>
-        <BudgetAssignmentSelect
-          transaction={transaction}
-          budgets={budgets}
-          isPending={isPending}
-          onBudgetChange={onBudgetChange}
-          compact
-        />
-      </div>
-      <div className="flex justify-end">
         <ItemActions ariaLabel={`More options for ${transaction.concept}`}>
           <DropdownMenuItem onSelect={() => setIsEditOpen(true)}>
             Edit Transaction
@@ -199,29 +192,37 @@ function TransactionRow({
 
   return (
     <TableRow>
-      <TableCell>
+      <TableCell className={DESKTOP_TABLE_CELL}>
         <div className="flex items-center gap-3">
           <ContactAvatar
             name={transaction.name}
             initials={transaction.contactInitials}
             color={transaction.contactColor}
             avatarUrl={transaction.avatarUrl}
+            className="shrink-0"
           />
-          <span className="text-foreground font-bold">{transaction.name}</span>
+          <span className="text-foreground font-bold whitespace-nowrap">
+            {transaction.name}
+          </span>
         </div>
       </TableCell>
-      <TableCell className="text-muted-foreground max-w-44">
+      <TableCell
+        className={cn(
+          DESKTOP_TABLE_CELL,
+          "text-muted-foreground whitespace-normal",
+        )}
+      >
         <div className="flex flex-col items-start gap-1">
-          <span>{transaction.concept}</span>
+          <span className="whitespace-nowrap">{transaction.concept}</span>
           {transaction.paymentMethod !== "bank_account" ? (
             <Badge variant="secondary">{transaction.paymentMethodLabel}</Badge>
           ) : null}
         </div>
       </TableCell>
-      <TableCell className="text-muted-foreground">
+      <TableCell className={cn(DESKTOP_TABLE_CELL, "text-muted-foreground")}>
         {transaction.category}
       </TableCell>
-      <TableCell>
+      <TableCell className={DESKTOP_TABLE_CELL}>
         <BudgetAssignmentSelect
           transaction={transaction}
           budgets={budgets}
@@ -229,23 +230,26 @@ function TransactionRow({
           onBudgetChange={onBudgetChange}
         />
       </TableCell>
-      <TableCell className="text-muted-foreground">
+      <TableCell className={cn(DESKTOP_TABLE_CELL, "text-muted-foreground")}>
         {transaction.date}
       </TableCell>
       <TableCell
         className={cn(
-          "text-right font-bold",
+          DESKTOP_STICKY_AMOUNT_CELL,
+          "font-bold tabular-nums",
           transactionAmountClassName(transaction.amount),
         )}
       >
         {formatSignedAmount(transaction.amount)}
       </TableCell>
-      <TableCell className="text-right">
-        <ItemActions ariaLabel={`More options for ${transaction.concept}`}>
-          <DropdownMenuItem onSelect={() => setIsEditOpen(true)}>
-            Edit Transaction
-          </DropdownMenuItem>
-        </ItemActions>
+      <TableCell className={cn(DESKTOP_STICKY_ACTIONS_CELL, "align-middle")}>
+        <div className="flex justify-end">
+          <ItemActions ariaLabel={`More options for ${transaction.concept}`}>
+            <DropdownMenuItem onSelect={() => setIsEditOpen(true)}>
+              Edit Transaction
+            </DropdownMenuItem>
+          </ItemActions>
+        </div>
         <EditTransactionDialog
           transaction={transaction}
           open={isEditOpen}
@@ -260,7 +264,6 @@ interface BudgetAssignmentSelectProps {
   transaction: Transaction
   budgets: Budget[]
   isPending: boolean
-  compact?: boolean
   onBudgetChange: (transaction: Transaction, budgetId: string) => void
 }
 
@@ -268,7 +271,6 @@ function BudgetAssignmentSelect({
   transaction,
   budgets,
   isPending,
-  compact,
   onBudgetChange,
 }: BudgetAssignmentSelectProps) {
   const isExpense = transaction.amount < 0
@@ -292,7 +294,7 @@ function BudgetAssignmentSelect({
     >
       <SelectTrigger
         aria-label={`Budget assignment for ${transaction.name}`}
-        className={cn("h-9", compact ? "w-44" : "w-48")}
+        className="h-9 w-48"
       >
         <SelectValue />
       </SelectTrigger>
