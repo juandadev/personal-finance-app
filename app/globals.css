@@ -119,6 +119,6 @@
     @apply bg-muted;
   }
   ::-webkit-scrollbar-thumb {
-    @apply bg-accent hover:bg-accent/80 rounded-full;
+    @apply bg-accent/50 hover:bg-accent/30 rounded-full;
   }
 }
