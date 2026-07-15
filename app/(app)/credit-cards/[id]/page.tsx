@@ -9,8 +9,8 @@ export default async function CreditCardDetailPage({
   const { id } = await params
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col">
-      <PageHeading title="Credit Card Details" />
+    <div className="mx-auto flex h-[calc(100dvh-var(--page-chrome-block))] min-h-0 w-full max-w-6xl flex-col gap-8 overflow-hidden">
+      <PageHeading title="Credit Card Details" fixed className="shrink-0" />
       <CreditCardDetailContent creditCardId={id} />
     </div>
   )

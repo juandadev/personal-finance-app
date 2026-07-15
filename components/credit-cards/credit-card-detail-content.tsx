@@ -45,12 +45,14 @@ export function CreditCardDetailContent({
 
   if (!creditCard) {
     return (
-      <EmptyDataCard
-        className="mt-6 min-h-90"
-        icon={<LockIcon weight="fill" className="size-5" aria-hidden />}
-        title="Credit Card Not Found"
-        description="This card may have been archived or removed."
-      />
+      <div className="min-h-0 flex-1 overflow-y-auto pr-3">
+        <EmptyDataCard
+          className="min-h-90"
+          icon={<LockIcon weight="fill" className="size-5" aria-hidden />}
+          title="Credit Card Not Found"
+          description="This card may have been archived or removed."
+        />
+      </div>
     )
   }
 
@@ -60,7 +62,7 @@ export function CreditCardDetailContent({
   const hasReservedInstallments = creditCard.reservedInstallmentAmount > 0
 
   return (
-    <div className="mt-6 space-y-6">
+    <div className="min-h-0 flex-1 space-y-6 overflow-y-auto pr-3">
       <Button asChild variant="ghost" size="sm" className="w-fit">
         <Link href="/credit-cards">
           <ArrowLeftIcon weight="fill" className="size-4" aria-hidden />

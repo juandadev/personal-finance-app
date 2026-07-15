@@ -34,7 +34,7 @@ export function TransactionsCard() {
 
         {hasTransactions ? (
           <ul className="divide-muted-foreground/10 mt-8 divide-y">
-            {transactions.slice(0, 5).map((transaction) => (
+            {transactions.slice(0, 4).map((transaction) => (
               <TransactionItem key={transaction.id} transaction={transaction} />
             ))}
           </ul>

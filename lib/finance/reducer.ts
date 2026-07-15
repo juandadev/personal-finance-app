@@ -19,6 +19,7 @@ import type {
   NewPotRecord,
   NewRecurringBillRecord,
   NewTransactionRecord,
+  PotMovementRequest,
   PotRecord,
   RecurringBillPaymentRecord,
   RecurringBillPaymentSource,
@@ -75,8 +76,15 @@ export type FinanceAction =
       updates: Partial<Omit<PotRecord, "id" | "user_id">>
     }
   | { type: "pot/delete"; id: string }
-  | { type: "pot/deposit"; id: string; amount_cents: number }
-  | { type: "pot/withdraw"; id: string; amount_cents: number }
+  | {
+      type: "pot/move"
+      payload: {
+        pots: PotRecord[]
+        transaction: TransactionRecord | null
+        accounts: AccountRecord[]
+        accountSummaries: AccountSummaryRecord[]
+      }
+    }
   | { type: "recurring-bill/add"; bill: RecurringBillRecord }
   | { type: "recurring-bill/update"; bill: RecurringBillRecord }
   | { type: "recurring-bill/delete"; id: string }
@@ -173,14 +181,7 @@ export interface FinanceActions {
     updates: Partial<Omit<PotRecord, "id" | "user_id">>,
   ) => Promise<FinanceMutationResult>
   deletePot: (id: string) => Promise<FinanceMutationResult>
-  depositToPot: (
-    id: string,
-    amount_cents: number,
-  ) => Promise<FinanceMutationResult>
-  withdrawFromPot: (
-    id: string,
-    amount_cents: number,
-  ) => Promise<FinanceMutationResult>
+  movePot: (movement: PotMovementRequest) => Promise<FinanceMutationResult>
   addRecurringBill: (
     bill: Omit<NewRecurringBillRecord, "archived_at">,
   ) => Promise<FinanceMutationResult>
@@ -521,32 +522,19 @@ export function financeReducer(
       }
     case "pot/delete":
       return { ...state, pots: removeById(state.pots, action.id) }
-    case "pot/deposit":
+    case "pot/move":
       return {
         ...state,
-        pots: state.pots.map((pot) =>
-          pot.id === action.id
-            ? {
-                ...pot,
-                balance_cents:
-                  pot.balance_cents + Math.max(action.amount_cents, 0),
-              }
-            : pot,
-        ),
-      }
-    case "pot/withdraw":
-      return {
-        ...state,
-        pots: state.pots.map((pot) =>
-          pot.id === action.id
-            ? {
-                ...pot,
-                balance_cents: Math.max(
-                  pot.balance_cents - Math.max(action.amount_cents, 0),
-                  0,
-                ),
-              }
-            : pot,
+        pots: upsertManyById(state.pots, action.payload.pots),
+        transactions: action.payload.transaction
+          ? upsertById(state.transactions, action.payload.transaction).sort(
+              (a, b) => b.posted_at.localeCompare(a.posted_at),
+            )
+          : state.transactions,
+        accounts: upsertManyById(state.accounts, action.payload.accounts),
+        accountSummaries: upsertAccountSummaries(
+          state.accountSummaries,
+          action.payload.accountSummaries,
         ),
       }
     case "recurring-bill/add":

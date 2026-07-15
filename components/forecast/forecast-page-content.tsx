@@ -31,8 +31,8 @@ export function ForecastPageContent() {
   const periods = readyReport?.months.map((month) => month.period) ?? []
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
-      <PageHeading title="Cash Forecast" fixed>
+    <div className="mx-auto flex h-[calc(100dvh-var(--page-chrome-block))] min-h-0 w-full max-w-6xl flex-col gap-8 overflow-hidden rounded-xl">
+      <PageHeading title="Cash Forecast" fixed className="shrink-0">
         <ModuleHeaderActions
           ariaLabel="More cash forecast actions"
           primaryAction={
@@ -69,7 +69,7 @@ export function ForecastPageContent() {
         </ModuleHeaderActions>
       </PageHeading>
 
-      <div className="mt-6">
+      <div className="min-h-0 flex-1 overflow-y-auto pr-2">
         {report === null ? (
           <ForecastClientLoading />
         ) : report.status === "blocked" ? (

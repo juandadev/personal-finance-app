@@ -4,11 +4,14 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export default function ForecastLoading() {
   return (
-    <div aria-label="Loading cash forecast">
+    <div
+      className="mx-auto flex h-[calc(100dvh-var(--page-chrome-block))] min-h-0 w-full max-w-6xl flex-col gap-8 overflow-hidden"
+      aria-label="Loading cash forecast"
+    >
       <p className="sr-only">Loading forecast...</p>
-      <PageHeading title="Cash Forecast" fixed />
+      <PageHeading title="Cash Forecast" fixed className="shrink-0" />
 
-      <div className="mt-6 space-y-6">
+      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto pr-3">
         <Card className="space-y-6">
           <div className="space-y-3">
             <Skeleton className="h-4 w-56 max-w-full" />

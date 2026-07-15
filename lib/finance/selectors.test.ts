@@ -61,6 +61,7 @@ function makeState(
         type: "merchant",
         theme_color: "chart-2",
         notes: null,
+        is_account_owner: false,
       },
     ],
     transactions: [],

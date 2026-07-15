@@ -26,7 +26,7 @@ import {
   payCreditCardStatement,
   payRecurringBillOccurrence,
   skipRecurringBillOccurrence,
-  transferPotBalance,
+  movePotBalance,
   unassignTransactionFromBudget,
   updateBudget,
   updateCashForecastAdjustment,
@@ -60,6 +60,7 @@ import type {
   NewPotRecord,
   NewRecurringBillRecord,
   NewTransactionRecord,
+  PotMovementRequest,
   PotRecord,
   RecurringBillPaymentRecord,
   RecurringBillPaymentSource,
@@ -265,6 +266,29 @@ const potUpdateSchema = z.object({
 
 const idSchema = recordIdSchema
 const amountSchema = z.number().int().positive()
+const optionalConceptSchema = z
+  .string()
+  .trim()
+  .max(80)
+  .transform((value) => (value ? value : null))
+  .nullable()
+  .optional()
+const optionalMovementDateSchema = isoDateSchema.nullable().optional()
+const potMovementSchema = z.object({
+  potId: idSchema,
+  amountCents: amountSchema,
+  direction: z.enum(["deposit", "withdraw"]),
+  source: z.discriminatedUnion("type", [
+    z.object({ type: z.literal("direct") }),
+    z.object({
+      type: z.literal("primary_account"),
+      categoryId: recordIdSchema.nullable().optional(),
+      concept: optionalConceptSchema,
+      postedAt: optionalMovementDateSchema,
+    }),
+    z.object({ type: z.literal("pot"), potId: idSchema }),
+  ]),
+})
 function validateVoucherExpense(
   transaction: {
     amount_cents: number
@@ -1107,25 +1131,27 @@ export async function updatePotAction(
   }
 }
 
-export async function transferPotAction(
-  id: string,
-  amountCents: number,
-  mode: "deposit" | "withdraw",
-): Promise<FinanceActionResult<PotRecord>> {
+export async function movePotAction(movement: PotMovementRequest): Promise<
+  FinanceActionResult<{
+    pots: PotRecord[]
+    transaction: TransactionRecord | null
+    accounts: AccountRecord[]
+    accountSummaries: AccountSummaryRecord[]
+  }>
+> {
   try {
     const userId = await getUserId()
-    const parsedId = idSchema.parse(id)
-    const parsedAmountCents = amountSchema.parse(amountCents)
-    const data = await transferPotBalance(
-      userId,
-      parsedId,
-      parsedAmountCents,
-      mode,
-    )
+    const parsedMovement = potMovementSchema.parse(movement)
+    const data = await movePotBalance(userId, parsedMovement)
 
     return {
       ok: true,
-      message: mode === "deposit" ? "Money added." : "Money withdrawn.",
+      message:
+        parsedMovement.source.type === "pot"
+          ? "Money transferred."
+          : parsedMovement.direction === "deposit"
+            ? "Money added."
+            : "Money withdrawn.",
       data,
     }
   } catch (error) {
