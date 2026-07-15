@@ -33,6 +33,7 @@ import type {
   NewCreditCardRecord,
   NewRecurringBillRecord,
   NewTransactionRecord,
+  PotMovementRequest,
   PotRecord,
   RecurringBillPaymentRecord,
   RecurringBillPaymentSource,
@@ -77,6 +78,7 @@ const accountColumns = [
   "type",
   "currency",
   "current_balance_cents",
+  "is_primary",
 ]
 const accountSummaryColumns = [
   "user_id",
@@ -94,6 +96,7 @@ const counterpartyColumns = [
   "type",
   "theme_color",
   "notes",
+  "is_account_owner",
 ]
 const categoryColumns = ["user_id", "id", "name", "slug", "theme_color"]
 const budgetColumns = [
@@ -252,6 +255,41 @@ async function ensureDefaultCategories(client: PoolClient, userId: string) {
   }
 }
 
+async function ensureOwnerContact(client: PoolClient, userId: string) {
+  const existing = await client.query(
+    `
+      SELECT 1
+      FROM counterparties
+      WHERE user_id = $1
+        AND is_account_owner
+      LIMIT 1
+    `,
+    [userId],
+  )
+
+  if (existing.rowCount) {
+    return
+  }
+
+  await client.query(
+    `
+      INSERT INTO counterparties (
+        user_id,
+        display_name,
+        avatar_url,
+        type,
+        theme_color,
+        notes,
+        is_account_owner
+      )
+      VALUES ($1, 'Juan Martinez', null, 'person', 'finance-grey', 'Account owner', true)
+      ON CONFLICT (user_id, lower(display_name))
+      DO UPDATE SET is_account_owner = true
+    `,
+    [userId],
+  )
+}
+
 function toPeriod(isoDate: string) {
   return isoDate.slice(0, 7)
 }
@@ -292,6 +330,7 @@ export async function loadFinanceState(
   return withFinanceTransaction(userId, async (client) => {
     await ensureUserProfile(client, userId, displayName)
     await ensureDefaultCategories(client, userId)
+    await ensureOwnerContact(client, userId)
     const currentPeriod = getCurrentPeriod()
 
     const profile = await client.query<UserPreferencesRecord>(
@@ -2571,38 +2610,267 @@ export async function updatePot(
   })
 }
 
-export async function transferPotBalance(
+export async function movePotBalance(
   userId: string,
-  id: string,
-  amountCents: number,
-  mode: "deposit" | "withdraw",
+  movement: PotMovementRequest,
 ) {
   return withFinanceTransaction(userId, async (client) => {
-    const result = await client.query<PotRecord>(
+    const isDeposit = movement.direction === "deposit"
+
+    if (movement.source.type === "direct") {
+      const result = await client.query<PotRecord>(
+        `
+          UPDATE pots
+          SET balance_cents =
+            CASE
+              WHEN $3::boolean THEN balance_cents + $2
+              ELSE balance_cents - $2
+            END
+          WHERE user_id = $1
+            AND id = $4
+            AND ($3::boolean OR balance_cents >= $2)
+          RETURNING ${potColumns.join(", ")}
+        `,
+        [userId, movement.amountCents, isDeposit, movement.potId],
+      )
+
+      if (!result.rowCount) {
+        throw new Error(
+          isDeposit
+            ? "Pot not found."
+            : "This pot does not have enough money for that withdrawal.",
+        )
+      }
+
+      return {
+        pots: result.rows,
+        transaction: null,
+        accounts: [],
+        accountSummaries: [],
+      }
+    }
+
+    if (movement.source.type === "pot") {
+      const sourcePotId = isDeposit ? movement.source.potId : movement.potId
+      const destinationPotId = isDeposit
+        ? movement.potId
+        : movement.source.potId
+
+      if (sourcePotId === destinationPotId) {
+        throw new Error("Choose a different pot to transfer money.")
+      }
+
+      const lockedPots = await client.query<PotRecord>(
+        `
+          SELECT ${potColumns.join(", ")}
+          FROM pots
+          WHERE user_id = $1
+            AND id = ANY($2::uuid[])
+          ORDER BY id
+          FOR UPDATE
+        `,
+        [userId, [sourcePotId, destinationPotId]],
+      )
+      const sourcePot = lockedPots.rows.find((pot) => pot.id === sourcePotId)
+
+      if (lockedPots.rowCount !== 2 || !sourcePot) {
+        throw new Error("Choose a valid pot to transfer money.")
+      }
+
+      if (sourcePot.balance_cents < movement.amountCents) {
+        throw new Error("The source pot does not have enough money.")
+      }
+
+      const result = await client.query<PotRecord>(
+        `
+          UPDATE pots
+          SET balance_cents = CASE
+            WHEN id = $2 THEN balance_cents - $4
+            WHEN id = $3 THEN balance_cents + $4
+            ELSE balance_cents
+          END
+          WHERE user_id = $1
+            AND id = ANY($5::uuid[])
+          RETURNING ${potColumns.join(", ")}
+        `,
+        [
+          userId,
+          sourcePotId,
+          destinationPotId,
+          movement.amountCents,
+          [sourcePotId, destinationPotId],
+        ],
+      )
+
+      return {
+        pots: result.rows,
+        transaction: null,
+        accounts: [],
+        accountSummaries: [],
+      }
+    }
+
+    const currentPotResult = await client.query<PotRecord>(
+      `
+        SELECT ${potColumns.join(", ")}
+        FROM pots
+        WHERE user_id = $1
+          AND id = $2
+        FOR UPDATE
+      `,
+      [userId, movement.potId],
+    )
+    const currentPot = currentPotResult.rows[0]
+
+    if (!currentPot) {
+      throw new Error("Pot not found.")
+    }
+
+    if (!isDeposit && currentPot.balance_cents < movement.amountCents) {
+      throw new Error(
+        "This pot does not have enough money for that withdrawal.",
+      )
+    }
+
+    const [primaryAccountResult, ownerContactResult, categoryResult] =
+      await Promise.all([
+        client.query<AccountRecord>(
+          `
+            SELECT ${accountColumns.join(", ")}
+            FROM accounts
+            WHERE user_id = $1
+              AND is_primary
+              AND type IN ('checking', 'savings')
+            LIMIT 1
+            FOR UPDATE
+          `,
+          [userId],
+        ),
+        client.query<CounterpartyRecord>(
+          `
+            SELECT ${counterpartyColumns.join(", ")}
+            FROM counterparties
+            WHERE user_id = $1
+              AND is_account_owner
+            LIMIT 1
+          `,
+          [userId],
+        ),
+        movement.source.categoryId
+          ? client.query<CategoryRecord>(
+              `
+                SELECT ${categoryColumns.join(", ")}
+                FROM categories
+                WHERE user_id = $1
+                  AND id = $2
+                LIMIT 1
+              `,
+              [userId, movement.source.categoryId],
+            )
+          : client.query<CategoryRecord>(
+              `
+                SELECT ${categoryColumns.join(", ")}
+                FROM categories
+                WHERE user_id = $1
+                  AND lower(name) = 'general'
+                LIMIT 1
+              `,
+              [userId],
+            ),
+      ])
+    const primaryAccount = primaryAccountResult.rows[0]
+    const ownerContact = ownerContactResult.rows[0]
+    const category = categoryResult.rows[0]
+
+    if (!primaryAccount) {
+      throw new Error(
+        "Your primary bank account is not ready yet. Refresh and try again.",
+      )
+    }
+
+    if (!ownerContact) {
+      throw new Error(
+        "Your account owner contact is not ready yet. Refresh and try again.",
+      )
+    }
+
+    if (!category) {
+      throw new Error(
+        movement.source.categoryId
+          ? "Category not found."
+          : "Your General category is not ready yet. Refresh and try again.",
+      )
+    }
+
+    const postedAt =
+      movement.source.postedAt ?? (await getUserLocalToday(client, userId))
+    await assertDateNotAfterUserLocalToday(client, userId, postedAt)
+
+    const updatedPotResult = await client.query<PotRecord>(
       `
         UPDATE pots
         SET balance_cents =
           CASE
-            WHEN $3::text = 'deposit' THEN balance_cents + $2
+            WHEN $3::boolean THEN balance_cents + $2
             ELSE balance_cents - $2
           END
         WHERE user_id = $1
           AND id = $4
-          AND ($3::text = 'deposit' OR balance_cents >= $2)
-        RETURNING user_id, id, name, balance_cents, target_cents, theme_color, due_date::text AS due_date
+        RETURNING ${potColumns.join(", ")}
       `,
-      [userId, amountCents, mode, id],
+      [userId, movement.amountCents, isDeposit, movement.potId],
+    )
+    const updatedPot = updatedPotResult.rows[0]
+    const concept =
+      movement.source.concept?.trim() ||
+      (isDeposit
+        ? `Deposit to ${currentPot.name}`
+        : `Taken from ${currentPot.name}`)
+    const transactionResult = await client.query<TransactionRecord>(
+      `
+        INSERT INTO transactions (
+          user_id,
+          id,
+          account_id,
+          counterparty_id,
+          category_id,
+          concept,
+          amount_cents,
+          is_voucher_expense,
+          payment_method,
+          credit_card_id,
+          credit_card_statement_id,
+          posted_at,
+          description
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, false, 'bank_account', null, null, $8, null)
+        RETURNING ${transactionSelectColumns.join(", ")}
+      `,
+      [
+        userId,
+        crypto.randomUUID(),
+        primaryAccount.id,
+        ownerContact.id,
+        category.id,
+        concept,
+        isDeposit ? -movement.amountCents : movement.amountCents,
+        postedAt,
+      ],
+    )
+    const transaction = transactionResult.rows[0]
+    const effects = await applyTransactionEffects(
+      client,
+      userId,
+      transaction,
+      1,
     )
 
-    if (!result.rowCount) {
-      throw new Error(
-        mode === "withdraw"
-          ? "This pot does not have enough money for that withdrawal."
-          : "Pot not found.",
-      )
+    return {
+      pots: [updatedPot],
+      transaction,
+      accounts: [effects.account],
+      accountSummaries: [effects.accountSummary],
     }
-
-    return result.rows[0]
   })
 }
 

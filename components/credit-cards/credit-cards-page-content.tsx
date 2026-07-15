@@ -63,7 +63,7 @@ export function CreditCardsPageContent() {
   const activeCards = creditCards.filter((card) => !card.archivedAt)
 
   return (
-    <div className="mt-6 space-y-6">
+    <div className="min-h-0 flex-1 space-y-6 overflow-y-auto pr-2">
       <div className="grid gap-3 md:grid-cols-2 md:gap-6 xl:grid-cols-4">
         <Card padding="overview" variant="primary">
           <p className="text-primary-foreground text-sm">Total Pending</p>

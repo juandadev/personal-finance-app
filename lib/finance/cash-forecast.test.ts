@@ -26,6 +26,7 @@ function makeState(overrides: Partial<FinanceState> = {}): FinanceState {
         type: "checking",
         currency: "USD",
         current_balance_cents: 100_000,
+        is_primary: true,
       },
     ],
     accountSummaries: [],

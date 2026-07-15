@@ -31,7 +31,7 @@ import {
   payRecurringBillOccurrenceAction,
   skipRecurringBillOccurrenceAction,
   saveCashForecastSettingsAction,
-  transferPotAction,
+  movePotAction,
   unassignTransactionFromBudgetAction,
   updateBudgetAction,
   updateCashForecastAdjustmentAction,
@@ -327,40 +327,13 @@ export function FinanceProvider({
             return result
           }),
         ),
-      depositToPot: (id: string, amount_cents: number) =>
+      movePot: (movement) =>
         runFinanceAction(() =>
-          transferPotAction(id, amount_cents, "deposit").then((result) => {
+          movePotAction(movement).then((result) => {
             if (result.ok) {
               dispatch({
-                type: "pot/update",
-                id,
-                updates: {
-                  name: result.data.name,
-                  balance_cents: result.data.balance_cents,
-                  target_cents: result.data.target_cents,
-                  theme_color: result.data.theme_color,
-                  due_date: result.data.due_date,
-                },
-              })
-            }
-
-            return result
-          }),
-        ),
-      withdrawFromPot: (id: string, amount_cents: number) =>
-        runFinanceAction(() =>
-          transferPotAction(id, amount_cents, "withdraw").then((result) => {
-            if (result.ok) {
-              dispatch({
-                type: "pot/update",
-                id,
-                updates: {
-                  name: result.data.name,
-                  balance_cents: result.data.balance_cents,
-                  target_cents: result.data.target_cents,
-                  theme_color: result.data.theme_color,
-                  due_date: result.data.due_date,
-                },
+                type: "pot/move",
+                payload: result.data,
               })
             }
 

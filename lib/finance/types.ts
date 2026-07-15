@@ -21,9 +21,26 @@ export type TransactionPaymentMethod =
 export type CreditCardStatementLifecycleStatus = "open" | "closed" | "paid"
 export type CashForecastAdjustmentKind = "additional_income" | "planned_outflow"
 export type CashForecastAdjustmentRecurrence = "once" | "monthly"
+export type PotMovementDirection = "deposit" | "withdraw"
+export type PotMovementSource =
+  | { type: "direct" }
+  | {
+      type: "primary_account"
+      categoryId?: FinanceRecordId | null
+      concept?: string | null
+      postedAt?: string | null
+    }
+  | { type: "pot"; potId: FinanceRecordId }
 
 export type FinanceUserId = string
 export type FinanceRecordId = string
+
+export interface PotMovementRequest {
+  potId: FinanceRecordId
+  amountCents: number
+  direction: PotMovementDirection
+  source: PotMovementSource
+}
 
 export interface UserPreferencesRecord {
   user_id: FinanceUserId
@@ -38,6 +55,7 @@ export interface AccountRecord {
   type: AccountType
   currency: CurrencyCode
   current_balance_cents: number
+  is_primary: boolean
 }
 
 export interface AccountSummaryRecord {
@@ -65,6 +83,7 @@ export interface CounterpartyRecord {
   type: CounterpartyType
   theme_color: ThemeColor
   notes: string | null
+  is_account_owner: boolean
 }
 
 export interface TransactionRecord {
@@ -235,7 +254,10 @@ export interface CashForecastAdjustmentRecord {
 export type NewBudgetRecord = Omit<BudgetRecord, "user_id">
 export type NewPotRecord = Omit<PotRecord, "user_id">
 export type NewCategoryRecord = Omit<CategoryRecord, "user_id">
-export type NewCounterpartyRecord = Omit<CounterpartyRecord, "user_id">
+export type NewCounterpartyRecord = Omit<
+  CounterpartyRecord,
+  "user_id" | "is_account_owner"
+>
 export type NewTransactionRecord = Omit<TransactionRecord, "user_id">
 export type NewCreditCardRecord = Omit<CreditCardRecord, "user_id">
 export type NewRecurringBillRecord = Omit<RecurringBillRecord, "user_id">

@@ -15,8 +15,23 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { FormField, FormStatusMessage } from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useFinance } from "@/hooks/use-finance"
+import { getForecastLocalDate } from "@/lib/finance/forecast-period"
 import { parseDollarAmount } from "@/lib/finance/form-utils"
+import {
+  defaultCategoryValue,
+  directAdjustmentValue,
+  getPotMovementSource,
+  primaryAccountValue,
+} from "@/lib/finance/pot-movement"
 import { formatCurrency } from "@/lib/format"
 import { currencyCentsSchema } from "@/lib/forms/validation"
 import { useStandardForm } from "@/lib/forms/use-standard-form"
@@ -35,6 +50,10 @@ interface PotTransferDialogProps {
 
 type PotTransferFormValues = {
   amount: string
+  source: string
+  concept: string
+  categoryId: string
+  postedAt: string
 }
 
 function getPreviewAmount(
@@ -63,15 +82,24 @@ export function PotTransferDialog({
   open,
   onOpenChange,
 }: PotTransferDialogProps) {
-  const { actions } = useFinance()
+  const { actions, state } = useFinance()
   const isWithdrawal = mode === "withdraw"
   const availableCents = Math.round(pot.amount * 100)
+  const localToday = getForecastLocalDate(
+    new Date(),
+    state.preferences.timezone,
+  )
+  const otherPots = state.pots.filter((candidate) => candidate.id !== pot.id)
   const defaultValues = useMemo(
     () =>
       ({
         amount: "",
+        source: directAdjustmentValue,
+        concept: "",
+        categoryId: "",
+        postedAt: localToday,
       }) satisfies PotTransferFormValues,
-    [],
+    [localToday],
   )
   const transferFormSchema = useMemo(
     () =>
@@ -80,6 +108,12 @@ export function PotTransferDialog({
           (amountCents) => !isWithdrawal || amountCents <= availableCents,
           "You cannot withdraw more than this pot contains.",
         ),
+        source: z.string().min(1, "Choose where the money is moving."),
+        concept: z.string().trim().max(80),
+        categoryId: z.string(),
+        postedAt: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid date."),
       }),
     [availableCents, isWithdrawal],
   )
@@ -91,14 +125,14 @@ export function PotTransferDialog({
             label: "Amount to Withdraw",
             button: "Withdraw Money",
             description:
-              "Enter the amount to withdraw from this pot. The preview shows the new saved total before you save.",
+              "Enter an amount, then choose whether to adjust this pot directly, move money to your main account, or transfer it to another pot.",
           }
         : {
             title: `Add to '${pot.name}'`,
             label: "Amount to Add",
             button: "Add Money",
             description:
-              "Enter the amount to add to this pot. The preview shows the new saved total before you save.",
+              "Enter an amount, then choose whether to adjust this pot directly, take it from your main account, or transfer it from another pot.",
           },
     [isWithdrawal, pot.name],
   )
@@ -107,9 +141,12 @@ export function PotTransferDialog({
     defaultValues,
     schema: transferFormSchema,
     onSubmit: async ({ applyActionResult, resetForm, value }) => {
-      const result = isWithdrawal
-        ? await actions.withdrawFromPot(pot.id, value.amount)
-        : await actions.depositToPot(pot.id, value.amount)
+      const result = await actions.movePot({
+        potId: pot.id,
+        amountCents: value.amount,
+        direction: isWithdrawal ? "withdraw" : "deposit",
+        source: getPotMovementSource(value.source, value),
+      })
 
       if (!applyActionResult(result)) {
         return
@@ -259,6 +296,161 @@ export function PotTransferDialog({
               </FormField>
             )}
           </standardForm.form.Field>
+
+          <standardForm.form.Field name="source">
+            {(field) => (
+              <FormField
+                id={`${mode}-pot-source-${pot.id}`}
+                label={isWithdrawal ? "Money Destination" : "Money Source"}
+                className="mt-5"
+                error={standardForm.fieldErrors.source}
+              >
+                {(fieldProps) => (
+                  <Select
+                    value={field.state.value}
+                    onValueChange={(value) =>
+                      standardForm.setValue("source", value)
+                    }
+                  >
+                    <SelectTrigger {...fieldProps} variant="form">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent matchTriggerWidth>
+                      <SelectItem value={directAdjustmentValue} variant="form">
+                        Direct Adjustment
+                      </SelectItem>
+                      <SelectItem value={primaryAccountValue} variant="form">
+                        Main Account
+                      </SelectItem>
+                      {otherPots.map((otherPot) => (
+                        <SelectItem
+                          key={otherPot.id}
+                          value={`pot:${otherPot.id}`}
+                          variant="form"
+                        >
+                          {isWithdrawal
+                            ? `Transfer To ${otherPot.name}`
+                            : `Transfer From ${otherPot.name}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </FormField>
+            )}
+          </standardForm.form.Field>
+
+          <standardForm.form.Subscribe
+            selector={(formState) => formState.values.source}
+          >
+            {(source) =>
+              source === primaryAccountValue ? (
+                <div className="mt-5 space-y-5">
+                  <standardForm.form.Field name="concept">
+                    {(field) => (
+                      <FormField
+                        id={`${mode}-pot-concept-${pot.id}`}
+                        label="Concept (Optional)"
+                        error={standardForm.fieldErrors.concept}
+                      >
+                        {(fieldProps) => (
+                          <Input
+                            {...fieldProps}
+                            value={field.state.value}
+                            onChange={(event) =>
+                              standardForm.setValue(
+                                "concept",
+                                event.target.value,
+                              )
+                            }
+                            onBlur={field.handleBlur}
+                            placeholder={
+                              isWithdrawal
+                                ? `Taken from ${pot.name}`
+                                : `Deposit to ${pot.name}`
+                            }
+                          />
+                        )}
+                      </FormField>
+                    )}
+                  </standardForm.form.Field>
+
+                  <standardForm.form.Field name="categoryId">
+                    {(field) => (
+                      <FormField
+                        id={`${mode}-pot-category-${pot.id}`}
+                        label="Category (Optional)"
+                      >
+                        {(fieldProps) => (
+                          <Select
+                            value={field.state.value || defaultCategoryValue}
+                            onValueChange={(value) =>
+                              standardForm.setValue(
+                                "categoryId",
+                                value === defaultCategoryValue ? "" : value,
+                              )
+                            }
+                          >
+                            <SelectTrigger {...fieldProps} variant="form">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent matchTriggerWidth>
+                              <SelectItem
+                                value={defaultCategoryValue}
+                                variant="form"
+                              >
+                                General (Default)
+                              </SelectItem>
+                              {state.categories
+                                .filter(
+                                  (category) =>
+                                    category.name.toLowerCase() !== "general",
+                                )
+                                .map((category) => (
+                                  <SelectItem
+                                    key={category.id}
+                                    value={category.id}
+                                    variant="form"
+                                  >
+                                    {category.name}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </FormField>
+                    )}
+                  </standardForm.form.Field>
+
+                  <standardForm.form.Field name="postedAt">
+                    {(field) => (
+                      <FormField
+                        id={`${mode}-pot-posted-at-${pot.id}`}
+                        label="Transaction Date"
+                        error={standardForm.fieldErrors.postedAt}
+                      >
+                        {(fieldProps) => (
+                          <Input
+                            {...fieldProps}
+                            type="date"
+                            max={localToday}
+                            value={field.state.value}
+                            onChange={(event) =>
+                              standardForm.setValue(
+                                "postedAt",
+                                event.target.value,
+                              )
+                            }
+                            onBlur={field.handleBlur}
+                          />
+                        )}
+                      </FormField>
+                    )}
+                  </standardForm.form.Field>
+                </div>
+              ) : null
+            }
+          </standardForm.form.Subscribe>
         </DialogFinanceForm>
       </DialogContent>
     </Dialog>

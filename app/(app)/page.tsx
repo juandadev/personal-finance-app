@@ -14,11 +14,11 @@ export default function OverviewPage() {
         <SummaryCards />
       </div>
       <div className="grid min-h-0 flex-1 gap-6 lg:@[829px]/main:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6 overflow-y-auto lg:@[829px]/main:pr-2">
           <PotsCard />
           <TransactionsCard />
         </div>
-        <div className="flex min-h-0 flex-col gap-4 overflow-y-auto rounded-xl lg:@[829px]/main:pr-3">
+        <div className="flex min-h-0 flex-col gap-4 overflow-y-auto rounded-xl lg:@[829px]/main:pr-2">
           <BudgetsCard />
           <CreditCardsCard />
           <RecurringBillsCard />
