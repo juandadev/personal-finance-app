@@ -31,31 +31,43 @@ interface PayCreditCardStatementDialogProps {
   creditCard: CreditCard
   statement?: CreditCardStatement
   trigger?: ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  hideTrigger?: boolean
 }
 
 export function PayCreditCardStatementDialog({
   creditCard,
   statement,
   trigger,
+  open: controlledOpen,
+  onOpenChange,
+  hideTrigger = false,
 }: PayCreditCardStatementDialogProps) {
   const { actions, state } = useFinance()
   const localToday = getForecastLocalDate(
     new Date(),
     state.preferences.timezone,
   )
-  const [open, setOpen] = useState(false)
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
   const [paidAt, setPaidAt] = useState(localToday)
   const [statusMessage, setStatusMessage] = useState("")
   const [isPaying, setIsPaying] = useState(false)
   const selectedStatement = statement ?? creditCard.oldestPayableStatement
   const isCardLevelPayment = statement === undefined
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : uncontrolledOpen
   const canPay =
     selectedStatement &&
     selectedStatement.lifecycleStatus !== "paid" &&
     selectedStatement.totalAmount > 0
 
   const handleOpenChange = (nextOpen: boolean) => {
-    setOpen(nextOpen)
+    if (!isControlled) {
+      setUncontrolledOpen(nextOpen)
+    }
+
+    onOpenChange?.(nextOpen)
 
     if (nextOpen) {
       setPaidAt(localToday)
@@ -88,14 +100,16 @@ export function PayCreditCardStatementDialog({
       return
     }
 
-    setOpen(false)
+    handleOpenChange(false)
   }
 
   return (
     <AlertDialog open={open} onOpenChange={handleOpenChange}>
-      <AlertDialogTrigger asChild>
-        {trigger ?? <Button size="sm">Pay Statement</Button>}
-      </AlertDialogTrigger>
+      {!hideTrigger ? (
+        <AlertDialogTrigger asChild>
+          {trigger ?? <Button size="sm">Pay Statement</Button>}
+        </AlertDialogTrigger>
+      ) : null}
       <AlertDialogContent variant="finance">
         <AlertDialogHeader className="text-left">
           <AlertDialogCloseButton aria-label="Close pay statement dialog" />

@@ -14,7 +14,7 @@ import type { ThemeColor } from "@/lib/theme-colors"
 export type CurrencyCode = "USD" | "MXN"
 export type AccountType = "checking" | "savings" | "credit"
 export type CounterpartyType = "person" | "merchant"
-export type BillFrequency = "monthly" | "yearly"
+export type BillFrequency = "monthly" | "yearly" | "one_time"
 export type RecurringBillPaymentStatus = "paid" | "skipped"
 export type TransactionPaymentMethod =
   "bank_account" | "credit_card" | "voucher" | "credit_card_payment"

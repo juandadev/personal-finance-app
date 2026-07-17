@@ -46,7 +46,7 @@ const billFormSchema = z.object({
   counterpartyId: requiredSelectSchema("Choose a contact."),
   concept: requiredStringSchema("Enter a bill concept.", 80),
   amount: currencyCentsSchema("Enter an amount greater than $0."),
-  frequency: z.enum(["monthly", "yearly"]),
+  frequency: z.enum(["monthly", "yearly", "one_time"]),
   firstDueDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid first due date."),
@@ -404,11 +404,15 @@ function BillDialog({
                   label="Frequency"
                   value={field.state.value}
                   onValueChange={(value) =>
-                    form.setValue("frequency", value as "monthly" | "yearly")
+                    form.setValue(
+                      "frequency",
+                      value as "monthly" | "yearly" | "one_time",
+                    )
                   }
                   options={[
                     { value: "monthly", label: "Monthly" },
                     { value: "yearly", label: "Yearly" },
+                    { value: "one_time", label: "One-Time" },
                   ]}
                   disabled={scheduleLocked}
                   error={form.fieldErrors.frequency}

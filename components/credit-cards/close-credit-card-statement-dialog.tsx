@@ -23,17 +23,25 @@ interface CloseCreditCardStatementDialogProps {
   creditCard: CreditCard
   statement?: CreditCardStatement
   trigger?: ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  hideTrigger?: boolean
 }
 
 export function CloseCreditCardStatementDialog({
   creditCard,
   statement = creditCard.currentStatement,
   trigger,
+  open: controlledOpen,
+  onOpenChange,
+  hideTrigger = false,
 }: CloseCreditCardStatementDialogProps) {
   const { actions } = useFinance()
-  const [open, setOpen] = useState(false)
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
   const [statusMessage, setStatusMessage] = useState("")
   const [isClosing, setIsClosing] = useState(false)
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : uncontrolledOpen
   const canClose =
     statement &&
     statement.lifecycleStatus !== "paid" &&
@@ -41,6 +49,14 @@ export function CloseCreditCardStatementDialog({
 
   if (!canClose || !statement) {
     return null
+  }
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!isControlled) {
+      setUncontrolledOpen(nextOpen)
+    }
+
+    onOpenChange?.(nextOpen)
   }
 
   const handleCloseStatement = async () => {
@@ -56,18 +72,20 @@ export function CloseCreditCardStatementDialog({
       return
     }
 
-    setOpen(false)
+    handleOpenChange(false)
   }
 
   return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger asChild>
-        {trigger ?? (
-          <Button size="sm" variant="secondary">
-            Close Statement
-          </Button>
-        )}
-      </AlertDialogTrigger>
+    <AlertDialog open={open} onOpenChange={handleOpenChange}>
+      {!hideTrigger ? (
+        <AlertDialogTrigger asChild>
+          {trigger ?? (
+            <Button size="sm" variant="secondary">
+              Close Statement
+            </Button>
+          )}
+        </AlertDialogTrigger>
+      ) : null}
       <AlertDialogContent variant="finance">
         <AlertDialogHeader className="text-left">
           <AlertDialogCloseButton aria-label="Close statement dialog" />

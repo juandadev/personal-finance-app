@@ -160,6 +160,27 @@ describe("selectFinanceViewModel credit reservation", () => {
     expect(card.availableCredit).toBe(700)
   })
 
+  test("reserves a future one-time card charge before it joins a statement", () => {
+    const state = makeState(
+      {},
+      {
+        id: "bill-1",
+        frequency: "one_time",
+        first_due_date: "2026-08-01",
+        total_payments: 1,
+      },
+    )
+    const futureCard = selectCard(state)
+    const dueCard = selectFinanceViewModel(state, "2026-08-01").creditCards[0]
+
+    expect(futureCard.totalPendingAmount).toBe(0)
+    expect(futureCard.reservedInstallmentAmount).toBe(100)
+    expect(futureCard.availableCredit).toBe(900)
+    expect(dueCard?.totalPendingAmount).toBe(100)
+    expect(dueCard?.reservedInstallmentAmount).toBe(0)
+    expect(dueCard?.availableCredit).toBe(900)
+  })
+
   test("paid installments reduce the reservation", () => {
     const card = selectCard(
       makeState(

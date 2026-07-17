@@ -111,6 +111,10 @@ export function getOccurrenceDueDate(
   frequency: RecurringBillRecord["frequency"],
   occurrenceIndex: number,
 ): string {
+  if (frequency === "one_time") {
+    return firstDueDate
+  }
+
   const anchor = parseIsoDate(firstDueDate)
 
   if (frequency === "yearly") {
@@ -177,6 +181,10 @@ export function resolveRecurringBillOccurrences(
   const occurrences: RecurringBillOccurrenceState[] = []
 
   for (let index = 0; index < MAX_GENERATED_OCCURRENCES; index += 1) {
+    if (bill.frequency === "one_time" && index > 0) {
+      break
+    }
+
     if (bill.total_payments !== null && index >= bill.total_payments) {
       break
     }

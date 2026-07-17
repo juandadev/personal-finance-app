@@ -1,11 +1,21 @@
 "use client"
 
 import Link from "next/link"
+import { useState } from "react"
 import { ArrowLeftIcon, LockIcon } from "@phosphor-icons/react"
 
+import {
+  HeaderMenuItem,
+  ItemActions,
+  ModuleHeaderActions,
+} from "@/components/actions"
 import { CloseCreditCardStatementDialog } from "@/components/credit-cards/close-credit-card-statement-dialog"
 import { CreditCardBadge } from "@/components/credit-cards/credit-card-badge"
 import { PayCreditCardStatementDialog } from "@/components/credit-cards/pay-credit-card-statement-dialog"
+import {
+  AddScheduledCreditCardChargeDialog,
+  EditScheduledCreditCardChargeDialog,
+} from "@/components/credit-cards/scheduled-credit-card-charge-dialog"
 import { EmptyDataCard } from "@/components/empty-data-card"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -16,7 +26,12 @@ import {
   formatDisplayDateRange,
   formatSignedAmount,
 } from "@/lib/format"
-import type { CreditCard, CreditCardDueStatus } from "@/lib/types"
+import type {
+  BillStatus,
+  CreditCard,
+  CreditCardDueStatus,
+  RecurringBill,
+} from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 const statusLabels: Record<CreditCardDueStatus, string> = {
@@ -25,6 +40,15 @@ const statusLabels: Record<CreditCardDueStatus, string> = {
   "due-today": "Due Today",
   overdue: "Overdue",
   paid: "Paid",
+}
+
+const billStatusLabels: Record<BillStatus, string> = {
+  paid: "Paid",
+  skipped: "Skipped",
+  upcoming: "Upcoming",
+  "due-soon": "Due Soon",
+  "due-today": "Due Today",
+  overdue: "Overdue",
 }
 
 function statusClassName(status: CreditCardDueStatus) {
@@ -40,7 +64,12 @@ export function CreditCardDetailContent({
 }: {
   creditCardId: string
 }) {
-  const { creditCards, transactions } = useFinance()
+  const { creditCards, recurringBills, transactions } = useFinance()
+  const [isScheduledChargeDialogOpen, setIsScheduledChargeDialogOpen] =
+    useState(false)
+  const [isMobilePayDialogOpen, setIsMobilePayDialogOpen] = useState(false)
+  const [isCloseStatementDialogOpen, setIsCloseStatementDialogOpen] =
+    useState(false)
   const creditCard = creditCards.find((card) => card.id === creditCardId)
 
   if (!creditCard) {
@@ -59,7 +88,25 @@ export function CreditCardDetailContent({
   const cardTransactions = transactions.filter(
     (transaction) => transaction.creditCardId === creditCard.id,
   )
+  const scheduledCharges = recurringBills.filter(
+    (bill) =>
+      bill.frequency === "one_time" &&
+      bill.creditCardId === creditCard.id &&
+      !bill.archivedAt &&
+      bill.currentOccurrence?.status !== "paid" &&
+      bill.currentOccurrence?.status !== "skipped",
+  )
   const hasReservedInstallments = creditCard.reservedInstallmentAmount > 0
+  const canPayStatement = Boolean(
+    creditCard.oldestPayableStatement &&
+    creditCard.oldestPayableStatement.lifecycleStatus !== "paid" &&
+    creditCard.oldestPayableStatement.totalAmount > 0,
+  )
+  const canCloseStatement = Boolean(
+    creditCard.currentStatement &&
+    creditCard.currentStatement.lifecycleStatus !== "paid" &&
+    creditCard.currentStatement.totalAmount === 0,
+  )
 
   return (
     <div className="min-h-0 flex-1 space-y-6 overflow-y-auto pr-3">
@@ -88,8 +135,34 @@ export function CreditCardDetailContent({
               </p>
             </div>
           </div>
-          <PayCreditCardStatementDialog creditCard={creditCard} />
-          <CloseCreditCardStatementDialog creditCard={creditCard} />
+          <ModuleHeaderActions
+            ariaLabel={`Actions for ${creditCard.nickname}`}
+            primaryAction={
+              canPayStatement ? (
+                <PayCreditCardStatementDialog creditCard={creditCard} />
+              ) : undefined
+            }
+            primaryMenuItem={
+              canPayStatement ? (
+                <HeaderMenuItem onSelect={() => setIsMobilePayDialogOpen(true)}>
+                  Pay Statement
+                </HeaderMenuItem>
+              ) : undefined
+            }
+          >
+            <HeaderMenuItem
+              onSelect={() => setIsScheduledChargeDialogOpen(true)}
+            >
+              Add Scheduled Charge
+            </HeaderMenuItem>
+            {canCloseStatement ? (
+              <HeaderMenuItem
+                onSelect={() => setIsCloseStatementDialogOpen(true)}
+              >
+                Close Statement
+              </HeaderMenuItem>
+            ) : null}
+          </ModuleHeaderActions>
         </div>
 
         <div
@@ -110,6 +183,9 @@ export function CreditCardDetailContent({
             value={formatCurrency(creditCard.availableCredit, {
               forceDecimals: true,
             })}
+            valueClassName={
+              creditCard.availableCredit < 0 ? "text-destructive" : undefined
+            }
           />
           {hasReservedInstallments ? (
             <Metric
@@ -128,6 +204,27 @@ export function CreditCardDetailContent({
         </div>
       </Card>
 
+      <PayCreditCardStatementDialog
+        creditCard={creditCard}
+        open={isMobilePayDialogOpen}
+        onOpenChange={setIsMobilePayDialogOpen}
+        hideTrigger
+      />
+      <AddScheduledCreditCardChargeDialog
+        creditCard={creditCard}
+        open={isScheduledChargeDialogOpen}
+        onOpenChange={setIsScheduledChargeDialogOpen}
+      />
+      <CloseCreditCardStatementDialog
+        creditCard={creditCard}
+        open={isCloseStatementDialogOpen}
+        onOpenChange={setIsCloseStatementDialogOpen}
+        hideTrigger
+      />
+      <ScheduledChargesCard
+        creditCard={creditCard}
+        scheduledCharges={scheduledCharges}
+      />
       <StatementsCard creditCard={creditCard} />
       <TransactionsCard
         creditCard={creditCard}
@@ -135,6 +232,85 @@ export function CreditCardDetailContent({
       />
       <PaymentsCard creditCard={creditCard} />
     </div>
+  )
+}
+
+function ScheduledChargesCard({
+  creditCard,
+  scheduledCharges,
+}: {
+  creditCard: CreditCard
+  scheduledCharges: RecurringBill[]
+}) {
+  const [editingCharge, setEditingCharge] = useState<RecurringBill | null>(null)
+
+  if (scheduledCharges.length === 0) {
+    return null
+  }
+
+  return (
+    <Card padding="fixed">
+      <h2 className="text-xl font-bold tracking-tight">Scheduled Charges</h2>
+      <div className="divide-muted-foreground/10 mt-4 divide-y">
+        {scheduledCharges.map((charge) => {
+          const occurrence = charge.currentOccurrence
+
+          return (
+            <div
+              key={charge.id}
+              className="flex items-center justify-between gap-4 py-4"
+            >
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold">{charge.concept}</p>
+                <p className="text-muted-foreground text-xs">
+                  {charge.name} · Charges{" "}
+                  {formatDisplayDate(charge.firstDueDate)}
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
+                <div className="text-right">
+                  <p className="text-sm font-bold">
+                    {formatSignedAmount(charge.amount * -1)}
+                  </p>
+                  {occurrence ? (
+                    <p
+                      className={cn(
+                        "text-xs font-bold",
+                        occurrence.status === "overdue"
+                          ? "text-destructive"
+                          : occurrence.status === "due-soon" ||
+                              occurrence.status === "due-today"
+                            ? "text-warning"
+                            : "text-muted-foreground",
+                      )}
+                    >
+                      {billStatusLabels[occurrence.status]}
+                    </p>
+                  ) : null}
+                </div>
+                <ItemActions ariaLabel={`More options for ${charge.concept}`}>
+                  <HeaderMenuItem onSelect={() => setEditingCharge(charge)}>
+                    Edit Scheduled Charge
+                  </HeaderMenuItem>
+                </ItemActions>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      {editingCharge ? (
+        <EditScheduledCreditCardChargeDialog
+          bill={editingCharge}
+          creditCard={creditCard}
+          open
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditingCharge(null)
+            }
+          }}
+        />
+      ) : null}
+    </Card>
   )
 }
 
@@ -237,7 +413,7 @@ function TransactionsCard({
             >
               <div>
                 <p className="text-muted-foreground text-sm font-bold">
-                  {line.name}
+                  {line.concept}
                 </p>
                 <p className="text-muted-foreground text-xs">
                   Recurring bill · Due {formatDisplayDate(line.dueDate)}
@@ -315,10 +491,12 @@ function Metric({
   label,
   value,
   status,
+  valueClassName,
 }: {
   label: string
   value: string
   status?: CreditCardDueStatus
+  valueClassName?: string
 }) {
   return (
     <div className="bg-background rounded-lg p-3">
@@ -330,7 +508,11 @@ function Metric({
           </p>
         ) : null}
       </div>
-      <p className="text-foreground mt-1 text-sm font-bold">{value}</p>
+      <p
+        className={cn("text-foreground mt-1 text-sm font-bold", valueClassName)}
+      >
+        {value}
+      </p>
     </div>
   )
 }

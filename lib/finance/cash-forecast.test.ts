@@ -939,6 +939,33 @@ describe("buildCashForecast projection", () => {
     })
   })
 
+  test("places a one-time scheduled card charge in its statement payment month", () => {
+    const card = makeCard()
+    const forecast = expectReady(
+      makeState({
+        cashForecastSettings: {
+          ...makeState().cashForecastSettings!,
+          default_monthly_income_cents: 0,
+        },
+        creditCards: [card],
+        recurringBills: [
+          makeBill({
+            frequency: "one_time",
+            first_due_date: "2026-08-10",
+            total_payments: 1,
+            credit_card_id: card.id,
+          }),
+        ],
+      }),
+    )
+
+    expect(forecast.months[1]?.creditCardOutflowCents).toBe(0)
+    expect(forecast.months[2]).toMatchObject({
+      period: "2026-09",
+      creditCardOutflowCents: 10_000,
+    })
+  })
+
   test("excludes paid and zero-balance statements", () => {
     const card = makeCard()
     const forecast = expectReady(

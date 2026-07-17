@@ -30,7 +30,7 @@ const transactionPaymentMethodValues = [
 
 const transactionDirectionValues = ["income", "expense"] as const
 
-const billFrequencyValues = ["monthly", "yearly"] as const
+const billFrequencyValues = ["monthly", "yearly", "one_time"] as const
 
 const billStatusValues = [
   "paid",

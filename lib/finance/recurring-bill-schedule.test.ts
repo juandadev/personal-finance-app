@@ -201,6 +201,26 @@ describe("resolveRecurringBillOccurrences", () => {
     expect(occurrences[0]?.status).toBe("upcoming")
   })
 
+  test("one-time schedules resolve exactly one occurrence", () => {
+    const occurrences = resolveRecurringBillOccurrences(
+      makeBill({
+        frequency: "one_time",
+        first_due_date: "2026-08-01",
+        total_payments: 1,
+      }),
+      [],
+      TODAY,
+      { includeAllFuture: true },
+    )
+
+    expect(occurrences).toHaveLength(1)
+    expect(occurrences[0]).toMatchObject({
+      dueDate: "2026-08-01",
+      sequence: 1,
+      status: "upcoming",
+    })
+  })
+
   test("generates unsettled occurrences only through a bounded horizon", () => {
     const occurrences = resolveRecurringBillOccurrences(
       makeBill({ first_due_date: "2026-07-31" }),

@@ -64,6 +64,10 @@ function amountClassName(status: BillStatus) {
 }
 
 function scheduleLabel(bill: RecurringBill) {
+  if (bill.frequency === "one_time") {
+    return "One-Time"
+  }
+
   if (bill.totalPayments && bill.currentOccurrence) {
     return `Payment ${bill.currentOccurrence.sequence} of ${bill.totalPayments}`
   }
@@ -76,7 +80,12 @@ function mobileDueDateLabel(bill: RecurringBill) {
     bill.firstDueDate,
     bill.frequency,
   )
-  const frequency = bill.frequency === "yearly" ? "Yearly" : "Monthly"
+  const frequency =
+    bill.frequency === "yearly"
+      ? "Yearly"
+      : bill.frequency === "one_time"
+        ? "One-Time"
+        : "Monthly"
 
   return `${frequency} - ${shortDate}`
 }

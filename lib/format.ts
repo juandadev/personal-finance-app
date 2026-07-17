@@ -95,11 +95,11 @@ export function formatDisplayDateRange(
 
 export function formatBillScheduleShortDate(
   isoDate: string,
-  frequency: "monthly" | "yearly",
+  frequency: "monthly" | "yearly" | "one_time",
 ): string {
   const date = parseIsoDateAsLocalDate(isoDate)
 
-  if (frequency === "yearly") {
+  if (frequency === "yearly" || frequency === "one_time") {
     return formatDateFns(date, "MMM do")
   }
 

@@ -222,7 +222,7 @@ const recurringBillSchema = z.object({
   concept: z.string().trim().min(1).max(80),
   amount_cents: z.number().int().positive(),
   currency: z.enum(["USD", "MXN"]),
-  frequency: z.enum(["monthly", "yearly"]),
+  frequency: z.enum(["monthly", "yearly", "one_time"]),
   first_due_date: isoDateSchema,
   total_payments: z.number().int().positive().nullable(),
   credit_card_id: recordIdSchema.nullable(),

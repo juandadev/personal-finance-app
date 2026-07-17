@@ -97,7 +97,7 @@ export interface RecurringBill {
   contactInitials: string
   counterpartyId: string
   amount: number
-  frequency: "monthly" | "yearly"
+  frequency: "monthly" | "yearly" | "one_time"
   firstDueDate: string
   totalPayments?: number
   settledCount: number
@@ -124,6 +124,7 @@ export interface CreditCardSummary {
 export interface CreditCardPendingBillLine {
   billId: string
   name: string
+  concept: string
   avatarUrl: string
   contactColor: ThemeColor
   contactInitials: string

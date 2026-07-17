@@ -160,7 +160,14 @@ function CreditCardTile({ creditCard }: { creditCard: CreditCard }) {
         <div>
           <p className="text-muted-foreground mb-3 text-sm">
             Available Credit:{" "}
-            <span className="text-foreground font-semibold">
+            <span
+              className={cn(
+                "font-semibold",
+                creditCard.availableCredit < 0
+                  ? "text-destructive"
+                  : "text-foreground",
+              )}
+            >
               {formatCurrency(creditCard.availableCredit, {
                 forceDecimals: true,
               })}

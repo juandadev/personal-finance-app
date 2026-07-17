@@ -323,6 +323,38 @@ async function assertDateNotAfterUserLocalToday(
   return assertDateNotAfterLocalToday(isoDate, timezone)
 }
 
+async function assertOneTimeScheduledCharge(
+  client: PoolClient,
+  userId: string,
+  bill: Pick<
+    RecurringBillRecord,
+    "credit_card_id" | "first_due_date" | "frequency" | "total_payments"
+  >,
+  requireFutureDate: boolean,
+) {
+  if (bill.frequency !== "one_time") {
+    return
+  }
+
+  if (!bill.credit_card_id) {
+    throw new Error("Choose a credit card for a scheduled charge.")
+  }
+
+  if (bill.total_payments !== 1) {
+    throw new Error("A scheduled charge must have exactly one payment.")
+  }
+
+  if (requireFutureDate) {
+    const localToday = await getUserLocalToday(client, userId)
+
+    if (bill.first_due_date <= localToday) {
+      throw new Error("Choose a future charge date.")
+    }
+  }
+
+  await getCreditCard(client, userId, bill.credit_card_id)
+}
+
 export async function loadFinanceState(
   userId: string,
   displayName: string | null,
@@ -2041,6 +2073,8 @@ export async function insertRecurringBill(
       "Category",
     )
 
+    await assertOneTimeScheduledCharge(client, userId, bill, true)
+
     if (bill.credit_card_id) {
       await getCreditCard(client, userId, bill.credit_card_id)
     }
@@ -2132,6 +2166,14 @@ export async function updateRecurringBill(
         `This bill already has ${settledCount} settled payments. The number of payments cannot be lower than that.`,
       )
     }
+
+    const nextBill = { ...existing, ...updates }
+    await assertOneTimeScheduledCharge(
+      client,
+      userId,
+      nextBill,
+      updates.first_due_date !== undefined || updates.frequency === "one_time",
+    )
 
     if (updates.counterparty_id) {
       await assertUserRecord(

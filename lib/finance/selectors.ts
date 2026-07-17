@@ -422,6 +422,7 @@ function selectPendingBillLines(
     return {
       billId: line.billId,
       name: counterparty.display_name,
+      concept: line.label,
       avatarUrl: counterparty.avatar_url ?? "",
       contactColor: counterparty.theme_color,
       contactInitials: getInitials(counterparty.display_name),
