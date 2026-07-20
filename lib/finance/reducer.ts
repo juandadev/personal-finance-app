@@ -226,6 +226,9 @@ export interface FinanceActions {
   saveCashForecastSettings: (
     defaultMonthlyIncomeCents: number,
   ) => Promise<FinanceMutationResult>
+  saveCashForecastIncludedBudgets: (
+    includedBudgetCategoryIds: string[],
+  ) => Promise<FinanceMutationResult>
   addCashForecastAdjustment: (
     adjustment: NewCashForecastAdjustmentRecord,
   ) => Promise<FinanceMutationResult>

@@ -154,8 +154,21 @@ async function closeUserBudgetPeriod(
 
     const copiedBudgets = await client.query(
       `
-        INSERT INTO budgets (user_id, category_id, period, limit_cents, theme_color)
-        SELECT user_id, category_id, $3, limit_cents, theme_color
+        INSERT INTO budgets (
+          user_id,
+          category_id,
+          period,
+          limit_cents,
+          monthly_voucher_coverage_cents,
+          theme_color
+        )
+        SELECT
+          user_id,
+          category_id,
+          $3,
+          limit_cents,
+          monthly_voucher_coverage_cents,
+          theme_color
         FROM budgets
         WHERE user_id = $1
           AND period = $2

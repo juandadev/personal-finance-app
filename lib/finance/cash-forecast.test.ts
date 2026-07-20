@@ -45,6 +45,7 @@ function makeState(overrides: Partial<FinanceState> = {}): FinanceState {
     cashForecastSettings: {
       user_id: "user-1",
       default_monthly_income_cents: 200_000,
+      included_budget_category_ids: [],
       created_at: "2026-07-01T00:00:00.000Z",
       updated_at: "2026-07-01T00:00:00.000Z",
     },
@@ -1003,5 +1004,313 @@ describe("buildCashForecast projection", () => {
     )
 
     expect(forecast.months[1]?.creditCardOutflowCents).toBe(0)
+  })
+})
+
+describe("buildCashForecast budget projections", () => {
+  const groceriesCategoryId = "11111111-1111-4111-8111-111111111111"
+  const groceriesBudgetId = "22222222-2222-4222-8222-222222222222"
+  const limitCents = 1_242_600
+  const voucherCoverageCents = 356_600
+  const oopCents = limitCents - voucherCoverageCents
+
+  function groceriesState(overrides: Partial<FinanceState> = {}): FinanceState {
+    return makeState({
+      categories: [
+        {
+          id: groceriesCategoryId,
+          user_id: "user-1",
+          name: "Groceries",
+          slug: "groceries",
+          theme_color: "chart-3",
+        },
+      ],
+      budgets: [
+        {
+          id: groceriesBudgetId,
+          user_id: "user-1",
+          category_id: groceriesCategoryId,
+          period: "2026-07",
+          limit_cents: limitCents,
+          monthly_voucher_coverage_cents: voucherCoverageCents,
+          theme_color: "chart-3",
+        },
+      ],
+      cashForecastSettings: {
+        ...makeState().cashForecastSettings!,
+        default_monthly_income_cents: 0,
+        included_budget_category_ids: [groceriesCategoryId],
+      },
+      ...overrides,
+    })
+  }
+
+  test("projects future-month out-of-pocket as limit minus voucher coverage", () => {
+    const forecast = expectReady(groceriesState())
+
+    expect(forecast.months[1]).toMatchObject({
+      period: "2026-08",
+      budgetProjectionOutflowCents: oopCents,
+    })
+    expect(
+      forecast.months[1]?.activities.some(
+        (activity) =>
+          activity.sourceType === "budget_projection" &&
+          activity.label === "Groceries" &&
+          activity.amountCents === -oopCents,
+      ),
+    ).toBe(true)
+  })
+
+  test("reduces the payment-due month projection for card-assigned spend", () => {
+    const card = makeCard()
+    const chargeCents = 50_000
+    const forecast = expectReady(
+      groceriesState({
+        creditCards: [card],
+        creditCardStatements: [
+          {
+            id: "statement-1",
+            user_id: "user-1",
+            credit_card_id: card.id,
+            period_start: "2026-06-21",
+            period_end: "2026-07-20",
+            payment_due_date: "2026-08-05",
+            statement_amount_cents: chargeCents,
+            lifecycle_status: "open",
+            paid_at: null,
+          },
+        ],
+        transactions: [
+          makeTransaction({
+            id: "grocery-card",
+            concept: "Groceries Card",
+            amount_cents: -chargeCents,
+            payment_method: "credit_card",
+            credit_card_id: card.id,
+            credit_card_statement_id: "statement-1",
+            category_id: groceriesCategoryId,
+            posted_at: "2026-07-10",
+          }),
+        ],
+        budgetTransactionAssignments: [
+          {
+            id: "assignment-1",
+            user_id: "user-1",
+            budget_id: groceriesBudgetId,
+            transaction_id: "grocery-card",
+            assigned_amount_cents: chargeCents,
+          },
+        ],
+      }),
+    )
+
+    expect(forecast.months[0]).toMatchObject({
+      period: "2026-07",
+      budgetProjectionOutflowCents: oopCents,
+    })
+    expect(forecast.months[1]).toMatchObject({
+      period: "2026-08",
+      budgetProjectionOutflowCents: oopCents - chargeCents,
+      creditCardOutflowCents: chargeCents,
+    })
+    expect(
+      (forecast.months[1]?.budgetProjectionOutflowCents ?? 0) +
+        (forecast.months[1]?.creditCardOutflowCents ?? 0),
+    ).toBe(oopCents)
+  })
+
+  test("reduces current-month projection for bank assignments", () => {
+    const bankCents = 200_000
+    const forecast = expectReady(
+      groceriesState({
+        transactions: [
+          makeTransaction({
+            id: "grocery-bank",
+            concept: "Groceries Bank",
+            amount_cents: -bankCents,
+            payment_method: "bank_account",
+            category_id: groceriesCategoryId,
+            posted_at: "2026-07-08",
+          }),
+        ],
+        budgetTransactionAssignments: [
+          {
+            id: "assignment-bank",
+            user_id: "user-1",
+            budget_id: groceriesBudgetId,
+            transaction_id: "grocery-bank",
+            assigned_amount_cents: bankCents,
+          },
+        ],
+      }),
+    )
+
+    expect(forecast.months[0]?.budgetProjectionOutflowCents).toBe(
+      oopCents - bankCents,
+    )
+  })
+
+  test("ignores voucher assignments for budget projections", () => {
+    const voucherCents = 100_000
+    const forecast = expectReady(
+      groceriesState({
+        transactions: [
+          makeTransaction({
+            id: "grocery-voucher",
+            concept: "Groceries Voucher",
+            amount_cents: -voucherCents,
+            is_voucher_expense: true,
+            payment_method: "voucher",
+            category_id: groceriesCategoryId,
+            posted_at: "2026-07-08",
+          }),
+        ],
+        budgetTransactionAssignments: [
+          {
+            id: "assignment-voucher",
+            user_id: "user-1",
+            budget_id: groceriesBudgetId,
+            transaction_id: "grocery-voucher",
+            assigned_amount_cents: voucherCents,
+          },
+        ],
+      }),
+    )
+
+    expect(forecast.months[0]?.budgetProjectionOutflowCents).toBe(oopCents)
+  })
+
+  test("ignores voucher assignments even when voucher coverage is zero", () => {
+    const voucherCents = 100_000
+    const forecast = expectReady(
+      groceriesState({
+        budgets: [
+          {
+            id: groceriesBudgetId,
+            user_id: "user-1",
+            category_id: groceriesCategoryId,
+            period: "2026-07",
+            limit_cents: limitCents,
+            monthly_voucher_coverage_cents: 0,
+            theme_color: "chart-3",
+          },
+        ],
+        transactions: [
+          makeTransaction({
+            id: "grocery-voucher",
+            concept: "Groceries Voucher",
+            amount_cents: -voucherCents,
+            is_voucher_expense: true,
+            payment_method: "voucher",
+            category_id: groceriesCategoryId,
+            posted_at: "2026-07-08",
+          }),
+        ],
+        budgetTransactionAssignments: [
+          {
+            id: "assignment-voucher",
+            user_id: "user-1",
+            budget_id: groceriesBudgetId,
+            transaction_id: "grocery-voucher",
+            assigned_amount_cents: voucherCents,
+          },
+        ],
+      }),
+    )
+
+    expect(forecast.months[0]?.budgetProjectionOutflowCents).toBe(limitCents)
+  })
+
+  test("reduces current-month projection once for same-month card dues", () => {
+    const card = makeCard({
+      closing_day_of_month: 10,
+      payment_due_day_of_month: 25,
+    })
+    const chargeCents = 50_000
+    const forecast = expectReady(
+      groceriesState({
+        creditCards: [card],
+        creditCardStatements: [
+          {
+            id: "statement-july",
+            user_id: "user-1",
+            credit_card_id: card.id,
+            period_start: "2026-06-11",
+            period_end: "2026-07-10",
+            payment_due_date: "2026-07-25",
+            statement_amount_cents: chargeCents,
+            lifecycle_status: "open",
+            paid_at: null,
+          },
+        ],
+        transactions: [
+          makeTransaction({
+            id: "grocery-card-july",
+            concept: "Groceries Card",
+            amount_cents: -chargeCents,
+            payment_method: "credit_card",
+            credit_card_id: card.id,
+            credit_card_statement_id: "statement-july",
+            category_id: groceriesCategoryId,
+            posted_at: "2026-07-05",
+          }),
+        ],
+        budgetTransactionAssignments: [
+          {
+            id: "assignment-july-card",
+            user_id: "user-1",
+            budget_id: groceriesBudgetId,
+            transaction_id: "grocery-card-july",
+            assigned_amount_cents: chargeCents,
+          },
+        ],
+      }),
+    )
+
+    expect(forecast.months[0]).toMatchObject({
+      period: "2026-07",
+      budgetProjectionOutflowCents: oopCents - chargeCents,
+      creditCardOutflowCents: chargeCents,
+    })
+    expect(
+      (forecast.months[0]?.budgetProjectionOutflowCents ?? 0) +
+        (forecast.months[0]?.creditCardOutflowCents ?? 0),
+    ).toBe(oopCents)
+  })
+
+  test("omits budget projections when the category is not opted in", () => {
+    const forecast = expectReady(
+      groceriesState({
+        cashForecastSettings: {
+          ...makeState().cashForecastSettings!,
+          default_monthly_income_cents: 0,
+          included_budget_category_ids: [],
+        },
+      }),
+    )
+
+    expect(
+      forecast.months.every(
+        (month) => month.budgetProjectionOutflowCents === 0,
+      ),
+    ).toBe(true)
+    expect(
+      forecast.months.some((month) =>
+        month.activities.some(
+          (activity) => activity.sourceType === "budget_projection",
+        ),
+      ),
+    ).toBe(false)
+  })
+
+  test("skips opted-in categories without an active budget", () => {
+    const forecast = expectReady(
+      groceriesState({
+        budgets: [],
+      }),
+    )
+
+    expect(forecast.months[1]?.budgetProjectionOutflowCents).toBe(0)
   })
 })

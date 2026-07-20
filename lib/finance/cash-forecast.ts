@@ -10,8 +10,10 @@ import {
   getForecastPeriods,
   getPeriodEndDate,
 } from "@/lib/finance/forecast-period"
+import { getCurrentPeriod } from "@/lib/finance/period"
 import { resolveRecurringBillOccurrences } from "@/lib/finance/recurring-bill-schedule"
 import type {
+  BudgetRecord,
   CashForecastAdjustmentRecord,
   CurrencyCode,
   FinanceState,
@@ -30,6 +32,7 @@ export type CashForecastActivitySource =
   | "recurring_bill"
   | "credit_card_statement"
   | "planned_outflow"
+  | "budget_projection"
 
 export type CashForecastActivityStatus = "actual" | "pending"
 
@@ -86,11 +89,19 @@ export interface CashForecastMonth {
   directBillOutflowCents: number
   creditCardOutflowCents: number
   plannedOutflowCents: number
+  budgetProjectionOutflowCents: number
   totalIncomeCents: number
   totalOutflowsCents: number
   monthlyChangeCents: number
   endingBalanceCents: number
   activities: CashForecastActivity[]
+}
+
+interface BudgetProjectionParticipant {
+  budget: BudgetRecord
+  categoryId: string
+  label: string
+  oopCents: number
 }
 
 export type CashForecastResult =
@@ -340,6 +351,194 @@ function hasMixedCurrency(
   )
 }
 
+function buildBudgetProjectionParticipants(
+  state: FinanceState,
+  asOf: Date,
+): BudgetProjectionParticipant[] {
+  const includedCategoryIds = new Set(
+    state.cashForecastSettings?.included_budget_category_ids ?? [],
+  )
+
+  if (includedCategoryIds.size === 0) {
+    return []
+  }
+
+  const activeBudgetPeriod = getCurrentPeriod(asOf)
+  const categoriesById = new Map(
+    state.categories.map((category) => [category.id, category]),
+  )
+
+  return state.budgets
+    .filter(
+      (budget) =>
+        budget.period === activeBudgetPeriod &&
+        includedCategoryIds.has(budget.category_id),
+    )
+    .map((budget) => ({
+      budget,
+      categoryId: budget.category_id,
+      label: categoriesById.get(budget.category_id)?.name ?? "Budget",
+      oopCents: Math.max(
+        0,
+        budget.limit_cents - budget.monthly_voucher_coverage_cents,
+      ),
+    }))
+    .toSorted((left, right) => {
+      const labelComparison = left.label.localeCompare(right.label)
+
+      return labelComparison !== 0
+        ? labelComparison
+        : left.budget.id.localeCompare(right.budget.id)
+    })
+}
+
+/** categoryId → duePeriod (YYYY-MM) → attributed assigned cents */
+function buildCardAttributionByCategoryPeriod(
+  state: FinanceState,
+  obligations: CreditCardObligation[],
+): Map<string, Map<string, number>> {
+  const budgetsById = new Map(
+    state.budgets.map((budget) => [budget.id, budget]),
+  )
+  const transactionsById = new Map(
+    state.transactions.map((transaction) => [transaction.id, transaction]),
+  )
+  const assignmentsByTransactionId = new Map<
+    string,
+    FinanceState["budgetTransactionAssignments"]
+  >()
+
+  for (const assignment of state.budgetTransactionAssignments) {
+    const assignments =
+      assignmentsByTransactionId.get(assignment.transaction_id) ?? []
+    assignments.push(assignment)
+    assignmentsByTransactionId.set(assignment.transaction_id, assignments)
+  }
+
+  const attribution = new Map<string, Map<string, number>>()
+
+  for (const obligation of obligations) {
+    const duePeriod = obligation.paymentDueDate.slice(0, 7)
+
+    for (const line of obligation.statementChargeLines) {
+      const transaction = transactionsById.get(line.transactionId)
+
+      if (!transaction || transaction.payment_method !== "credit_card") {
+        continue
+      }
+
+      const assignments =
+        assignmentsByTransactionId.get(line.transactionId) ?? []
+
+      for (const assignment of assignments) {
+        const budget = budgetsById.get(assignment.budget_id)
+
+        if (!budget) {
+          continue
+        }
+
+        const byPeriod = attribution.get(budget.category_id) ?? new Map()
+        byPeriod.set(
+          duePeriod,
+          (byPeriod.get(duePeriod) ?? 0) + assignment.assigned_amount_cents,
+        )
+        attribution.set(budget.category_id, byPeriod)
+      }
+    }
+  }
+
+  return attribution
+}
+
+function buildChargeDuePeriodByTransactionId(
+  obligations: CreditCardObligation[],
+): Map<string, string> {
+  const duePeriodByTransactionId = new Map<string, string>()
+
+  for (const obligation of obligations) {
+    const duePeriod = obligation.paymentDueDate.slice(0, 7)
+
+    for (const line of obligation.statementChargeLines) {
+      duePeriodByTransactionId.set(line.transactionId, duePeriod)
+    }
+  }
+
+  return duePeriodByTransactionId
+}
+
+function isVoucherAssignmentTransaction(transaction: TransactionRecord) {
+  return (
+    transaction.is_voucher_expense || transaction.payment_method === "voucher"
+  )
+}
+
+function computeBudgetProjectionCents(
+  participant: BudgetProjectionParticipant,
+  period: string,
+  isCurrentPeriod: boolean,
+  state: FinanceState,
+  cardAttribution: Map<string, Map<string, number>>,
+  chargeDuePeriodByTransactionId: Map<string, string>,
+): number {
+  const cardAttributedDueInPeriod =
+    cardAttribution.get(participant.categoryId)?.get(period) ?? 0
+
+  if (!isCurrentPeriod) {
+    return Math.max(0, participant.oopCents - cardAttributedDueInPeriod)
+  }
+
+  const budget = participant.budget
+  const transactionsById = new Map(
+    state.transactions.map((transaction) => [transaction.id, transaction]),
+  )
+  // Cash still expected to leave the bank this month from this budget's OOP.
+  // Voucher assignments never affect Forecast — they are not cash movement.
+  // Later-due card charges reduce the due-month projection instead.
+  let cashAssignedExcludingLaterCardCents = 0
+
+  for (const assignment of state.budgetTransactionAssignments) {
+    if (assignment.budget_id !== budget.id) {
+      continue
+    }
+
+    const transaction = transactionsById.get(assignment.transaction_id)
+
+    if (!transaction || isVoucherAssignmentTransaction(transaction)) {
+      continue
+    }
+
+    if (transaction.payment_method === "credit_card") {
+      const duePeriod = chargeDuePeriodByTransactionId.get(
+        assignment.transaction_id,
+      )
+
+      if (duePeriod && duePeriod > period) {
+        continue
+      }
+    }
+
+    cashAssignedExcludingLaterCardCents += assignment.assigned_amount_cents
+  }
+
+  return Math.max(0, participant.oopCents - cashAssignedExcludingLaterCardCents)
+}
+
+function budgetProjectionActivity(
+  participant: BudgetProjectionParticipant,
+  period: string,
+  amountCents: number,
+): CashForecastActivity {
+  return {
+    key: `budget-projection:${participant.budget.id}:${period}`,
+    sourceType: "budget_projection",
+    sourceId: participant.budget.id,
+    label: participant.label,
+    period,
+    amountCents: -amountCents,
+    status: "pending",
+  }
+}
+
 export function buildCashForecast(
   state: FinanceState,
   asOf: Date,
@@ -382,6 +581,16 @@ export function buildCashForecast(
       obligation.amountCents > 0 &&
       obligation.paymentDueDate <= forecastEnd,
   )
+  const budgetProjectionParticipants = buildBudgetProjectionParticipants(
+    state,
+    asOf,
+  )
+  const cardAttributionByCategoryPeriod = buildCardAttributionByCategoryPeriod(
+    state,
+    cardObligations,
+  )
+  const chargeDuePeriodByTransactionId =
+    buildChargeDuePeriodByTransactionId(cardObligations)
 
   if (
     hasMixedCurrency(
@@ -433,8 +642,23 @@ export function buildCashForecast(
     (sum, adjustment) => sum + adjustment.amount_cents,
     0,
   )
+  const pendingBudgetProjectionCents = budgetProjectionParticipants.reduce(
+    (sum, participant) =>
+      sum +
+      computeBudgetProjectionCents(
+        participant,
+        currentPeriod,
+        true,
+        state,
+        cardAttributionByCategoryPeriod,
+        chargeDuePeriodByTransactionId,
+      ),
+    0,
+  )
   const pendingOutflowsCents =
-    remainingObligationsCents + pendingPlannedOutflowCents
+    remainingObligationsCents +
+    pendingPlannedOutflowCents +
+    pendingBudgetProjectionCents
   const currentActualTransactions = state.transactions
     .filter(
       (transaction) =>
@@ -517,13 +741,34 @@ export function buildCashForecast(
       (sum, adjustment) => sum + adjustment.amount_cents,
       0,
     )
+    const budgetProjectionActivities = budgetProjectionParticipants.flatMap(
+      (participant) => {
+        const amountCents = computeBudgetProjectionCents(
+          participant,
+          period,
+          isCurrentPeriod,
+          state,
+          cardAttributionByCategoryPeriod,
+          chargeDuePeriodByTransactionId,
+        )
+
+        return amountCents > 0
+          ? [budgetProjectionActivity(participant, period, amountCents)]
+          : []
+      },
+    )
+    const budgetProjectionOutflowCents = budgetProjectionActivities.reduce(
+      (sum, activity) => sum + Math.abs(activity.amountCents),
+      0,
+    )
     const totalIncomeCents =
       monthActualIncomeCents + defaultIncomeCents + additionalIncomeCents
     const totalOutflowsCents =
       monthActualOutflowCents +
       directBillOutflowCents +
       creditCardOutflowCents +
-      plannedOutflowCents
+      plannedOutflowCents +
+      budgetProjectionOutflowCents
     const monthlyChangeCents = totalIncomeCents - totalOutflowsCents
     const endingBalanceCents = openingBalanceCents + monthlyChangeCents
     const datedOutflows = sortDatedActivities([
@@ -559,6 +804,7 @@ export function buildCashForecast(
       ...plannedOutflows.map((adjustment) =>
         adjustmentActivity(adjustment, period),
       ),
+      ...budgetProjectionActivities,
     ]
     const month = {
       period,
@@ -572,6 +818,7 @@ export function buildCashForecast(
       directBillOutflowCents,
       creditCardOutflowCents,
       plannedOutflowCents,
+      budgetProjectionOutflowCents,
       totalIncomeCents,
       totalOutflowsCents,
       monthlyChangeCents,

@@ -33,11 +33,44 @@ import { useStandardForm } from "@/lib/forms/use-standard-form"
 import type { Budget } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
-const editBudgetFormSchema = z.object({
-  categoryId: requiredSelectSchema("Choose a budget category."),
-  maximumSpend: currencyCentsSchema("Enter a maximum spend greater than $0."),
-  themeColor: themeColorSchema,
+const MAXIMUM_MONEY_CENTS = 2_147_483_647
+
+const voucherCoverageCentsSchema = z.string().transform((value, context) => {
+  const normalizedValue = value.trim().replaceAll(",", "")
+
+  if (normalizedValue === "") {
+    return 0
+  }
+
+  const amount = Number(normalizedValue)
+  const amountCents = Math.round(amount * 100)
+
+  if (
+    !Number.isFinite(amount) ||
+    amount < 0 ||
+    amountCents > MAXIMUM_MONEY_CENTS
+  ) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Enter voucher coverage of $0 or more.",
+    })
+    return z.NEVER
+  }
+
+  return amountCents
 })
+
+const editBudgetFormSchema = z
+  .object({
+    categoryId: requiredSelectSchema("Choose a budget category."),
+    maximumSpend: currencyCentsSchema("Enter a maximum spend greater than $0."),
+    monthlyVoucherCoverage: voucherCoverageCentsSchema,
+    themeColor: themeColorSchema,
+  })
+  .refine((value) => value.monthlyVoucherCoverage <= value.maximumSpend, {
+    message: "Voucher coverage cannot exceed the budget limit.",
+    path: ["monthlyVoucherCoverage"],
+  })
 
 type EditBudgetFormValues = z.input<typeof editBudgetFormSchema>
 
@@ -57,14 +90,16 @@ export function EditBudgetDialog({
     (budgetRecord) => budgetRecord.id === budget.id,
   )
   const currentCategoryId = currentBudget?.category_id ?? ""
+  const coverageCents = currentBudget?.monthly_voucher_coverage_cents ?? 0
   const defaultValues = useMemo(
     () =>
       ({
         categoryId: currentCategoryId,
         maximumSpend: formatDollarInput(budget.maximum),
+        monthlyVoucherCoverage: formatDollarInput(coverageCents / 100),
         themeColor: budget.color,
       }) satisfies EditBudgetFormValues,
-    [budget.color, budget.maximum, currentCategoryId],
+    [budget.color, budget.maximum, coverageCents, currentCategoryId],
   )
 
   const budgetedCategoryIds = useMemo(
@@ -114,6 +149,7 @@ export function EditBudgetDialog({
       const result = await actions.updateBudget(currentBudget.id, {
         category_id: category.id,
         limit_cents: value.maximumSpend,
+        monthly_voucher_coverage_cents: value.monthlyVoucherCoverage,
         theme_color: value.themeColor,
       })
 
@@ -239,6 +275,32 @@ export function EditBudgetDialog({
                     value={field.state.value}
                     onChange={(event) =>
                       standardForm.setValue("maximumSpend", event.target.value)
+                    }
+                    onBlur={field.handleBlur}
+                  />
+                )}
+              </FormField>
+            )}
+          </standardForm.form.Field>
+
+          <standardForm.form.Field name="monthlyVoucherCoverage">
+            {(field) => (
+              <FormField
+                id="edit-monthly-voucher-coverage"
+                label="Monthly Voucher Coverage"
+                error={standardForm.fieldErrors.monthlyVoucherCoverage}
+                helperText="Only the remainder after this amount is treated as expected cash in Forecast when this budget is included."
+              >
+                {(fieldProps) => (
+                  <CurrencyInput
+                    {...fieldProps}
+                    inputMode="decimal"
+                    value={field.state.value}
+                    onChange={(event) =>
+                      standardForm.setValue(
+                        "monthlyVoucherCoverage",
+                        event.target.value,
+                      )
                     }
                     onBlur={field.handleBlur}
                   />

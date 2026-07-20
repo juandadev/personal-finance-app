@@ -10,6 +10,7 @@ type SaveResult =
       data: {
         user_id: string
         default_monthly_income_cents: number
+        included_budget_category_ids: string[]
         created_at: string
         updated_at: string
       }
@@ -83,6 +84,7 @@ describe("MonthlyIncomeDialog", () => {
         data: {
           user_id: "user-1",
           default_monthly_income_cents: 450_025,
+          included_budget_category_ids: [],
           created_at: "2026-07-12T00:00:00.000Z",
           updated_at: "2026-07-12T00:00:00.000Z",
         },

@@ -30,6 +30,7 @@ import {
   deleteTransactionAction,
   payRecurringBillOccurrenceAction,
   skipRecurringBillOccurrenceAction,
+  saveCashForecastIncludedBudgetsAction,
   saveCashForecastSettingsAction,
   movePotAction,
   unassignTransactionFromBudgetAction,
@@ -237,6 +238,8 @@ export function FinanceProvider({
                   category_id: result.data.budget.category_id,
                   period: result.data.budget.period,
                   limit_cents: result.data.budget.limit_cents,
+                  monthly_voucher_coverage_cents:
+                    result.data.budget.monthly_voucher_coverage_cents,
                   theme_color: result.data.budget.theme_color,
                 },
                 spent_cents: result.data.budgetSummary?.spent_cents,
@@ -546,6 +549,21 @@ export function FinanceProvider({
       saveCashForecastSettings: (defaultMonthlyIncomeCents: number) =>
         runFinanceAction(() =>
           saveCashForecastSettingsAction(defaultMonthlyIncomeCents).then(
+            (result) => {
+              if (result.ok) {
+                dispatch({
+                  type: "cash-forecast/settings-save",
+                  settings: result.data,
+                })
+              }
+
+              return result
+            },
+          ),
+        ),
+      saveCashForecastIncludedBudgets: (includedBudgetCategoryIds: string[]) =>
+        runFinanceAction(() =>
+          saveCashForecastIncludedBudgetsAction(includedBudgetCategoryIds).then(
             (result) => {
               if (result.ok) {
                 dispatch({

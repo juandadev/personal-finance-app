@@ -36,6 +36,7 @@ import {
   updatePot,
   updateRecurringBill,
   updateTransaction,
+  updateCashForecastIncludedBudgets,
   upsertCashForecastSettings,
 } from "@/lib/finance/queries"
 import { isFutureISODate } from "@/lib/finance/pot-due-date"
@@ -116,24 +117,56 @@ const cashForecastAdjustmentSchema = z.discriminatedUnion("kind", [
   }),
 ])
 
-const budgetSchema = z.object({
-  id: recordIdSchema,
-  user_id: z.string().min(1),
-  category_id: recordIdSchema,
-  period: z.string().regex(/^\d{4}-\d{2}$/),
-  limit_cents: z.number().int().positive(),
-  theme_color: themeColorSchema,
-})
+const budgetSchema = z
+  .object({
+    id: recordIdSchema,
+    user_id: z.string().min(1),
+    category_id: recordIdSchema,
+    period: z.string().regex(/^\d{4}-\d{2}$/),
+    limit_cents: z.number().int().positive().max(maximumMoneyCents),
+    monthly_voucher_coverage_cents: z
+      .number()
+      .int()
+      .min(0)
+      .max(maximumMoneyCents),
+    theme_color: themeColorSchema,
+  })
+  .refine(
+    (budget) => budget.monthly_voucher_coverage_cents <= budget.limit_cents,
+    {
+      message: "Voucher coverage cannot exceed the budget limit.",
+      path: ["monthly_voucher_coverage_cents"],
+    },
+  )
 
-const budgetUpdateSchema = z.object({
-  category_id: recordIdSchema.optional(),
-  period: z
-    .string()
-    .regex(/^\d{4}-\d{2}$/)
-    .optional(),
-  limit_cents: z.number().int().positive().optional(),
-  theme_color: themeColorSchema.optional(),
-})
+const budgetUpdateSchema = z
+  .object({
+    category_id: recordIdSchema.optional(),
+    period: z
+      .string()
+      .regex(/^\d{4}-\d{2}$/)
+      .optional(),
+    limit_cents: z.number().int().positive().max(maximumMoneyCents).optional(),
+    monthly_voucher_coverage_cents: z
+      .number()
+      .int()
+      .min(0)
+      .max(maximumMoneyCents)
+      .optional(),
+    theme_color: themeColorSchema.optional(),
+  })
+  .refine(
+    (updates) =>
+      updates.limit_cents === undefined ||
+      updates.monthly_voucher_coverage_cents === undefined ||
+      updates.monthly_voucher_coverage_cents <= updates.limit_cents,
+    {
+      message: "Voucher coverage cannot exceed the budget limit.",
+      path: ["monthly_voucher_coverage_cents"],
+    },
+  )
+
+const includedBudgetCategoryIdsSchema = z.array(recordIdSchema)
 
 const nameSchema = z.string().trim().min(1).max(60)
 const categoryNameSchema = z.string().trim().min(1).max(40)
@@ -1190,6 +1223,29 @@ export async function saveCashForecastSettingsAction(
     return {
       ok: true,
       message: "Monthly income saved.",
+      data,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function saveCashForecastIncludedBudgetsAction(
+  includedBudgetCategoryIds: string[],
+): Promise<FinanceActionResult<CashForecastSettingsRecord>> {
+  try {
+    const userId = await getUserId()
+    const parsedCategoryIds = includedBudgetCategoryIdsSchema.parse(
+      includedBudgetCategoryIds,
+    )
+    const data = await updateCashForecastIncludedBudgets(
+      userId,
+      parsedCategoryIds,
+    )
+
+    return {
+      ok: true,
+      message: "Budget projections saved.",
       data,
     }
   } catch (error) {

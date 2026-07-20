@@ -13,9 +13,10 @@ import {
   YAxis,
 } from "recharts"
 
+import { ForecastBudgetProjectionsPanel } from "@/components/forecast/forecast-budget-projections-panel"
+import { isForecastPeriodPreviewing } from "@/components/forecast/forecast-ui-state"
 import { Card } from "@/components/ui/card"
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart"
-import { isForecastPeriodPreviewing } from "@/components/forecast/forecast-ui-state"
 import {
   formatCompactCurrency,
   formatCurrency,
@@ -174,6 +175,7 @@ export function ForecastSummaryChart({
             <dl className="grid gap-3 sm:grid-cols-2 xl:min-w-md">
               <BridgeValue
                 label="Current Month Opening"
+                amountCents={report.bridge.openingBalanceCents}
                 value={formatCurrency(report.bridge.openingBalanceCents / 100, {
                   currency: report.currency,
                   forceDecimals: true,
@@ -181,6 +183,7 @@ export function ForecastSummaryChart({
               />
               <BridgeValue
                 label={`Balance on ${formatDisplayDate(report.bridge.asOfDate)}`}
+                amountCents={report.bridge.startingBalanceCents}
                 value={formatCurrency(
                   report.bridge.startingBalanceCents / 100,
                   {
@@ -191,6 +194,7 @@ export function ForecastSummaryChart({
               />
               <BridgeValue
                 label="Pending Income This Month"
+                amountCents={report.bridge.pendingAdditionalIncomeCents}
                 value={formatCurrency(
                   report.bridge.pendingAdditionalIncomeCents / 100,
                   {
@@ -201,6 +205,8 @@ export function ForecastSummaryChart({
               />
               <BridgeValue
                 label="Pending Outflows This Month"
+                amountCents={report.bridge.pendingOutflowsCents}
+                alwaysDanger
                 value={formatCurrency(
                   report.bridge.pendingOutflowsCents / 100,
                   {
@@ -213,6 +219,10 @@ export function ForecastSummaryChart({
           </div>
 
           <div>
+            <div className="mb-4">
+              <ForecastBudgetProjectionsPanel />
+            </div>
+
             <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
               <LegendItem className="bg-chart-1" label="Income" shape="bar" />
               <LegendItem className="bg-chart-4" label="Outflows" shape="bar" />
@@ -353,11 +363,30 @@ export function ForecastSummaryChart({
   )
 }
 
-function BridgeValue({ label, value }: { label: string; value: string }) {
+function BridgeValue({
+  label,
+  value,
+  amountCents,
+  alwaysDanger = false,
+}: {
+  label: string
+  value: string
+  amountCents: number
+  alwaysDanger?: boolean
+}) {
+  const isDanger = alwaysDanger || amountCents < 0
+
   return (
     <div className="bg-background rounded-lg p-4">
       <dt className="text-muted-foreground text-xs">{label}</dt>
-      <dd className="mt-1 font-bold tabular-nums">{value}</dd>
+      <dd
+        className={cn(
+          "mt-1 font-bold tabular-nums",
+          isDanger && "text-destructive",
+        )}
+      >
+        {value}
+      </dd>
     </div>
   )
 }

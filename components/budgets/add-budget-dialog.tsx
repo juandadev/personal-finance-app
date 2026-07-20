@@ -33,11 +33,44 @@ import {
 import { useStandardForm } from "@/lib/forms/use-standard-form"
 import { cn } from "@/lib/utils"
 
-const addBudgetFormSchema = z.object({
-  categoryId: requiredSelectSchema("Choose a budget category."),
-  maximumSpend: currencyCentsSchema("Enter a maximum spend greater than $0."),
-  themeColor: themeColorSchema,
+const MAXIMUM_MONEY_CENTS = 2_147_483_647
+
+const voucherCoverageCentsSchema = z.string().transform((value, context) => {
+  const normalizedValue = value.trim().replaceAll(",", "")
+
+  if (normalizedValue === "") {
+    return 0
+  }
+
+  const amount = Number(normalizedValue)
+  const amountCents = Math.round(amount * 100)
+
+  if (
+    !Number.isFinite(amount) ||
+    amount < 0 ||
+    amountCents > MAXIMUM_MONEY_CENTS
+  ) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Enter voucher coverage of $0 or more.",
+    })
+    return z.NEVER
+  }
+
+  return amountCents
 })
+
+const addBudgetFormSchema = z
+  .object({
+    categoryId: requiredSelectSchema("Choose a budget category."),
+    maximumSpend: currencyCentsSchema("Enter a maximum spend greater than $0."),
+    monthlyVoucherCoverage: voucherCoverageCentsSchema,
+    themeColor: themeColorSchema,
+  })
+  .refine((value) => value.monthlyVoucherCoverage <= value.maximumSpend, {
+    message: "Voucher coverage cannot exceed the budget limit.",
+    path: ["monthlyVoucherCoverage"],
+  })
 
 type AddBudgetFormValues = z.input<typeof addBudgetFormSchema>
 
@@ -69,6 +102,7 @@ export function AddBudgetDialog() {
       ({
         categoryId: firstCategoryId,
         maximumSpend: "",
+        monthlyVoucherCoverage: "",
         themeColor: themeOptions[0].value,
       }) satisfies AddBudgetFormValues,
     [firstCategoryId],
@@ -98,6 +132,7 @@ export function AddBudgetDialog() {
           category_id: category.id,
           period,
           limit_cents: value.maximumSpend,
+          monthly_voucher_coverage_cents: value.monthlyVoucherCoverage,
           theme_color: value.themeColor,
         },
         0,
@@ -246,6 +281,33 @@ export function AddBudgetDialog() {
                     }
                     onBlur={field.handleBlur}
                     placeholder="e.g. 2000"
+                  />
+                )}
+              </FormField>
+            )}
+          </standardForm.form.Field>
+
+          <standardForm.form.Field name="monthlyVoucherCoverage">
+            {(field) => (
+              <FormField
+                id="monthly-voucher-coverage"
+                label="Monthly Voucher Coverage"
+                error={standardForm.fieldErrors.monthlyVoucherCoverage}
+                helperText="Only the remainder after this amount is treated as expected cash in Forecast when this budget is included."
+              >
+                {(fieldProps) => (
+                  <CurrencyInput
+                    {...fieldProps}
+                    inputMode="decimal"
+                    value={field.state.value}
+                    onChange={(event) =>
+                      standardForm.setValue(
+                        "monthlyVoucherCoverage",
+                        event.target.value,
+                      )
+                    }
+                    onBlur={field.handleBlur}
+                    placeholder="e.g. 0"
                   />
                 )}
               </FormField>

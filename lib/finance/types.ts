@@ -108,6 +108,7 @@ export interface BudgetRecord {
   category_id: FinanceRecordId
   period: string
   limit_cents: number
+  monthly_voucher_coverage_cents: number
   theme_color: ThemeColor
 }
 
@@ -235,6 +236,7 @@ export interface CreditCardPaymentRecord {
 export interface CashForecastSettingsRecord {
   user_id: FinanceUserId
   default_monthly_income_cents: number
+  included_budget_category_ids: FinanceRecordId[]
   created_at: string
   updated_at: string
 }

@@ -144,7 +144,7 @@ function ForecastBlockedState({
 }
 
 function ForecastReadyContent({ report }: { report: ReadyForecast }) {
-  const { state } = useFinance()
+  const { state, budgets } = useFinance()
   const [pinnedPeriod, setPinnedPeriod] = useState(
     report.months[0]?.period ?? "",
   )
@@ -153,6 +153,9 @@ function ForecastReadyContent({ report }: { report: ReadyForecast }) {
     report.months[0]
   const selectedPeriod = selectedMonth?.period ?? ""
   const periods = report.months.map((month) => month.period)
+  const budgetColorsById = Object.fromEntries(
+    budgets.map((budget) => [budget.id, budget.color]),
+  )
 
   if (!selectedMonth) {
     return null
@@ -168,6 +171,7 @@ function ForecastReadyContent({ report }: { report: ReadyForecast }) {
       <ForecastActivityReport
         key={selectedPeriod}
         adjustments={state.cashForecastAdjustments}
+        budgetColorsById={budgetColorsById}
         currency={report.currency}
         month={selectedMonth}
         periods={periods}

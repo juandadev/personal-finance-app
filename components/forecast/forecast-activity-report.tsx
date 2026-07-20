@@ -38,6 +38,7 @@ import type {
   CashForecastAdjustmentRecord,
   CurrencyCode,
 } from "@/lib/finance/types"
+import { themeColorClasses, type ThemeColor } from "@/lib/theme-colors"
 import { cn } from "@/lib/utils"
 
 const PARENT_ROWS_PER_PAGE = 10
@@ -50,6 +51,7 @@ const activitySourceLabels: Record<CashForecastActivity["sourceType"], string> =
     recurring_bill: "Recurring bill",
     credit_card_statement: "Credit card payment",
     planned_outflow: "Planned outflow",
+    budget_projection: "Budget projection",
   }
 
 const childSourceLabels: Record<
@@ -63,6 +65,7 @@ const childSourceLabels: Record<
 
 interface ForecastActivityReportProps {
   adjustments: CashForecastAdjustmentRecord[]
+  budgetColorsById?: Record<string, ThemeColor>
   currency: CurrencyCode
   month: CashForecastMonth
   periods: string[]
@@ -70,6 +73,7 @@ interface ForecastActivityReportProps {
 
 export function ForecastActivityReport({
   adjustments,
+  budgetColorsById = {},
   currency,
   month,
   periods,
@@ -146,7 +150,11 @@ export function ForecastActivityReport({
                 currency,
               })}
               valueClassName={
-                month.monthlyChangeCents > 0 ? "text-accent" : undefined
+                month.monthlyChangeCents > 0
+                  ? "text-accent"
+                  : month.monthlyChangeCents < 0
+                    ? "text-destructive"
+                    : undefined
               }
             />
           </dl>
@@ -166,6 +174,10 @@ export function ForecastActivityReport({
                       ? adjustmentsById.get(activity.sourceId)
                       : undefined
                   }
+                  budgetColor={getBudgetProjectionColor(
+                    activity,
+                    budgetColorsById,
+                  )}
                   currency={currency}
                   periods={periods}
                   onDeleted={handleRowDeleted}
@@ -206,6 +218,10 @@ export function ForecastActivityReport({
                         ? adjustmentsById.get(activity.sourceId)
                         : undefined
                     }
+                    budgetColor={getBudgetProjectionColor(
+                      activity,
+                      budgetColorsById,
+                    )}
                     currency={currency}
                     periods={periods}
                     onDeleted={handleRowDeleted}
@@ -250,12 +266,16 @@ function ActivityTotal({
 function DesktopActivityRows({
   activity,
   adjustment,
+  budgetColor,
   currency,
   periods,
   onDeleted,
 }: ActivityRowProps) {
   const [open, setOpen] = useState(false)
   const hasChildren = Boolean(activity.children?.length)
+  const budgetTextClassName = budgetColor
+    ? themeColorClasses[budgetColor].text
+    : undefined
 
   return (
     <Collapsible asChild open={open} onOpenChange={setOpen}>
@@ -270,7 +290,9 @@ function DesktopActivityRows({
                   childCount={activity.children?.length ?? 0}
                 />
               ) : null}
-              <span className="font-bold">{activity.label}</span>
+              <span className={cn("font-bold", budgetTextClassName)}>
+                {activity.label}
+              </span>
             </div>
           </TableCell>
           <TableCell className="text-muted-foreground">
@@ -289,7 +311,8 @@ function DesktopActivityRows({
           <TableCell
             className={cn(
               "text-right font-bold tabular-nums",
-              activity.amountCents > 0 && "text-accent",
+              budgetTextClassName ??
+                (activity.amountCents > 0 ? "text-accent" : undefined),
             )}
           >
             {formatSignedAmount(activity.amountCents / 100, { currency })}
@@ -326,12 +349,16 @@ function DesktopActivityRows({
 function MobileActivityRow({
   activity,
   adjustment,
+  budgetColor,
   currency,
   periods,
   onDeleted,
 }: ActivityRowProps) {
   const [open, setOpen] = useState(false)
   const hasChildren = Boolean(activity.children?.length)
+  const budgetTextClassName = budgetColor
+    ? themeColorClasses[budgetColor].text
+    : undefined
 
   return (
     <li className="py-4">
@@ -346,7 +373,14 @@ function MobileActivityRow({
               />
             ) : null}
             <div className="min-w-0">
-              <p className="truncate text-sm font-bold">{activity.label}</p>
+              <p
+                className={cn(
+                  "truncate text-sm font-bold",
+                  budgetTextClassName,
+                )}
+              >
+                {activity.label}
+              </p>
               <p className="text-muted-foreground mt-1 text-xs">
                 {sourceLabel(activity, adjustment)}
                 {activity.effectiveDate
@@ -359,7 +393,8 @@ function MobileActivityRow({
             <span
               className={cn(
                 "pt-2 text-sm font-bold tabular-nums",
-                activity.amountCents > 0 && "text-accent",
+                budgetTextClassName ??
+                  (activity.amountCents > 0 ? "text-accent" : undefined),
               )}
             >
               {formatSignedAmount(activity.amountCents / 100, { currency })}
@@ -390,6 +425,7 @@ function MobileActivityRow({
 interface ActivityRowProps {
   activity: CashForecastActivity
   adjustment?: CashForecastAdjustmentRecord
+  budgetColor?: ThemeColor
   currency: CurrencyCode
   periods: string[]
   onDeleted: () => void
@@ -518,4 +554,15 @@ function isAdjustmentActivity(activity: CashForecastActivity) {
     activity.sourceType === "additional_income" ||
     activity.sourceType === "planned_outflow"
   )
+}
+
+function getBudgetProjectionColor(
+  activity: CashForecastActivity,
+  budgetColorsById: Record<string, ThemeColor>,
+): ThemeColor | undefined {
+  if (activity.sourceType !== "budget_projection" || !activity.sourceId) {
+    return undefined
+  }
+
+  return budgetColorsById[activity.sourceId]
 }

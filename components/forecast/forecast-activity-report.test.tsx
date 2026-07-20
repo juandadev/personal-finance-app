@@ -156,6 +156,24 @@ describe("ForecastActivityReport", () => {
     )
   })
 
+  test("styles monthly change with destructive text when negative", () => {
+    render(
+      <ForecastActivityReport
+        adjustments={[]}
+        currency="USD"
+        month={{
+          ...makeMonth([]),
+          monthlyChangeCents: -25_000,
+        }}
+        periods={["2026-08"]}
+      />,
+    )
+
+    expect(
+      activityTotal("Monthly Change")?.className.includes("text-destructive"),
+    ).toBe(true)
+  })
+
   test("labels current-month actual and pending sources clearly", () => {
     render(
       <ForecastActivityReport
@@ -220,6 +238,7 @@ function makeMonth(
     directBillOutflowCents: 0,
     creditCardOutflowCents: 45_000,
     plannedOutflowCents: 0,
+    budgetProjectionOutflowCents: 0,
     totalIncomeCents: 100_000,
     totalOutflowsCents: 45_000,
     monthlyChangeCents: 55_000,
@@ -227,3 +246,46 @@ function makeMonth(
     activities,
   }
 }
+
+function activityTotal(label: string) {
+  const term = screen.getByText(label)
+  return term.parentElement?.querySelector("dd")
+}
+
+describe("ForecastActivityReport budget projection source", () => {
+  test("labels budget projection rows", () => {
+    render(
+      <ForecastActivityReport
+        adjustments={[]}
+        budgetColorsById={{ "budget-1": "finance-purple" }}
+        currency="USD"
+        month={makeMonth([
+          {
+            key: "budget-projection:1",
+            sourceType: "budget_projection",
+            sourceId: "budget-1",
+            label: "Groceries",
+            period: "2026-08",
+            amountCents: -88_600,
+            status: "pending",
+          },
+        ])}
+        periods={["2026-07", "2026-08"]}
+      />,
+    )
+
+    expect(
+      screen.getAllByText("Pending · Budget projection").length,
+    ).toBeGreaterThan(0)
+    expect(
+      screen
+        .getAllByText("Groceries")[0]
+        ?.className.includes("text-finance-purple"),
+    ).toBe(true)
+    expect(
+      screen
+        .getAllByText("-$886.00")[0]
+        ?.className.includes("text-finance-purple"),
+    ).toBe(true)
+  })
+})

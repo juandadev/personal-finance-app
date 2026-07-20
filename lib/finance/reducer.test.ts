@@ -30,6 +30,7 @@ describe("financeReducer cash forecast events", () => {
       settings: {
         user_id: "user-1",
         default_monthly_income_cents: 0,
+        included_budget_category_ids: [],
         created_at: "2026-07-01T00:00:00.000Z",
         updated_at: "2026-07-01T00:00:00.000Z",
       },

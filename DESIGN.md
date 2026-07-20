@@ -447,7 +447,18 @@ Button labels should be action-specific: `Add Money`, `Create Budget`,
   one-time or repeat monthly from their selected start month. They remain
   pending forecast-only entries until edited or deleted.
 - Only user-created forecast adjustments expose item-level Edit and Delete
-  actions. Generated income, bill, and card rows are read-only.
+  actions. Generated income, bill, card, and budget-projection rows are
+  read-only.
+- Inside the summary chart card, above the color legend and chart, a
+  collapsible Budget projections control (collapsed by default) lists active
+  budgets as compact checkbox + name rows. Desktop wraps them in a row; mobile
+  stacks them in a column. Toggles save immediately (no separate Save action);
+  while a save is in flight, disable further toggles and show a small loading
+  state. Selection persists by category so it survives monthly budget copy.
+  Never show raw category ids. Empty state can briefly point users to Budgets.
+- Budget create/edit dialogs include a Monthly voucher coverage field
+  (`$0` allowed, must not exceed the budget limit). Forecast uses only
+  `limit − coverage` as expected cash for opted-in budgets.
 
 ### Recurring Bills
 

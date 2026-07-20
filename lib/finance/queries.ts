@@ -105,6 +105,7 @@ const budgetColumns = [
   "category_id",
   "period",
   "limit_cents",
+  "monthly_voucher_coverage_cents",
   "theme_color",
 ]
 const transactionSelectColumns = [
@@ -202,6 +203,7 @@ const creditCardPaymentColumns = [
 const cashForecastSettingsColumns = [
   "user_id",
   "default_monthly_income_cents",
+  "included_budget_category_ids",
   "created_at::text AS created_at",
   "updated_at::text AS updated_at",
 ]
@@ -2420,9 +2422,17 @@ export async function insertBudget(
     // language=SQL format=false
     const budgetResult = await client.query<BudgetRecord>(
       `
-        INSERT INTO budgets (user_id, id, category_id, period, limit_cents, theme_color)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING user_id, id, category_id, period, limit_cents, theme_color
+        INSERT INTO budgets (
+          user_id,
+          id,
+          category_id,
+          period,
+          limit_cents,
+          monthly_voucher_coverage_cents,
+          theme_color
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING ${budgetColumns.join(", ")}
       `,
       [
         userId,
@@ -2430,6 +2440,7 @@ export async function insertBudget(
         budget.category_id,
         budget.period,
         budget.limit_cents,
+        budget.monthly_voucher_coverage_cents,
         budget.theme_color,
       ],
     )
@@ -2463,15 +2474,17 @@ export async function updateBudget(
           category_id = COALESCE($2, category_id),
           period = COALESCE($3, period),
           limit_cents = COALESCE($4, limit_cents),
-          theme_color = COALESCE($5, theme_color)
-        WHERE user_id = $1 AND id = $6
-        RETURNING user_id, id, category_id, period, limit_cents, theme_color
+          monthly_voucher_coverage_cents = COALESCE($5, monthly_voucher_coverage_cents),
+          theme_color = COALESCE($6, theme_color)
+        WHERE user_id = $1 AND id = $7
+        RETURNING ${budgetColumns.join(", ")}
       `,
       [
         userId,
         updates.category_id ?? null,
         updates.period ?? null,
         updates.limit_cents ?? null,
+        updates.monthly_voucher_coverage_cents ?? null,
         updates.theme_color ?? null,
         id,
       ],
@@ -2938,9 +2951,10 @@ export async function upsertCashForecastSettings(
       `
         INSERT INTO cash_forecast_settings (
           user_id,
-          default_monthly_income_cents
+          default_monthly_income_cents,
+          included_budget_category_ids
         )
-        VALUES ($1, $2)
+        VALUES ($1, $2, '{}')
         ON CONFLICT (user_id)
         DO UPDATE SET
           default_monthly_income_cents = excluded.default_monthly_income_cents
@@ -2948,6 +2962,29 @@ export async function upsertCashForecastSettings(
       `,
       [userId, defaultMonthlyIncomeCents],
     )
+
+    return result.rows[0]
+  })
+}
+
+export async function updateCashForecastIncludedBudgets(
+  userId: string,
+  includedBudgetCategoryIds: string[],
+) {
+  return withFinanceTransaction(userId, async (client) => {
+    const result = await client.query<CashForecastSettingsRecord>(
+      `
+        UPDATE cash_forecast_settings
+        SET included_budget_category_ids = $2::uuid[]
+        WHERE user_id = $1
+        RETURNING ${cashForecastSettingsColumns.join(", ")}
+      `,
+      [userId, includedBudgetCategoryIds],
+    )
+
+    if (!result.rowCount) {
+      throw new Error("Save monthly income before choosing budget projections.")
+    }
 
     return result.rows[0]
   })

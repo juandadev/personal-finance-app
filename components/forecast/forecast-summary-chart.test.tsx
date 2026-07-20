@@ -25,6 +25,10 @@ mock.module("recharts", () => ({
   YAxis: RechartsStub,
 }))
 
+mock.module("@/components/forecast/forecast-budget-projections-panel", () => ({
+  ForecastBudgetProjectionsPanel: () => null,
+}))
+
 const { ForecastSummaryChart } =
   await import("@/components/forecast/forecast-summary-chart")
 
@@ -122,6 +126,39 @@ describe("ForecastSummaryChart", () => {
     expect(screen.getByText(/Selected month/)).toBeTruthy()
   })
 
+  test("styles bridge values with destructive text for negatives and pending outflows", () => {
+    render(
+      <ForecastSummaryChart
+        report={{
+          ...report,
+          bridge: {
+            ...report.bridge,
+            openingBalanceCents: -10_000,
+            pendingOutflowsCents: 60_000,
+          },
+        }}
+        pinnedPeriod={months[0]!.period}
+        onPinnedPeriodChange={() => undefined}
+      />,
+    )
+
+    expect(
+      bridgeValue("Current Month Opening")?.className.includes(
+        "text-destructive",
+      ),
+    ).toBe(true)
+    expect(
+      bridgeValue("Pending Outflows This Month")?.className.includes(
+        "text-destructive",
+      ),
+    ).toBe(true)
+    expect(
+      bridgeValue("Balance on Jul 12, 2026")?.className.includes(
+        "text-destructive",
+      ),
+    ).toBe(false)
+  })
+
   test("renders all 13 month controls with the current month selected", () => {
     const thirteenMonths = [
       ["2026-07", "July 2026"],
@@ -177,10 +214,16 @@ function makeMonth(
     directBillOutflowCents: 15_000,
     creditCardOutflowCents: 5_000,
     plannedOutflowCents: 5_000,
+    budgetProjectionOutflowCents: 0,
     totalIncomeCents: 75_000,
     totalOutflowsCents: 25_000,
     monthlyChangeCents: 50_000,
     endingBalanceCents,
     activities: [],
   }
+}
+
+function bridgeValue(label: string) {
+  const term = screen.getByText(label)
+  return term.parentElement?.querySelector("dd")
 }
