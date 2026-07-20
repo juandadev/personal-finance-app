@@ -10,6 +10,10 @@ import {
   getForecastPeriods,
   getPeriodEndDate,
 } from "@/lib/finance/forecast-period"
+import {
+  getAccountOwnerContactId,
+  isPotMovementTransaction,
+} from "@/lib/finance/pot-transactions"
 import { getCurrentPeriod } from "@/lib/finance/period"
 import { resolveRecurringBillOccurrences } from "@/lib/finance/recurring-bill-schedule"
 import type {
@@ -283,27 +287,11 @@ function transactionChangesCash(transaction: TransactionRecord): boolean {
   )
 }
 
-function getAccountOwnerContactId(state: FinanceState): string | null {
-  return (
-    state.counterparties.find((counterparty) => counterparty.is_account_owner)
-      ?.id ?? null
-  )
-}
-
 function getSalaryCategoryId(state: FinanceState): string | null {
   return (
     state.categories.find(
       (category) => category.slug.toLowerCase() === "salary",
     )?.id ?? null
-  )
-}
-
-function isPotMovementTransaction(
-  transaction: TransactionRecord,
-  ownerContactId: string | null,
-): boolean {
-  return (
-    ownerContactId !== null && transaction.counterparty_id === ownerContactId
   )
 }
 

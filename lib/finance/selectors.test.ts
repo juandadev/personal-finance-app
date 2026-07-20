@@ -151,6 +151,98 @@ function selectBill(state: FinanceState, today = TODAY) {
   return bill
 }
 
+describe("selectFinanceViewModel summary stats", () => {
+  test("excludes pot withdrawals from overview income", () => {
+    const viewModel = selectFinanceViewModel(
+      makeState({
+        accounts: [
+          {
+            id: "account-1",
+            user_id: "user-1",
+            name: "Main",
+            type: "checking",
+            is_primary: true,
+            current_balance_cents: 125_000,
+          },
+        ],
+        accountSummaries: [
+          {
+            id: "summary-1",
+            user_id: "user-1",
+            account_id: "account-1",
+            period: "2026-07",
+            income_cents: 25_000,
+            expense_cents: 0,
+          },
+        ],
+        counterparties: [
+          {
+            id: "owner-1",
+            user_id: "user-1",
+            display_name: "Juan Martinez",
+            avatar_url: null,
+            type: "person",
+            theme_color: "finance-grey",
+            notes: "Account owner",
+            is_account_owner: true,
+          },
+          {
+            id: "merchant-1",
+            user_id: "user-1",
+            display_name: "Merchant",
+            avatar_url: null,
+            type: "merchant",
+            theme_color: "chart-2",
+            notes: null,
+            is_account_owner: false,
+          },
+        ],
+        transactions: [
+          {
+            id: "salary",
+            user_id: "user-1",
+            account_id: "account-1",
+            counterparty_id: "merchant-1",
+            category_id: "category-1",
+            concept: "July salary",
+            amount_cents: 20_000,
+            is_voucher_expense: false,
+            payment_method: "bank_account",
+            credit_card_id: null,
+            credit_card_statement_id: null,
+            posted_at: "2026-07-03",
+            description: null,
+          },
+          {
+            id: "pot-withdrawal",
+            user_id: "user-1",
+            account_id: "account-1",
+            counterparty_id: "owner-1",
+            category_id: "category-1",
+            concept: "Taken from Vacation",
+            amount_cents: 5_000,
+            is_voucher_expense: false,
+            payment_method: "bank_account",
+            credit_card_id: null,
+            credit_card_statement_id: null,
+            posted_at: "2026-07-05",
+            description: null,
+          },
+        ],
+      }),
+      TODAY,
+    )
+
+    expect(
+      viewModel.summaryStats.find((stat) => stat.label === "Income"),
+    ).toEqual({
+      label: "Income",
+      amount: 200,
+      variant: "default",
+    })
+  })
+})
+
 describe("selectFinanceViewModel credit reservation", () => {
   test("reserves all unpaid finite card installments immediately", () => {
     const card = selectCard(makeState({}, { id: "bill-1" }))

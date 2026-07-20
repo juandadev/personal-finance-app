@@ -1,6 +1,10 @@
 import { getCreditCardDueStatus } from "@/lib/finance/credit-card-cycle"
 import { selectPrimaryPaymentAccount } from "@/lib/finance/accounts"
 import {
+  getAccountOwnerContactId,
+  isPotMovementTransaction,
+} from "@/lib/finance/pot-transactions"
+import {
   buildCashForecast,
   type CashForecastResult,
 } from "@/lib/finance/cash-forecast"
@@ -720,6 +724,30 @@ function selectCreditCardSummary(
   ]
 }
 
+function selectOverviewIncomeCents(state: FinanceState): number {
+  const accountSummary = state.accountSummaries[0]
+
+  if (!accountSummary) {
+    return 0
+  }
+
+  const ownerContactId = getAccountOwnerContactId(state)
+  const potIncomeCents = state.transactions.reduce((sum, transaction) => {
+    if (
+      transaction.account_id !== accountSummary.account_id ||
+      transaction.posted_at.slice(0, 7) !== accountSummary.period ||
+      transaction.amount_cents <= 0 ||
+      !isPotMovementTransaction(transaction, ownerContactId)
+    ) {
+      return sum
+    }
+
+    return sum + transaction.amount_cents
+  }, 0)
+
+  return Math.max(0, accountSummary.income_cents - potIncomeCents)
+}
+
 function selectSummaryStats(
   state: FinanceState,
 ): FinanceViewModel["summaryStats"] {
@@ -734,7 +762,7 @@ function selectSummaryStats(
     },
     {
       label: "Income",
-      amount: centsToDollars(accountSummary?.income_cents ?? 0),
+      amount: centsToDollars(selectOverviewIncomeCents(state)),
       variant: "default",
     },
     {
