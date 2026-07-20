@@ -21,10 +21,6 @@ mock.module("@/components/actions", () => ({
   ItemActions: ({ children }: { children: ReactNode }) => <>{children}</>,
 }))
 
-mock.module("./budget-progress-bar", () => ({
-  BudgetProgressBar: () => null,
-}))
-
 mock.module("./delete-budget-dialog", () => ({
   DeleteBudgetDialog: () => null,
 }))
@@ -65,5 +61,48 @@ describe("BudgetCategoryCard", () => {
     expect(
       screen.getByRole("link", { name: "See All" }).getAttribute("href"),
     ).toBe("/transactions?budget=budget%20with%20spaces")
+  })
+
+  test("shows Free with remaining amount when within budget", () => {
+    render(
+      <BudgetCategoryCard
+        budget={{
+          id: "budget-1",
+          period: "2026-07",
+          category: "Groceries",
+          categoryId: "category-1",
+          maximum: 500,
+          spent: 200,
+          color: "chart-1",
+        }}
+        transactions={[]}
+      />,
+    )
+
+    expect(screen.getByText("Free")).toBeTruthy()
+    expect(screen.getByText("$300.00")).toBeTruthy()
+    expect(screen.queryByText("Exceeded")).toBeNull()
+  })
+
+  test("shows Exceeded with overage when over budget", () => {
+    render(
+      <BudgetCategoryCard
+        budget={{
+          id: "budget-1",
+          period: "2026-07",
+          category: "Groceries",
+          categoryId: "category-1",
+          maximum: 500,
+          spent: 545,
+          color: "chart-1",
+        }}
+        transactions={[]}
+      />,
+    )
+
+    expect(screen.getByText("Exceeded")).toBeTruthy()
+    const overage = screen.getByText("$45.00")
+    expect(overage.className).toContain("text-destructive")
+    expect(screen.queryByText("Free")).toBeNull()
   })
 })

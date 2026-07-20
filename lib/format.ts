@@ -64,6 +64,10 @@ export function transactionAmountClassName(amount: number): string {
   return amount > 0 ? "text-accent" : "text-destructive"
 }
 
+export function budgetOverLimitClassName(isOver: boolean): string {
+  return isOver ? "text-destructive" : "text-foreground"
+}
+
 export function formatBudgetPercentage(spent: number, maximum: number): string {
   if (maximum <= 0) {
     return "0%"

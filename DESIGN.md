@@ -460,6 +460,20 @@ Button labels should be action-specific: `Add Money`, `Create Budget`,
   (`$0` allowed, must not exceed the budget limit). Forecast uses only
   `limit − coverage` as expected cash for opted-in budgets.
 
+### Budgets
+
+- Within budget: remaining and free amounts use `text-foreground`; progress
+  tracks use `bg-background`.
+- Over budget: exceeded amounts and over-limit percentages use
+  `text-destructive`; progress tracks use `bg-destructive/15`.
+- The overview budgets list shows **spent** money per category. Over-limit
+  amounts use destructive styling.
+- Budget category cards keep **Free** with the remaining amount when within
+  budget. When over budget, switch the label to **Exceeded** and show the
+  positive overage amount in destructive styling.
+- Do not rely on color alone to communicate over-budget state. Pair destructive
+  styling with label and numeric context.
+
 ### Recurring Bills
 
 - A bill's identity comes from its contact: rows use the shared `ContactAvatar`

@@ -10,6 +10,7 @@ import type {
   TransactionCategory,
 } from "@/lib/types"
 import type { ThemeColor } from "@/lib/theme-colors"
+import type { BudgetCloseStatus } from "./budget-balance"
 
 export type CurrencyCode = "USD" | "MXN"
 export type AccountType = "checking" | "savings" | "credit"
@@ -129,6 +130,8 @@ export interface BudgetTransactionAssignmentRecord {
 export type MonthlyReportModule = "budgets"
 export type MonthlyReportRunStatus = "running" | "completed" | "failed"
 
+export type { BudgetCloseStatus } from "./budget-balance"
+
 export interface MonthlyReportRunRecord {
   id: FinanceRecordId
   user_id: FinanceUserId
@@ -152,6 +155,8 @@ export interface BudgetMonthlySnapshotRecord {
   limit_cents: number
   spent_cents: number
   free_cents: number
+  over_cents: number
+  status: BudgetCloseStatus
   assigned_transaction_count: number
 }
 

@@ -12,7 +12,16 @@ import {
   cardActionLinkClasses,
 } from "@/components/ui/card"
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
-import { formatCurrency, formatBudgetPercentage } from "@/lib/format"
+import {
+  budgetOverLimitClassName,
+  formatCurrency,
+  formatBudgetPercentage,
+} from "@/lib/format"
+import {
+  getBudgetOverage,
+  getBudgetRemaining,
+  isBudgetOverLimit,
+} from "@/lib/finance/budget-balance"
 import { themeColorClasses } from "@/lib/theme-colors"
 import type { Budget, Transaction } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -32,7 +41,9 @@ export function BudgetCategoryCard({
 }: BudgetCategoryCardProps) {
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
-  const remaining = Math.max(budget.maximum - budget.spent, 0)
+  const isOver = isBudgetOverLimit(budget.maximum, budget.spent)
+  const remaining = getBudgetRemaining(budget.maximum, budget.spent)
+  const overage = getBudgetOverage(budget.maximum, budget.spent)
   const latestTransactions = transactions.slice(0, 3)
 
   return (
@@ -77,7 +88,7 @@ export function BudgetCategoryCard({
 
       <div className="text-muted-foreground mt-3 flex items-center justify-between text-xs">
         <span>
-          <strong>
+          <strong className={budgetOverLimitClassName(isOver)}>
             {formatBudgetPercentage(budget.spent, budget.maximum)}
           </strong>{" "}
           spent
@@ -106,9 +117,18 @@ export function BudgetCategoryCard({
             className="bg-background h-full w-1 rounded-full"
           />
           <div>
-            <p className="text-muted-foreground text-xs">Free</p>
-            <p className="text-foreground mt-1 text-sm font-bold">
-              {formatCurrency(remaining, { forceDecimals: true })}
+            <p className="text-muted-foreground text-xs">
+              {isOver ? "Exceeded" : "Free"}
+            </p>
+            <p
+              className={cn(
+                "mt-1 text-sm font-bold",
+                isOver ? "text-destructive" : "text-foreground",
+              )}
+            >
+              {formatCurrency(isOver ? overage : remaining, {
+                forceDecimals: true,
+              })}
             </p>
           </div>
         </div>

@@ -1,4 +1,5 @@
-import { formatCurrency } from "@/lib/format"
+import { budgetOverLimitClassName, formatCurrency } from "@/lib/format"
+import { isBudgetOverLimit } from "@/lib/finance/budget-balance"
 import { themeColorClasses } from "@/lib/theme-colors"
 import type { Budget } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -8,6 +9,8 @@ interface BudgetItemProps {
 }
 
 export function BudgetItem({ budget }: BudgetItemProps) {
+  const isOver = isBudgetOverLimit(budget.maximum, budget.spent)
+
   return (
     <li className="flex w-full items-center justify-start gap-4 truncate md:max-w-24.5">
       <span
@@ -21,8 +24,10 @@ export function BudgetItem({ budget }: BudgetItemProps) {
         <p className="text-muted-foreground truncate text-xs">
           {budget.category}
         </p>
-        <p className="text-foreground text-sm font-bold">
-          {formatCurrency(budget.maximum, { forceDecimals: true })}
+        <p
+          className={cn("text-sm font-bold", budgetOverLimitClassName(isOver))}
+        >
+          {formatCurrency(budget.spent, { forceDecimals: true })}
         </p>
       </div>
     </li>

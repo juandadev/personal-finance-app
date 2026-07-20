@@ -109,6 +109,7 @@ async function closeUserBudgetPeriod(
     )
     const reportRunId = reportRun.rows[0].id
 
+    // Snapshot field rules must stay aligned with getBudgetSnapshotFields().
     const snapshots = await client.query(
       `
         INSERT INTO budget_monthly_snapshots (
@@ -122,31 +123,69 @@ async function closeUserBudgetPeriod(
           limit_cents,
           spent_cents,
           free_cents,
+          over_cents,
+          status,
           assigned_transaction_count
         )
         SELECT
-          b.user_id,
+          budget_rows.user_id,
           $3,
-          b.period,
-          b.id,
-          b.category_id,
-          c.name,
-          b.theme_color,
-          b.limit_cents,
-          COALESCE(SUM(bta.assigned_amount_cents), 0)::integer,
-          GREATEST(
-            b.limit_cents - COALESCE(SUM(bta.assigned_amount_cents), 0),
-            0
-          )::integer,
-          COUNT(bta.id)::integer
-        FROM budgets b
-        JOIN categories c ON c.id = b.category_id
-        LEFT JOIN budget_transaction_assignments bta
-          ON bta.user_id = b.user_id
-          AND bta.budget_id = b.id
-        WHERE b.user_id = $1
-          AND b.period = $2
-        GROUP BY b.user_id, b.period, b.id, b.category_id, c.name, b.theme_color, b.limit_cents
+          budget_rows.period,
+          budget_rows.source_budget_id,
+          budget_rows.category_id,
+          budget_rows.category_name,
+          budget_rows.theme_color,
+          budget_rows.limit_cents,
+          budget_rows.spent_cents,
+          CASE
+            WHEN budget_rows.spent_cents > budget_rows.limit_cents
+              AND budget_rows.limit_cents > 0
+            THEN 0
+            ELSE GREATEST(
+              budget_rows.limit_cents - budget_rows.spent_cents,
+              0
+            )
+          END,
+          CASE
+            WHEN budget_rows.spent_cents > budget_rows.limit_cents
+              AND budget_rows.limit_cents > 0
+            THEN budget_rows.spent_cents - budget_rows.limit_cents
+            ELSE 0
+          END,
+          CASE
+            WHEN budget_rows.spent_cents > budget_rows.limit_cents
+              AND budget_rows.limit_cents > 0
+            THEN 'over_budget'
+            ELSE 'within_budget'
+          END,
+          budget_rows.assigned_transaction_count
+        FROM (
+          SELECT
+            b.user_id,
+            b.period,
+            b.id AS source_budget_id,
+            b.category_id,
+            c.name AS category_name,
+            b.theme_color,
+            b.limit_cents,
+            COALESCE(SUM(bta.assigned_amount_cents), 0)::integer AS spent_cents,
+            COUNT(bta.id)::integer AS assigned_transaction_count
+          FROM budgets b
+          JOIN categories c ON c.id = b.category_id
+          LEFT JOIN budget_transaction_assignments bta
+            ON bta.user_id = b.user_id
+            AND bta.budget_id = b.id
+          WHERE b.user_id = $1
+            AND b.period = $2
+          GROUP BY
+            b.user_id,
+            b.period,
+            b.id,
+            b.category_id,
+            c.name,
+            b.theme_color,
+            b.limit_cents
+        ) AS budget_rows
         ON CONFLICT (user_id, period, source_budget_id) DO NOTHING
       `,
       [userId, period, reportRunId],
