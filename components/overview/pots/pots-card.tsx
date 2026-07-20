@@ -44,7 +44,7 @@ export function PotsCard() {
               <p className="mt-1 text-3xl font-bold tracking-tight">
                 <PotMoneyReveal
                   amount={totalSaved}
-                  expandedClassName="bg-background"
+                  expandedClassName="bg-background pr-1 rounded-sm"
                 />
               </p>
             </div>
