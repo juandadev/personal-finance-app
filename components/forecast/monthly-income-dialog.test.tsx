@@ -58,6 +58,16 @@ mock.module("@/components/ui/dialog", () => ({
     <div>{children}</div>
   ),
   DialogTitle: ({ children }: { children: ReactNode }) => <h2>{children}</h2>,
+  DialogFinanceForm: ({
+    actions,
+    children,
+    ...props
+  }: ComponentProps<"form"> & { actions: ReactNode }) => (
+    <form {...props}>
+      {children}
+      {actions}
+    </form>
+  ),
 }))
 
 const { MonthlyIncomeDialog } =

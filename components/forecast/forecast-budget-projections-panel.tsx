@@ -82,7 +82,7 @@ export function ForecastBudgetProjectionsPanel() {
           <Button
             type="button"
             variant="ghost"
-            className="text-muted-foreground hover:text-foreground h-auto gap-1.5 px-0 py-1 text-xs font-bold"
+            className="text-muted-foreground hover:text-foreground h-auto gap-1.5 px-0 py-1 text-xs font-bold has-[>svg]:px-0"
             aria-label={`${open ? "Collapse" : "Expand"} budget projections`}
           >
             <CaretDownIcon

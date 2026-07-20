@@ -575,6 +575,7 @@ function TransactionDialog({
                     : "transaction-contact-closed"
                 }
                 id="transaction-contact"
+                excludeAccountOwner
                 value={field.state.value}
                 onValueChange={(value) =>
                   mainForm.setValue("counterpartyId", value)

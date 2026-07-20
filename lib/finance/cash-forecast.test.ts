@@ -132,6 +132,52 @@ function makeTransaction(
   }
 }
 
+function makeOwnerCounterparty() {
+  return {
+    id: "owner-1",
+    user_id: "user-1",
+    display_name: "Juan Martinez",
+    avatar_url: null,
+    type: "person" as const,
+    theme_color: "finance-grey" as const,
+    notes: "Account owner",
+    is_account_owner: true,
+  }
+}
+
+function makeMerchantCounterparty() {
+  return {
+    id: "merchant-1",
+    user_id: "user-1",
+    display_name: "Employer",
+    avatar_url: null,
+    type: "merchant" as const,
+    theme_color: "chart-2" as const,
+    notes: null,
+    is_account_owner: false,
+  }
+}
+
+function makeSalaryCategory() {
+  return {
+    id: "cat-salary",
+    user_id: "user-1",
+    name: "Salary",
+    slug: "salary",
+    theme_color: "chart-1" as const,
+  }
+}
+
+function makeIncomeForecastFixtures(
+  overrides: Partial<FinanceState> = {},
+): FinanceState {
+  return makeState({
+    categories: [makeSalaryCategory()],
+    counterparties: [makeOwnerCounterparty(), makeMerchantCounterparty()],
+    ...overrides,
+  })
+}
+
 function expectReady(state: FinanceState) {
   const result = buildCashForecast(state, AS_OF)
 
@@ -271,7 +317,7 @@ describe("buildCashForecast blockers", () => {
 })
 
 describe("buildCashForecast projection", () => {
-  test("reconstructs current opening from actual cash movement and uses actual-only current income", () => {
+  test("reconstructs current opening from actual cash movement and projects remaining default income", () => {
     const forecast = expectReady(
       makeState({
         accounts: [
@@ -325,21 +371,22 @@ describe("buildCashForecast projection", () => {
       openingBalanceCents: 100_000,
       actualIncomeCents: 80_000,
       actualOutflowCents: 20_000,
-      defaultIncomeCents: 0,
-      totalIncomeCents: 80_000,
+      defaultIncomeCents: 200_000,
+      totalIncomeCents: 280_000,
       totalOutflowsCents: 20_000,
-      endingBalanceCents: 160_000,
+      endingBalanceCents: 360_000,
     })
     expect(current.activities.map((activity) => activity.key)).toEqual([
       "cash-transaction:salary",
       "cash-transaction:groceries",
+      "default-income:2026-07",
     ])
     expect(
-      current.activities.every((activity) => activity.status === "actual"),
-    ).toBe(true)
+      current.activities.filter((activity) => activity.status === "actual"),
+    ).toHaveLength(2)
     expect(forecast.months[1]).toMatchObject({
       period: "2026-08",
-      openingBalanceCents: 160_000,
+      openingBalanceCents: 360_000,
       defaultIncomeCents: 200_000,
     })
   })
@@ -657,8 +704,8 @@ describe("buildCashForecast projection", () => {
     expect(forecast.months[0]).toMatchObject({
       period: "2026-07",
       openingBalanceCents: 100_000,
-      defaultIncomeCents: 0,
-      endingBalanceCents: 65_000,
+      defaultIncomeCents: 200_000,
+      endingBalanceCents: 265_000,
     })
   })
 
@@ -709,28 +756,28 @@ describe("buildCashForecast projection", () => {
     expect(forecast.months).toHaveLength(13)
     expect(forecast.months[0]).toMatchObject({
       period: "2026-07",
-      defaultIncomeCents: 0,
-      endingBalanceCents: 0,
+      defaultIncomeCents: 100_000,
+      endingBalanceCents: 100_000,
     })
     expect(forecast.months[1]).toMatchObject({
       period: "2026-08",
       additionalIncomeCents: 80_000,
-      endingBalanceCents: 180_000,
+      endingBalanceCents: 280_000,
     })
     expect(forecast.months[2]).toMatchObject({
       period: "2026-09",
       additionalIncomeCents: 30_000,
       plannedOutflowCents: 20_000,
-      endingBalanceCents: 290_000,
+      endingBalanceCents: 390_000,
     })
     expect(forecast.months[3]).toMatchObject({
       period: "2026-10",
       additionalIncomeCents: 30_000,
       plannedOutflowCents: 10_000,
-      endingBalanceCents: 410_000,
+      endingBalanceCents: 510_000,
     })
     expect(forecast.months.at(-1)?.period).toBe("2027-07")
-    expect(forecast.months.at(-1)?.endingBalanceCents).toBe(1_490_000)
+    expect(forecast.months.at(-1)?.endingBalanceCents).toBe(1_590_000)
   })
 
   test("keeps negative balances valid and carries them forward", () => {
@@ -1004,6 +1051,236 @@ describe("buildCashForecast projection", () => {
     )
 
     expect(forecast.months[1]?.creditCardOutflowCents).toBe(0)
+  })
+})
+
+describe("buildCashForecast current-month income", () => {
+  test("reduces remaining default income by salary received without double-counting", () => {
+    const forecast = expectReady(
+      makeIncomeForecastFixtures({
+        accounts: [
+          {
+            ...makeState().accounts[0]!,
+            current_balance_cents: 120_000,
+          },
+        ],
+        transactions: [
+          makeTransaction({
+            id: "salary",
+            concept: "July salary",
+            amount_cents: 80_000,
+            category_id: "cat-salary",
+            counterparty_id: "merchant-1",
+            posted_at: "2026-07-03",
+          }),
+        ],
+      }),
+    )
+    const current = forecast.months[0]!
+
+    expect(current).toMatchObject({
+      actualIncomeCents: 80_000,
+      defaultIncomeCents: 120_000,
+      totalIncomeCents: 200_000,
+      openingBalanceCents: 40_000,
+      endingBalanceCents: 240_000,
+    })
+    expect(
+      current.activities.find(
+        (activity) => activity.sourceType === "default_income",
+      ),
+    ).toMatchObject({
+      label: "Remaining Monthly Income",
+      amountCents: 120_000,
+      status: "pending",
+    })
+  })
+
+  test("clamps remaining default income to zero when salary exceeds default", () => {
+    const forecast = expectReady(
+      makeIncomeForecastFixtures({
+        accounts: [
+          {
+            ...makeState().accounts[0]!,
+            current_balance_cents: 250_000,
+          },
+        ],
+        transactions: [
+          makeTransaction({
+            id: "salary",
+            concept: "July salary",
+            amount_cents: 250_000,
+            category_id: "cat-salary",
+            counterparty_id: "merchant-1",
+            posted_at: "2026-07-03",
+          }),
+        ],
+      }),
+    )
+
+    expect(forecast.months[0]).toMatchObject({
+      actualIncomeCents: 250_000,
+      defaultIncomeCents: 0,
+      totalIncomeCents: 250_000,
+      openingBalanceCents: 0,
+      endingBalanceCents: 250_000,
+    })
+    expect(
+      forecast.months[0]?.activities.some(
+        (activity) => activity.sourceType === "default_income",
+      ),
+    ).toBe(false)
+  })
+
+  test("excludes pot withdrawals from forecast income while preserving opening balance", () => {
+    const forecast = expectReady(
+      makeIncomeForecastFixtures({
+        accounts: [
+          {
+            ...makeState().accounts[0]!,
+            current_balance_cents: 125_000,
+          },
+        ],
+        transactions: [
+          makeTransaction({
+            id: "salary",
+            concept: "July salary",
+            amount_cents: 20_000,
+            category_id: "cat-salary",
+            counterparty_id: "merchant-1",
+            posted_at: "2026-07-03",
+          }),
+          makeTransaction({
+            id: "pot-withdrawal",
+            concept: "Taken from Vacation",
+            amount_cents: 5_000,
+            counterparty_id: "owner-1",
+            posted_at: "2026-07-05",
+          }),
+        ],
+      }),
+    )
+
+    expect(forecast.months[0]).toMatchObject({
+      actualIncomeCents: 20_000,
+      defaultIncomeCents: 180_000,
+      totalIncomeCents: 200_000,
+      openingBalanceCents: 100_000,
+      endingBalanceCents: 300_000,
+    })
+    expect(
+      forecast.months[0]?.activities.map((activity) => activity.key),
+    ).toEqual(["cash-transaction:salary", "default-income:2026-07"])
+  })
+
+  test("excludes pot deposits from forecast outflow", () => {
+    const forecast = expectReady(
+      makeIncomeForecastFixtures({
+        accounts: [
+          {
+            ...makeState().accounts[0]!,
+            current_balance_cents: 115_000,
+          },
+        ],
+        transactions: [
+          makeTransaction({
+            id: "pot-deposit",
+            concept: "Deposit to Vacation",
+            amount_cents: -5_000,
+            counterparty_id: "owner-1",
+            posted_at: "2026-07-05",
+          }),
+        ],
+      }),
+    )
+
+    expect(forecast.months[0]).toMatchObject({
+      actualOutflowCents: 0,
+      defaultIncomeCents: 200_000,
+      totalIncomeCents: 200_000,
+      openingBalanceCents: 120_000,
+      endingBalanceCents: 320_000,
+    })
+    expect(forecast.months[0]?.activities).toHaveLength(1)
+    expect(forecast.months[0]?.activities[0]?.sourceType).toBe("default_income")
+  })
+
+  test("counts non-salary income without reducing remaining default income", () => {
+    const forecast = expectReady(
+      makeIncomeForecastFixtures({
+        accounts: [
+          {
+            ...makeState().accounts[0]!,
+            current_balance_cents: 123_000,
+          },
+        ],
+        categories: [
+          makeSalaryCategory(),
+          {
+            id: "cat-freelance",
+            user_id: "user-1",
+            name: "Freelance",
+            slug: "freelance",
+            theme_color: "chart-4",
+          },
+        ],
+        transactions: [
+          makeTransaction({
+            id: "salary",
+            concept: "July salary",
+            amount_cents: 20_000,
+            category_id: "cat-salary",
+            counterparty_id: "merchant-1",
+            posted_at: "2026-07-03",
+          }),
+          makeTransaction({
+            id: "freelance",
+            concept: "Design project",
+            amount_cents: 3_000,
+            category_id: "cat-freelance",
+            counterparty_id: "merchant-1",
+            posted_at: "2026-07-06",
+          }),
+        ],
+      }),
+    )
+
+    expect(forecast.months[0]).toMatchObject({
+      actualIncomeCents: 23_000,
+      defaultIncomeCents: 180_000,
+      totalIncomeCents: 203_000,
+    })
+  })
+
+  test("keeps future months on the full saved default income", () => {
+    const forecast = expectReady(
+      makeIncomeForecastFixtures({
+        transactions: [
+          makeTransaction({
+            id: "salary",
+            concept: "July salary",
+            amount_cents: 80_000,
+            category_id: "cat-salary",
+            counterparty_id: "merchant-1",
+            posted_at: "2026-07-03",
+          }),
+        ],
+      }),
+    )
+
+    expect(forecast.months[1]).toMatchObject({
+      period: "2026-08",
+      actualIncomeCents: 0,
+      defaultIncomeCents: 200_000,
+      totalIncomeCents: 200_000,
+    })
+    expect(
+      forecast.months[1]?.activities.find(
+        (activity) => activity.sourceType === "default_income",
+      ),
+    ).toMatchObject({
+      label: "Default Monthly Income",
+    })
   })
 })
 

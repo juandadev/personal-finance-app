@@ -28,6 +28,7 @@ import {
   requiredStringSchema,
   themeColorSchema,
 } from "@/lib/forms/validation"
+import { filterSelectableCounterparties } from "@/lib/finance/contact-selection"
 import { useStandardForm } from "@/lib/forms/use-standard-form"
 import type { ThemeColor } from "@/lib/theme-colors"
 import { getInitials } from "@/lib/utils"
@@ -54,6 +55,7 @@ type ContactSelectOption = SelectWithCreateOption & {
 
 interface ContactSelectWithQuickCreateProps {
   error?: string
+  excludeAccountOwner?: boolean
   id: string
   label?: string
   onValueChange: (value: string) => void
@@ -63,6 +65,7 @@ interface ContactSelectWithQuickCreateProps {
 
 export function ContactSelectWithQuickCreate({
   error,
+  excludeAccountOwner = false,
   id,
   label = "Contact",
   onValueChange,
@@ -89,7 +92,10 @@ export function ContactSelectWithQuickCreate({
   const contactOptions = useMemo(
     () =>
       withFallbackOption(
-        state.counterparties.map((counterparty) => ({
+        filterSelectableCounterparties(state.counterparties, {
+          excludeAccountOwner,
+          selectedId: value,
+        }).map((counterparty) => ({
           value: counterparty.id,
           label: counterparty.display_name,
           contactAvatar: {
@@ -101,7 +107,7 @@ export function ContactSelectWithQuickCreate({
         })),
         createdContactOption,
       ),
-    [createdContactOption, state.counterparties],
+    [createdContactOption, excludeAccountOwner, state.counterparties, value],
   )
   const quickContactForm = useStandardForm({
     defaultValues: quickContactDefaultValues,

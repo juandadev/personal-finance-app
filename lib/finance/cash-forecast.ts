@@ -283,6 +283,48 @@ function transactionChangesCash(transaction: TransactionRecord): boolean {
   )
 }
 
+function getAccountOwnerContactId(state: FinanceState): string | null {
+  return (
+    state.counterparties.find((counterparty) => counterparty.is_account_owner)
+      ?.id ?? null
+  )
+}
+
+function getSalaryCategoryId(state: FinanceState): string | null {
+  return (
+    state.categories.find(
+      (category) => category.slug.toLowerCase() === "salary",
+    )?.id ?? null
+  )
+}
+
+function isPotMovementTransaction(
+  transaction: TransactionRecord,
+  ownerContactId: string | null,
+): boolean {
+  return (
+    ownerContactId !== null && transaction.counterparty_id === ownerContactId
+  )
+}
+
+function sumPositiveCents(transactions: TransactionRecord[]): number {
+  return transactions.reduce(
+    (sum, transaction) =>
+      transaction.amount_cents > 0 ? sum + transaction.amount_cents : sum,
+    0,
+  )
+}
+
+function sumNegativeCents(transactions: TransactionRecord[]): number {
+  return transactions.reduce(
+    (sum, transaction) =>
+      transaction.amount_cents < 0
+        ? sum + Math.abs(transaction.amount_cents)
+        : sum,
+    0,
+  )
+}
+
 function actualTransactionActivity(
   transaction: TransactionRecord,
   period: string,
@@ -674,21 +716,37 @@ export function buildCashForecast(
         ? dateComparison
         : left.id.localeCompare(right.id)
     })
-  const actualIncomeCents = currentActualTransactions.reduce(
-    (sum, transaction) =>
-      transaction.amount_cents > 0 ? sum + transaction.amount_cents : sum,
-    0,
+  const ownerContactId = getAccountOwnerContactId(state)
+  const salaryCategoryId = getSalaryCategoryId(state)
+  const savedDefaultIncomeCents =
+    state.cashForecastSettings?.default_monthly_income_cents ?? 0
+  const reconciliationIncomeCents = sumPositiveCents(currentActualTransactions)
+  const reconciliationOutflowCents = sumNegativeCents(currentActualTransactions)
+  const reconciliationNetMovementCents =
+    reconciliationIncomeCents - reconciliationOutflowCents
+  const forecastActualTransactions = currentActualTransactions.filter(
+    (transaction) => !isPotMovementTransaction(transaction, ownerContactId),
   )
-  const actualOutflowCents = currentActualTransactions.reduce(
-    (sum, transaction) =>
-      transaction.amount_cents < 0
-        ? sum + Math.abs(transaction.amount_cents)
-        : sum,
-    0,
+  const forecastActualIncomeCents = sumPositiveCents(forecastActualTransactions)
+  const forecastActualOutflowCents = sumNegativeCents(
+    forecastActualTransactions,
   )
-  const actualNetMovementCents = actualIncomeCents - actualOutflowCents
+  const forecastActualNetMovementCents =
+    forecastActualIncomeCents - forecastActualOutflowCents
+  const salaryReceivedCents = sumPositiveCents(
+    currentActualTransactions.filter(
+      (transaction) =>
+        salaryCategoryId !== null &&
+        transaction.category_id === salaryCategoryId &&
+        !isPotMovementTransaction(transaction, ownerContactId),
+    ),
+  )
+  const remainingDefaultIncomeCents = Math.max(
+    0,
+    savedDefaultIncomeCents - salaryReceivedCents,
+  )
   const currentOpeningBalanceCents =
-    primaryAccount.current_balance_cents - actualNetMovementCents
+    primaryAccount.current_balance_cents - reconciliationNetMovementCents
   const bridgeActivities = sortDatedActivities([
     ...currentDirectBills.map((projection) =>
       directBillActivity(projection, currentPeriod),
@@ -701,8 +759,8 @@ export function buildCashForecast(
   const months = periods.map((period): CashForecastMonth => {
     const isCurrentPeriod = period === currentPeriod
     const defaultIncomeCents = isCurrentPeriod
-      ? 0
-      : (state.cashForecastSettings?.default_monthly_income_cents ?? 0)
+      ? remainingDefaultIncomeCents
+      : savedDefaultIncomeCents
     const additionalIncome = sortedAdjustments.filter(
       (adjustment) =>
         adjustment.kind === "additional_income" &&
@@ -723,8 +781,12 @@ export function buildCashForecast(
       : cardObligations.filter(
           (obligation) => obligation.paymentDueDate.slice(0, 7) === period,
         )
-    const monthActualIncomeCents = isCurrentPeriod ? actualIncomeCents : 0
-    const monthActualOutflowCents = isCurrentPeriod ? actualOutflowCents : 0
+    const monthActualIncomeCents = isCurrentPeriod
+      ? forecastActualIncomeCents
+      : 0
+    const monthActualOutflowCents = isCurrentPeriod
+      ? forecastActualOutflowCents
+      : 0
     const additionalIncomeCents = additionalIncome.reduce(
       (sum, adjustment) => sum + adjustment.amount_cents,
       0,
@@ -781,7 +843,7 @@ export function buildCashForecast(
     ])
     const activities: CashForecastActivity[] = [
       ...(isCurrentPeriod
-        ? currentActualTransactions.map((transaction) =>
+        ? forecastActualTransactions.map((transaction) =>
             actualTransactionActivity(transaction, period),
           )
         : []),
@@ -791,7 +853,9 @@ export function buildCashForecast(
             {
               key: `default-income:${period}`,
               sourceType: "default_income" as const,
-              label: "Default Monthly Income",
+              label: isCurrentPeriod
+                ? "Remaining Monthly Income"
+                : "Default Monthly Income",
               period,
               amountCents: defaultIncomeCents,
               status: "pending" as const,
@@ -839,9 +903,9 @@ export function buildCashForecast(
       period: currentPeriod,
       asOfDate,
       startingBalanceCents: primaryAccount.current_balance_cents,
-      actualIncomeCents,
-      actualOutflowCents,
-      actualNetMovementCents,
+      actualIncomeCents: forecastActualIncomeCents,
+      actualOutflowCents: forecastActualOutflowCents,
+      actualNetMovementCents: forecastActualNetMovementCents,
       directBillObligationsCents,
       creditCardObligationsCents,
       remainingObligationsCents,
