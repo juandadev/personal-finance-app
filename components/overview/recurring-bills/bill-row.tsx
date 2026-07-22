@@ -1,4 +1,4 @@
-import { formatCurrency } from "@/lib/format"
+import { MoneyAmount } from "@/components/money-amount"
 import { themeColorClasses } from "@/lib/theme-colors"
 import type { RecurringBillSummary } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -17,7 +17,7 @@ export function BillRow({ bill }: BillRowProps) {
     >
       <p className="text-muted-foreground text-sm">{bill.label}</p>
       <p className="text-foreground text-sm font-bold">
-        {formatCurrency(bill.amount, { forceDecimals: true })}
+        <MoneyAmount amount={bill.amount} forceDecimals />
       </p>
     </li>
   )

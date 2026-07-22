@@ -16,7 +16,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { FormStatusMessage } from "@/components/ui/form"
 import { useFinance } from "@/hooks/use-finance"
-import { formatCurrency, formatDisplayDateRange } from "@/lib/format"
+import { MoneyAmount } from "@/components/money-amount"
+import { formatDisplayDateRange } from "@/lib/format"
 import type { CreditCard, CreditCardStatement } from "@/lib/types"
 
 interface CloseCreditCardStatementDialogProps {
@@ -115,7 +116,7 @@ export function CloseCreditCardStatementDialog({
             <div className="flex justify-between gap-4">
               <dt className="text-muted-foreground">Amount</dt>
               <dd className="text-right font-bold">
-                {formatCurrency(statement.amount, { forceDecimals: true })}
+                <MoneyAmount amount={statement.amount} forceDecimals />
               </dd>
             </div>
           </dl>

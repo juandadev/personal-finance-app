@@ -17,7 +17,8 @@ import {
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { useFinance } from "@/hooks/use-finance"
 import { cn } from "@/lib/utils"
-import { formatSignedAmount, transactionAmountClassName } from "@/lib/format"
+import { MoneyAmount } from "@/components/money-amount"
+import { transactionAmountClassName } from "@/lib/format"
 import type { Budget, Transaction } from "@/lib/types"
 import {
   Table,
@@ -161,7 +162,7 @@ function MobileTransactionItem({ transaction }: { transaction: Transaction }) {
               transactionAmountClassName(transaction.amount),
             )}
           >
-            {formatSignedAmount(transaction.amount)}
+            <MoneyAmount amount={transaction.amount} variant="signed" />
           </span>
           <span className="text-muted-foreground text-xs whitespace-nowrap">
             {transaction.date}
@@ -240,7 +241,7 @@ function TransactionRow({
           transactionAmountClassName(transaction.amount),
         )}
       >
-        {formatSignedAmount(transaction.amount)}
+        <MoneyAmount amount={transaction.amount} variant="signed" />
       </TableCell>
       <TableCell className={cn(DESKTOP_STICKY_ACTIONS_CELL, "align-middle")}>
         <div className="flex justify-end">

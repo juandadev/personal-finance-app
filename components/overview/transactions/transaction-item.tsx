@@ -1,6 +1,7 @@
 import { ContactAvatar } from "@/components/contact-avatar"
+import { MoneyAmount } from "@/components/money-amount"
 import { cn } from "@/lib/utils"
-import { formatSignedAmount, transactionAmountClassName } from "@/lib/format"
+import { transactionAmountClassName } from "@/lib/format"
 import type { Transaction } from "@/lib/types"
 
 interface TransactionItemProps {
@@ -31,7 +32,7 @@ export function TransactionItem({ transaction }: TransactionItemProps) {
             transactionAmountClassName(transaction.amount),
           )}
         >
-          {formatSignedAmount(transaction.amount)}
+          <MoneyAmount amount={transaction.amount} variant="signed" />
         </p>
         <p className="text-muted-foreground mt-1 text-xs">{transaction.date}</p>
       </div>

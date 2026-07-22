@@ -3,6 +3,7 @@
 import { useMemo } from "react"
 import { z } from "zod"
 
+import { MoneyAmount } from "@/components/money-amount"
 import { Button } from "@/components/ui/button"
 import { CurrencyInput } from "@/components/ui/currency-input"
 import {
@@ -32,7 +33,6 @@ import {
   getPotMovementSource,
   primaryAccountValue,
 } from "@/lib/finance/pot-movement"
-import { formatCurrency } from "@/lib/format"
 import { currencyCentsSchema } from "@/lib/forms/validation"
 import { useStandardForm } from "@/lib/forms/use-standard-form"
 import { themeColorClasses } from "@/lib/theme-colors"
@@ -225,7 +225,7 @@ export function PotTransferDialog({
                   <div className="flex items-center justify-between gap-4">
                     <p className="text-muted-foreground text-sm">New Amount</p>
                     <p className="text-foreground text-3xl leading-tight font-bold tracking-tight">
-                      {formatCurrency(previewAmount, { forceDecimals: true })}
+                      <MoneyAmount amount={previewAmount} forceDecimals />
                     </p>
                   </div>
 
@@ -264,7 +264,7 @@ export function PotTransferDialog({
                         %
                       </span>
                       <span className="text-muted-foreground">
-                        Target of {formatCurrency(pot.target)}
+                        Target of <MoneyAmount amount={pot.target} />
                       </span>
                     </div>
                   </div>

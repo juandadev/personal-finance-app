@@ -1,7 +1,20 @@
-import { describe, expect, test } from "bun:test"
-import { render, screen } from "@testing-library/react"
+import { afterEach, describe, expect, mock, test } from "bun:test"
+import { cleanup, render, screen } from "@testing-library/react"
 
-import { BudgetItem } from "./budget-item"
+mock.module("@/hooks/use-finance", () => ({
+  useFinance: () => ({
+    state: {
+      preferences: {
+        hideAmounts: false,
+        default_currency: "USD",
+      },
+    },
+  }),
+}))
+
+const { BudgetItem } = await import("./budget-item")
+
+afterEach(cleanup)
 
 describe("BudgetItem", () => {
   test("shows spent amount with normal styling when within budget", () => {
@@ -20,8 +33,8 @@ describe("BudgetItem", () => {
     )
 
     const amount = screen.getByText("$200.00")
-    expect(amount.className).toContain("text-foreground")
-    expect(amount.className).not.toContain("text-destructive")
+    expect(amount.parentElement?.className).toContain("text-foreground")
+    expect(amount.parentElement?.className).not.toContain("text-destructive")
   })
 
   test("shows spent amount with destructive styling when over budget", () => {
@@ -40,6 +53,6 @@ describe("BudgetItem", () => {
     )
 
     const amount = screen.getByText("$545.00")
-    expect(amount.className).toContain("text-destructive")
+    expect(amount.parentElement?.className).toContain("text-destructive")
   })
 })

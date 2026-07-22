@@ -1,4 +1,4 @@
-import { formatCurrency } from "@/lib/format"
+import { MoneyAmount } from "@/components/money-amount"
 import { themeColorClasses } from "@/lib/theme-colors"
 import type { CreditCardSummary } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -17,7 +17,7 @@ export function CreditCardRow({ summary }: CreditCardRowProps) {
     >
       <p className="text-muted-foreground text-sm">{summary.label}</p>
       <p className="text-foreground text-sm font-bold">
-        {formatCurrency(summary.amount, { forceDecimals: true })}
+        <MoneyAmount amount={summary.amount} forceDecimals />
       </p>
     </li>
   )

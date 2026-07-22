@@ -1,7 +1,15 @@
 "use client"
 
-import { createContext, useContext, useMemo, useReducer } from "react"
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+} from "react"
 import type { Dispatch, ReactNode } from "react"
+import { toast } from "sonner"
 import {
   financeReducer,
   runFinanceAction,
@@ -44,6 +52,7 @@ import {
   updateTransactionAction,
   payCreditCardCycleAction,
   payCreditCardStatementAction,
+  updateUiPreferencesAction,
 } from "@/lib/finance/actions"
 import { createInitialFinanceState } from "@/lib/finance/seed"
 import { selectFinanceViewModel } from "@/lib/finance/selectors"
@@ -87,6 +96,11 @@ export function FinanceProvider({
     financeReducer,
     initialState ?? createInitialFinanceState(),
   )
+  const stateRef = useRef(state)
+
+  useEffect(() => {
+    stateRef.current = state
+  }, [state])
 
   const actions = useMemo<FinanceActions>(
     () => ({
@@ -620,6 +634,24 @@ export function FinanceProvider({
             return result
           }),
         ),
+      updateUiPreferences: (hideAmounts: boolean) => {
+        const previousHideAmounts = stateRef.current.preferences.hideAmounts
+        dispatch({ type: "preferences/ui-update", hideAmounts })
+
+        return runFinanceAction(() =>
+          updateUiPreferencesAction({ hideAmounts }).then((result) => {
+            if (!result.ok) {
+              dispatch({
+                type: "preferences/ui-update",
+                hideAmounts: previousHideAmounts,
+              })
+              toast.error(result.message)
+            }
+
+            return result
+          }),
+        )
+      },
     }),
     [dispatch],
   )

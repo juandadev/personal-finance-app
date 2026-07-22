@@ -1,4 +1,5 @@
-import { budgetOverLimitClassName, formatCurrency } from "@/lib/format"
+import { MoneyAmount } from "@/components/money-amount"
+import { budgetOverLimitClassName } from "@/lib/format"
 import { isBudgetOverLimit } from "@/lib/finance/budget-balance"
 import { themeColorClasses } from "@/lib/theme-colors"
 import type { Budget } from "@/lib/types"
@@ -27,7 +28,7 @@ export function BudgetItem({ budget }: BudgetItemProps) {
         <p
           className={cn("text-sm font-bold", budgetOverLimitClassName(isOver))}
         >
-          {formatCurrency(budget.spent, { forceDecimals: true })}
+          <MoneyAmount amount={budget.spent} forceDecimals />
         </p>
       </div>
     </li>

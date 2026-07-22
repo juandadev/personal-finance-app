@@ -130,6 +130,7 @@ export type FinanceAction =
       adjustment: CashForecastAdjustmentRecord
     }
   | { type: "cash-forecast/adjustment-delete"; id: string }
+  | { type: "preferences/ui-update"; hideAmounts: boolean }
 
 export interface FinanceActions {
   addTransaction: (
@@ -237,6 +238,7 @@ export interface FinanceActions {
     adjustment: Omit<NewCashForecastAdjustmentRecord, "id">,
   ) => Promise<FinanceMutationResult>
   deleteCashForecastAdjustment: (id: string) => Promise<FinanceMutationResult>
+  updateUiPreferences: (hideAmounts: boolean) => Promise<FinanceMutationResult>
 }
 
 export type FinanceMutationResult =
@@ -674,6 +676,14 @@ export function financeReducer(
           state.cashForecastAdjustments,
           action.id,
         ),
+      }
+    case "preferences/ui-update":
+      return {
+        ...state,
+        preferences: {
+          ...state.preferences,
+          hideAmounts: action.hideAmounts,
+        },
       }
     default:
       return state

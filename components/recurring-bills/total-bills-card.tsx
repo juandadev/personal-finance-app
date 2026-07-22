@@ -1,6 +1,6 @@
 import { ReceiptIcon } from "@phosphor-icons/react"
+import { MoneyAmount } from "@/components/money-amount"
 import { Card } from "@/components/ui/card"
-import { formatCurrency } from "@/lib/format"
 
 interface TotalBillsCardProps {
   amount: number
@@ -21,7 +21,7 @@ export function TotalBillsCard({ amount }: TotalBillsCardProps) {
           Total Bills
         </p>
         <p className="mt-2 text-3xl font-bold">
-          {formatCurrency(amount, { forceDecimals: true })}
+          <MoneyAmount amount={amount} forceDecimals />
         </p>
       </div>
     </Card>

@@ -1,12 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
 import { CaretDownIcon, CreditCardIcon } from "@phosphor-icons/react"
 
 import { ItemActions } from "@/components/actions"
 import { DeleteForecastItemDialog } from "@/components/forecast/delete-forecast-item-dialog"
 import { EditForecastItemDialog } from "@/components/forecast/forecast-item-dialog"
 import { getForecastActivityPagination } from "@/components/forecast/forecast-ui-state"
+import { MoneyAmount } from "@/components/money-amount"
 import { Button } from "@/components/ui/button"
 import {
   Collapsible,
@@ -24,11 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  formatCurrency,
-  formatDisplayDate,
-  formatSignedAmount,
-} from "@/lib/format"
+import { formatDisplayDate } from "@/lib/format"
 import type {
   CashForecastActivity,
   CashForecastActivityChild,
@@ -131,24 +128,34 @@ export function ForecastActivityReport({
           <dl className="grid gap-3 sm:grid-cols-3">
             <ActivityTotal
               label="Total Income"
-              value={formatCurrency(month.totalIncomeCents / 100, {
-                currency,
-                forceDecimals: true,
-              })}
+              value={
+                <MoneyAmount
+                  amount={month.totalIncomeCents / 100}
+                  currency={currency}
+                  forceDecimals
+                />
+              }
               valueClassName="text-accent"
             />
             <ActivityTotal
               label="Total Outflows"
-              value={formatCurrency(month.totalOutflowsCents / 100, {
-                currency,
-                forceDecimals: true,
-              })}
+              value={
+                <MoneyAmount
+                  amount={month.totalOutflowsCents / 100}
+                  currency={currency}
+                  forceDecimals
+                />
+              }
             />
             <ActivityTotal
               label="Monthly Change"
-              value={formatSignedAmount(month.monthlyChangeCents / 100, {
-                currency,
-              })}
+              value={
+                <MoneyAmount
+                  amount={month.monthlyChangeCents / 100}
+                  currency={currency}
+                  variant="signed"
+                />
+              }
               valueClassName={
                 month.monthlyChangeCents > 0
                   ? "text-accent"
@@ -250,7 +257,7 @@ function ActivityTotal({
   valueClassName,
 }: {
   label: string
-  value: string
+  value: ReactNode
   valueClassName?: string
 }) {
   return (
@@ -315,7 +322,11 @@ function DesktopActivityRows({
                 (activity.amountCents > 0 ? "text-accent" : undefined),
             )}
           >
-            {formatSignedAmount(activity.amountCents / 100, { currency })}
+            <MoneyAmount
+              amount={activity.amountCents / 100}
+              currency={currency}
+              variant="signed"
+            />
           </TableCell>
           <TableCell className="text-right">
             {adjustment ? (
@@ -334,8 +345,8 @@ function DesktopActivityRows({
             <TableRow className="bg-background/70 hover:bg-background/70">
               <TableCell colSpan={5} className="py-0">
                 <StatementChildren
-                  items={activity.children ?? []}
                   currency={currency}
+                  items={activity.children ?? []}
                 />
               </TableCell>
             </TableRow>
@@ -397,7 +408,11 @@ function MobileActivityRow({
                   (activity.amountCents > 0 ? "text-accent" : undefined),
               )}
             >
-              {formatSignedAmount(activity.amountCents / 100, { currency })}
+              <MoneyAmount
+                amount={activity.amountCents / 100}
+                currency={currency}
+                variant="signed"
+              />
             </span>
             {adjustment ? (
               <ForecastActivityActions
@@ -411,8 +426,8 @@ function MobileActivityRow({
         {hasChildren ? (
           <CollapsibleContent>
             <StatementChildren
-              items={activity.children ?? []}
               currency={currency}
+              items={activity.children ?? []}
               className="mt-3 ml-10"
             />
           </CollapsibleContent>
@@ -462,12 +477,12 @@ function StatementDisclosure({
 }
 
 function StatementChildren({
-  items,
   currency,
+  items,
   className,
 }: {
-  items: CashForecastActivityChild[]
   currency: CurrencyCode
+  items: CashForecastActivityChild[]
   className?: string
 }) {
   return (
@@ -487,7 +502,11 @@ function StatementChildren({
             </p>
           </div>
           <span className="shrink-0 font-semibold tabular-nums">
-            {formatSignedAmount(child.amountCents / 100, { currency })}
+            <MoneyAmount
+              amount={child.amountCents / 100}
+              currency={currency}
+              variant="signed"
+            />
           </span>
         </li>
       ))}

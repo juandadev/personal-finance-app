@@ -1,6 +1,6 @@
-import { describe, expect, mock, test } from "bun:test"
+import { afterEach, describe, expect, mock, test } from "bun:test"
 import type { ReactNode } from "react"
-import { render, screen } from "@testing-library/react"
+import { cleanup, render, screen } from "@testing-library/react"
 
 mock.module("next/link", () => ({
   default: ({
@@ -15,6 +15,17 @@ mock.module("next/link", () => ({
       {children}
     </a>
   ),
+}))
+
+mock.module("@/hooks/use-finance", () => ({
+  useFinance: () => ({
+    state: {
+      preferences: {
+        hideAmounts: false,
+        default_currency: "USD",
+      },
+    },
+  }),
 }))
 
 mock.module("@/components/actions", () => ({
@@ -40,6 +51,8 @@ mock.module("@/components/ui/dropdown-menu", () => ({
 }))
 
 const { BudgetCategoryCard } = await import("./budget-category-card")
+
+afterEach(cleanup)
 
 describe("BudgetCategoryCard", () => {
   test("links See All to the canonical budget transaction filter", () => {
@@ -102,7 +115,7 @@ describe("BudgetCategoryCard", () => {
 
     expect(screen.getByText("Exceeded")).toBeTruthy()
     const overage = screen.getByText("$45.00")
-    expect(overage.className).toContain("text-destructive")
+    expect(overage.parentElement?.className).toContain("text-destructive")
     expect(screen.queryByText("Free")).toBeNull()
   })
 })

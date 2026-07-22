@@ -1,6 +1,7 @@
 import { ContactAvatar } from "@/components/contact-avatar"
+import { MoneyAmount } from "@/components/money-amount"
 import { Badge } from "@/components/ui/badge"
-import { formatSignedAmount, transactionAmountClassName } from "@/lib/format"
+import { transactionAmountClassName } from "@/lib/format"
 import type { Transaction } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -35,7 +36,7 @@ export function LatestSpendingItem({ transaction }: LatestSpendingItemProps) {
             transactionAmountClassName(transaction.amount),
           )}
         >
-          {formatSignedAmount(transaction.amount)}
+          <MoneyAmount amount={transaction.amount} variant="signed" />
         </span>
         <span className="text-muted-foreground text-xs">
           {transaction.date}

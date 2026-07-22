@@ -26,7 +26,8 @@ import {
 } from "@/components/ui/select"
 import { useFinance } from "@/hooks/use-finance"
 import { getForecastLocalDate } from "@/lib/finance/forecast-period"
-import { formatCurrency, formatDisplayDate } from "@/lib/format"
+import { MoneyAmount } from "@/components/money-amount"
+import { formatDisplayDate } from "@/lib/format"
 import type { RecurringBill, RecurringBillOccurrence } from "@/lib/types"
 
 const bankAccountValue = "bank_account"
@@ -136,7 +137,7 @@ export function PayBillDialog({
             <div className="flex justify-between gap-4">
               <dt className="text-muted-foreground">Amount</dt>
               <dd className="text-right font-bold">
-                {formatCurrency(occurrence.amount, { forceDecimals: true })}
+                <MoneyAmount amount={occurrence.amount} forceDecimals />
               </dd>
             </div>
           </dl>

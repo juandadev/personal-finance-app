@@ -25,6 +25,17 @@ mock.module("recharts", () => ({
   YAxis: RechartsStub,
 }))
 
+mock.module("@/hooks/use-finance", () => ({
+  useFinance: () => ({
+    state: {
+      preferences: {
+        hideAmounts: false,
+        default_currency: "USD",
+      },
+    },
+  }),
+}))
+
 mock.module("@/components/forecast/forecast-budget-projections-panel", () => ({
   ForecastBudgetProjectionsPanel: () => null,
 }))

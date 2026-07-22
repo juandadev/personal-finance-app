@@ -40,6 +40,7 @@ function makeState(
       user_id: "user-1",
       default_currency: "MXN",
       timezone: "America/Mexico_City",
+      hideAmounts: false,
     },
     accounts: [],
     accountSummaries: [],

@@ -1,10 +1,7 @@
 "use client"
 
-import {
-  budgetOverLimitClassName,
-  formatCurrency,
-  formatBudgetPercentage,
-} from "@/lib/format"
+import { MoneyAmount } from "@/components/money-amount"
+import { budgetOverLimitClassName, formatBudgetPercentage } from "@/lib/format"
 import { isBudgetOverLimit } from "@/lib/finance/budget-balance"
 import { themeColorClasses } from "@/lib/theme-colors"
 import type { Budget } from "@/lib/types"
@@ -39,10 +36,10 @@ export function SpendingSummaryItem({ budget }: SpendingSummaryItemProps) {
               budgetOverLimitClassName(isOver),
             )}
           >
-            {formatCurrency(budget.spent, { forceDecimals: true })}
+            <MoneyAmount amount={budget.spent} forceDecimals />
           </span>
           <span className="text-muted-foreground text-xs">
-            of {formatCurrency(budget.maximum, { forceDecimals: true })}
+            of <MoneyAmount amount={budget.maximum} forceDecimals />
           </span>
         </div>
         <span className="text-muted-foreground text-xs">

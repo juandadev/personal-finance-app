@@ -9,9 +9,8 @@ import {
   CardTitle,
   cardActionLinkClasses,
 } from "@/components/ui/card"
+import { MoneyAmount } from "@/components/money-amount"
 import { useFinance } from "@/hooks/use-finance"
-import { formatCurrency } from "@/lib/format"
-import { PotMoneyReveal } from "./pot-money-reveal"
 import { PotItem } from "./pot-item"
 
 export function PotsCard() {
@@ -42,7 +41,7 @@ export function PotsCard() {
             <div>
               <p className="text-muted-foreground text-sm">Total Saved</p>
               <p className="mt-1 text-3xl font-bold tracking-tight">
-                <PotMoneyReveal
+                <MoneyAmount
                   amount={totalSaved}
                   expandedClassName="bg-background pr-1 rounded-sm"
                 />
@@ -72,7 +71,7 @@ function GhostPotItem() {
       <div className="min-w-0 flex-1">
         <p className="text-muted-foreground text-sm">Create your first pot</p>
         <p className="text-foreground mt-1 text-sm font-bold">
-          {formatCurrency(0)}
+          <MoneyAmount amount={0} />
         </p>
       </div>
     </li>

@@ -17,6 +17,7 @@ function makeState(overrides: Partial<FinanceState> = {}): FinanceState {
       user_id: "user-1",
       default_currency: "USD",
       timezone: "America/Mexico_City",
+      hideAmounts: false,
     },
     accounts: [
       {

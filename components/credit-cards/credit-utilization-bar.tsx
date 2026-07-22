@@ -1,6 +1,8 @@
 "use client"
 
 import { formatCurrency } from "@/lib/format"
+import { getHiddenAmountAriaLabel } from "@/lib/finance/ui-preferences"
+import { useFinance } from "@/hooks/use-finance"
 import { themeColorClasses, type ThemeColor } from "@/lib/theme-colors"
 import { cn } from "@/lib/utils"
 
@@ -17,6 +19,11 @@ export function CreditUtilizationBar({
   reservedInstallmentAmount,
   color,
 }: CreditUtilizationBarProps) {
+  const {
+    state: {
+      preferences: { hideAmounts },
+    },
+  } = useFinance()
   const usableLimit = Math.max(creditLimit, 0)
   const pendingSegment = Math.min(Math.max(totalPendingAmount, 0), usableLimit)
   const reservedSegment = Math.min(
@@ -29,6 +36,15 @@ export function CreditUtilizationBar({
     usableLimit > 0 ? (pendingSegment / usableLimit) * 100 : 0
   const reservedWidth =
     usableLimit > 0 ? (reservedSegment / usableLimit) * 100 : 0
+  const ariaValueText = hideAmounts
+    ? getHiddenAmountAriaLabel()
+    : `Total pending ${formatCurrency(totalPendingAmount, {
+        forceDecimals: true,
+      })}, reserved installments ${formatCurrency(reservedInstallmentAmount, {
+        forceDecimals: true,
+      })}, available credit ${formatCurrency(availableCredit, {
+        forceDecimals: true,
+      })}.`
 
   return (
     <div
@@ -38,13 +54,7 @@ export function CreditUtilizationBar({
       aria-valuemin={0}
       aria-valuemax={usableLimit}
       aria-valuenow={Math.min(Math.max(utilizedCredit, 0), usableLimit)}
-      aria-valuetext={`Total pending ${formatCurrency(totalPendingAmount, {
-        forceDecimals: true,
-      })}, reserved installments ${formatCurrency(reservedInstallmentAmount, {
-        forceDecimals: true,
-      })}, available credit ${formatCurrency(availableCredit, {
-        forceDecimals: true,
-      })}.`}
+      aria-valuetext={ariaValueText}
     >
       <div
         aria-hidden="true"

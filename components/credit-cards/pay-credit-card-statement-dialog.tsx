@@ -20,11 +20,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useFinance } from "@/hooks/use-finance"
 import { getForecastLocalDate } from "@/lib/finance/forecast-period"
-import {
-  formatCurrency,
-  formatDisplayDate,
-  formatDisplayDateRange,
-} from "@/lib/format"
+import { MoneyAmount } from "@/components/money-amount"
+import { formatDisplayDate, formatDisplayDateRange } from "@/lib/format"
 import type { CreditCard, CreditCardStatement } from "@/lib/types"
 
 interface PayCreditCardStatementDialogProps {
@@ -160,9 +157,10 @@ export function PayCreditCardStatementDialog({
                 <div className="flex justify-between gap-4">
                   <dt className="text-muted-foreground">Purchases</dt>
                   <dd className="text-right">
-                    {formatCurrency(selectedStatement.amount, {
-                      forceDecimals: true,
-                    })}
+                    <MoneyAmount
+                      amount={selectedStatement.amount}
+                      forceDecimals
+                    />
                   </dd>
                 </div>
                 <div className="flex justify-between gap-4">
@@ -170,9 +168,10 @@ export function PayCreditCardStatementDialog({
                     Recurring Bills ({selectedStatement.pendingBills.length})
                   </dt>
                   <dd className="text-right">
-                    {formatCurrency(selectedStatement.pendingBillsAmount, {
-                      forceDecimals: true,
-                    })}
+                    <MoneyAmount
+                      amount={selectedStatement.pendingBillsAmount}
+                      forceDecimals
+                    />
                   </dd>
                 </div>
               </>
@@ -180,9 +179,10 @@ export function PayCreditCardStatementDialog({
             <div className="flex justify-between gap-4">
               <dt className="text-muted-foreground">Amount</dt>
               <dd className="text-right font-bold">
-                {formatCurrency(selectedStatement.totalAmount, {
-                  forceDecimals: true,
-                })}
+                <MoneyAmount
+                  amount={selectedStatement.totalAmount}
+                  forceDecimals
+                />
               </dd>
             </div>
           </dl>

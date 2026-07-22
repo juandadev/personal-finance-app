@@ -8,6 +8,17 @@ import type {
   CashForecastMonth,
 } from "@/lib/finance/cash-forecast"
 
+mock.module("@/hooks/use-finance", () => ({
+  useFinance: () => ({
+    state: {
+      preferences: {
+        hideAmounts: false,
+        default_currency: "USD",
+      },
+    },
+  }),
+}))
+
 mock.module("@/components/forecast/delete-forecast-item-dialog", () => ({
   DeleteForecastItemDialog: () => null,
 }))
@@ -285,7 +296,7 @@ describe("ForecastActivityReport budget projection source", () => {
     expect(
       screen
         .getAllByText("-$886.00")[0]
-        ?.className.includes("text-finance-purple"),
+        ?.parentElement?.className.includes("text-finance-purple"),
     ).toBe(true)
   })
 })

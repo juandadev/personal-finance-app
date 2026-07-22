@@ -1,5 +1,5 @@
+import { MoneyAmount } from "@/components/money-amount"
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
-import { formatCurrency } from "@/lib/format"
 import type { RecurringBillSummary } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -36,7 +36,7 @@ function SummaryRow({
           variant === "warning" ? "text-warning" : "text-foreground",
         )}
       >
-        {count} ({formatCurrency(amount, { forceDecimals: true })})
+        {count} (<MoneyAmount amount={amount} forceDecimals />)
       </span>
     </div>
   )

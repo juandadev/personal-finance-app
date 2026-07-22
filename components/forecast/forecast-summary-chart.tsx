@@ -1,6 +1,12 @@
 "use client"
 
-import { useMemo, useRef, useState, type KeyboardEvent } from "react"
+import {
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react"
 import { WarningIcon } from "@phosphor-icons/react"
 import { useReducedMotion } from "motion/react"
 import {
@@ -15,8 +21,11 @@ import {
 
 import { ForecastBudgetProjectionsPanel } from "@/components/forecast/forecast-budget-projections-panel"
 import { isForecastPeriodPreviewing } from "@/components/forecast/forecast-ui-state"
+import { MoneyAmount } from "@/components/money-amount"
 import { Card } from "@/components/ui/card"
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart"
+import { Skeleton } from "@/components/ui/skeleton"
+import { useFinance } from "@/hooks/use-finance"
 import {
   formatCompactCurrency,
   formatCurrency,
@@ -27,6 +36,8 @@ import type {
   CashForecastMonth,
   CashForecastResult,
 } from "@/lib/finance/cash-forecast"
+import type { CurrencyCode } from "@/lib/finance/types"
+import { getHiddenAmountAriaLabel } from "@/lib/finance/ui-preferences"
 import { cn } from "@/lib/utils"
 
 const chartConfig = {
@@ -66,6 +77,11 @@ export function ForecastSummaryChart({
   pinnedPeriod,
   onPinnedPeriodChange,
 }: ForecastSummaryChartProps) {
+  const {
+    state: {
+      preferences: { hideAmounts },
+    },
+  } = useFinance()
   const [hoveredPeriod, setHoveredPeriod] = useState<string | null>(null)
   const [focusedPeriod, setFocusedPeriod] = useState<string | null>(null)
   const monthButtonsRef = useRef<Array<HTMLButtonElement | null>>([])
@@ -156,10 +172,11 @@ export function ForecastSummaryChart({
                     aria-hidden
                   />
                 ) : null}
-                {formatCurrency(activeMonth.endingBalanceCents / 100, {
-                  currency: report.currency,
-                  forceDecimals: true,
-                })}
+                <MoneyAmount
+                  amount={activeMonth.endingBalanceCents / 100}
+                  currency={report.currency}
+                  forceDecimals
+                />
               </p>
               <p
                 className={cn(
@@ -176,44 +193,47 @@ export function ForecastSummaryChart({
               <BridgeValue
                 label="Current Month Opening"
                 amountCents={report.bridge.openingBalanceCents}
-                value={formatCurrency(report.bridge.openingBalanceCents / 100, {
-                  currency: report.currency,
-                  forceDecimals: true,
-                })}
+                value={
+                  <MoneyAmount
+                    amount={report.bridge.openingBalanceCents / 100}
+                    currency={report.currency}
+                    forceDecimals
+                  />
+                }
               />
               <BridgeValue
                 label={`Balance on ${formatDisplayDate(report.bridge.asOfDate)}`}
                 amountCents={report.bridge.startingBalanceCents}
-                value={formatCurrency(
-                  report.bridge.startingBalanceCents / 100,
-                  {
-                    currency: report.currency,
-                    forceDecimals: true,
-                  },
-                )}
+                value={
+                  <MoneyAmount
+                    amount={report.bridge.startingBalanceCents / 100}
+                    currency={report.currency}
+                    forceDecimals
+                  />
+                }
               />
               <BridgeValue
                 label="Pending Income This Month"
                 amountCents={report.bridge.pendingAdditionalIncomeCents}
-                value={formatCurrency(
-                  report.bridge.pendingAdditionalIncomeCents / 100,
-                  {
-                    currency: report.currency,
-                    forceDecimals: true,
-                  },
-                )}
+                value={
+                  <MoneyAmount
+                    amount={report.bridge.pendingAdditionalIncomeCents / 100}
+                    currency={report.currency}
+                    forceDecimals
+                  />
+                }
               />
               <BridgeValue
                 label="Pending Outflows This Month"
                 amountCents={report.bridge.pendingOutflowsCents}
                 alwaysDanger
-                value={formatCurrency(
-                  report.bridge.pendingOutflowsCents / 100,
-                  {
-                    currency: report.currency,
-                    forceDecimals: true,
-                  },
-                )}
+                value={
+                  <MoneyAmount
+                    amount={report.bridge.pendingOutflowsCents / 100}
+                    currency={report.currency}
+                    forceDecimals
+                  />
+                }
               />
             </dl>
           </div>
@@ -253,11 +273,13 @@ export function ForecastSummaryChart({
                       tickLine={false}
                       tickMargin={8}
                       width={56}
-                      tickFormatter={(value: number) =>
-                        formatCompactCurrency(value, {
-                          currency: report.currency,
-                        })
-                      }
+                      tick={(props) => (
+                        <ForecastYAxisTick
+                          {...props}
+                          currency={report.currency}
+                          hideAmounts={hideAmounts}
+                        />
+                      )}
                     />
                     <ReferenceLine y={0} stroke="var(--color-border)" />
                     <Bar
@@ -329,7 +351,11 @@ export function ForecastSummaryChart({
                             ? "text-foreground opacity-100"
                             : "text-muted-foreground opacity-55",
                         )}
-                        aria-label={monthAriaLabel(month, report.currency)}
+                        aria-label={monthAriaLabel(
+                          month,
+                          report.currency,
+                          hideAmounts,
+                        )}
                         aria-pressed={month.period === pinnedPeriod}
                         onMouseEnter={() => setHoveredPeriod(month.period)}
                         onFocus={() => setFocusedPeriod(month.period)}
@@ -370,7 +396,7 @@ function BridgeValue({
   alwaysDanger = false,
 }: {
   label: string
-  value: string
+  value: ReactNode
   amountCents: number
   alwaysDanger?: boolean
 }) {
@@ -451,10 +477,55 @@ function getMonth(months: CashForecastMonth[], period: string | null) {
   return months.find((month) => month.period === period)
 }
 
+function ForecastYAxisTick({
+  x,
+  y,
+  payload,
+  currency,
+  hideAmounts,
+}: {
+  x?: number
+  y?: number
+  payload?: { value?: number }
+  currency: CurrencyCode
+  hideAmounts: boolean
+}) {
+  const tickX = x ?? 0
+  const tickY = y ?? 0
+  const value = payload?.value ?? 0
+
+  if (hideAmounts) {
+    return (
+      <g transform={`translate(${tickX},${tickY})`}>
+        <foreignObject x={-52} y={-8} width={48} height={16}>
+          <Skeleton animate={false} className="h-4 w-full" />
+        </foreignObject>
+      </g>
+    )
+  }
+
+  return (
+    <text
+      x={tickX}
+      y={tickY}
+      dy={4}
+      textAnchor="end"
+      className="fill-muted-foreground text-[11px]"
+    >
+      {formatCompactCurrency(value, { currency })}
+    </text>
+  )
+}
+
 function monthAriaLabel(
   month: CashForecastMonth,
   currency: ReadyForecast["currency"],
+  hideAmounts: boolean,
 ) {
+  if (hideAmounts) {
+    return [month.label, getHiddenAmountAriaLabel()].join(", ")
+  }
+
   const options = { currency } as const
 
   return [

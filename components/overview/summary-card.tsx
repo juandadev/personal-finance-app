@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card"
+import { MoneyAmount } from "@/components/money-amount"
 import { cn } from "@/lib/utils"
 import type { SummaryStat } from "@/lib/types"
-import { PotMoneyReveal } from "./pots/pot-money-reveal"
 
 interface SummaryCardProps {
   stat: SummaryStat
@@ -21,7 +21,7 @@ export function SummaryCard({ stat }: SummaryCardProps) {
         {stat.label}
       </p>
       <p className="mt-3 text-3xl font-bold tracking-tight">
-        <PotMoneyReveal
+        <MoneyAmount
           amount={stat.amount}
           expandedClassName={
             isPrimary ? "bg-primary text-primary-foreground" : undefined

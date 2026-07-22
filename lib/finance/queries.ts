@@ -42,7 +42,12 @@ import type {
   UserPreferencesRecord,
 } from "@/lib/finance/types"
 import { getCurrentPeriod } from "@/lib/finance/period"
+import { parseUiPreferences } from "@/lib/finance/ui-preferences"
 import type { ThemeColor } from "@/lib/theme-colors"
+
+type ProfileRow = Omit<UserPreferencesRecord, "hideAmounts"> & {
+  ui_preferences: unknown
+}
 
 const defaultCategorySeeds: {
   name: string
@@ -70,7 +75,12 @@ const defaultCategorySeeds: {
   { name: "General", slug: "general", theme_color: "finance-grey" },
 ]
 
-const profileColumns = ["user_id", "default_currency", "timezone"]
+const profileColumns = [
+  "user_id",
+  "default_currency",
+  "timezone",
+  "ui_preferences",
+]
 const accountColumns = [
   "user_id",
   "id",
@@ -367,10 +377,18 @@ export async function loadFinanceState(
     await ensureOwnerContact(client, userId)
     const currentPeriod = getCurrentPeriod()
 
-    const profile = await client.query<UserPreferencesRecord>(
+    const profile = await client.query<ProfileRow>(
       `SELECT ${profileColumns.join(", ")} FROM profiles WHERE user_id = $1`,
       [userId],
     )
+    const profileRow = profile.rows[0]
+    const uiPreferences = parseUiPreferences(profileRow.ui_preferences)
+    const preferences: UserPreferencesRecord = {
+      user_id: profileRow.user_id,
+      default_currency: profileRow.default_currency,
+      timezone: profileRow.timezone,
+      hideAmounts: uiPreferences.hideAmounts,
+    }
     const accounts = await client.query<AccountRecord>(
       `SELECT ${accountColumns.join(", ")} FROM accounts WHERE user_id = $1 ORDER BY id`,
       [userId],
@@ -449,7 +467,7 @@ export async function loadFinanceState(
       )
 
     return {
-      preferences: profile.rows[0],
+      preferences,
       accounts: accounts.rows,
       accountSummaries: accountSummaries.rows,
       categories: categories.rows,
@@ -3077,5 +3095,28 @@ export async function deleteCashForecastAdjustment(userId: string, id: string) {
     }
 
     return result.rows[0]
+  })
+}
+
+export async function updateUiPreferences(
+  userId: string,
+  patch: { hideAmounts: boolean },
+) {
+  return withFinanceTransaction(userId, async (client) => {
+    const result = await client.query<{ ui_preferences: unknown }>(
+      `
+        UPDATE profiles
+        SET ui_preferences = COALESCE(ui_preferences, '{}'::jsonb) || $2::jsonb
+        WHERE user_id = $1
+        RETURNING ui_preferences
+      `,
+      [userId, JSON.stringify(patch)],
+    )
+
+    if (!result.rowCount) {
+      throw new Error("Profile not found.")
+    }
+
+    return parseUiPreferences(result.rows[0].ui_preferences)
   })
 }

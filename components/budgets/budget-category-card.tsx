@@ -12,11 +12,8 @@ import {
   cardActionLinkClasses,
 } from "@/components/ui/card"
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
-import {
-  budgetOverLimitClassName,
-  formatCurrency,
-  formatBudgetPercentage,
-} from "@/lib/format"
+import { MoneyAmount } from "@/components/money-amount"
+import { budgetOverLimitClassName, formatBudgetPercentage } from "@/lib/format"
 import {
   getBudgetOverage,
   getBudgetRemaining,
@@ -75,7 +72,7 @@ export function BudgetCategoryCard({
       </CardHeader>
 
       <p className="text-muted-foreground mt-4 text-sm">
-        Maximum of {formatCurrency(budget.maximum, { forceDecimals: true })}
+        Maximum of <MoneyAmount amount={budget.maximum} forceDecimals />
       </p>
 
       <div className="mt-4">
@@ -107,7 +104,7 @@ export function BudgetCategoryCard({
           <div>
             <p className="text-muted-foreground text-xs">Spent</p>
             <p className="text-foreground mt-1 text-sm font-bold">
-              {formatCurrency(budget.spent, { forceDecimals: true })}
+              <MoneyAmount amount={budget.spent} forceDecimals />
             </p>
           </div>
         </div>
@@ -126,9 +123,10 @@ export function BudgetCategoryCard({
                 isOver ? "text-destructive" : "text-foreground",
               )}
             >
-              {formatCurrency(isOver ? overage : remaining, {
-                forceDecimals: true,
-              })}
+              <MoneyAmount
+                amount={isOver ? overage : remaining}
+                forceDecimals
+              />
             </p>
           </div>
         </div>

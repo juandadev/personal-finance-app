@@ -37,8 +37,10 @@ import {
   updateRecurringBill,
   updateTransaction,
   updateCashForecastIncludedBudgets,
+  updateUiPreferences,
   upsertCashForecastSettings,
 } from "@/lib/finance/queries"
+import { uiPreferencesSchema } from "@/lib/finance/ui-preferences"
 import { isFutureISODate } from "@/lib/finance/pot-due-date"
 import type {
   AccountRecord,
@@ -1306,6 +1308,26 @@ export async function deleteCashForecastAdjustmentAction(
       ok: true,
       message: "Forecast item deleted.",
       data,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function updateUiPreferencesAction(patch: {
+  hideAmounts: boolean
+}): Promise<FinanceActionResult<{ hideAmounts: boolean }>> {
+  try {
+    const userId = await getUserId()
+    const parsedPatch = uiPreferencesSchema.parse(patch)
+    const data = await updateUiPreferences(userId, parsedPatch)
+
+    return {
+      ok: true,
+      message: parsedPatch.hideAmounts ? "Amounts hidden." : "Amounts visible.",
+      data: {
+        hideAmounts: data.hideAmounts,
+      },
     }
   } catch (error) {
     return handleFinanceActionError(error)

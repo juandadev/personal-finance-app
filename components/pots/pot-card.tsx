@@ -2,18 +2,18 @@
 
 import { useState } from "react"
 import { ItemActions } from "@/components/actions"
+import { MoneyAmount } from "@/components/money-amount"
+import { Button } from "@/components/ui/button"
 import { Card, CardAction, CardHeader, CardTitle } from "@/components/ui/card"
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
-import type { Pot } from "@/lib/types"
 import { formatPotDueDateRemaining } from "@/lib/finance/pot-due-date"
-import { formatCurrency } from "@/lib/format"
 import { themeColorClasses } from "@/lib/theme-colors"
+import type { Pot } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { DeletePotDialog } from "./delete-pot-dialog"
 import { EditPotDialog } from "./edit-pot-dialog"
 import { PotProgressBar } from "./pot-progress-bar"
 import { PotTransferDialog } from "./pot-transfer-dialog"
-import { Button } from "@/components/ui/button"
 
 interface PotCardProps {
   pot: Pot
@@ -60,7 +60,7 @@ export function PotCard({ pot }: PotCardProps) {
         <div className="mt-6 flex items-center justify-between">
           <span className="text-muted-foreground text-sm">Total Saved</span>
           <span className="text-foreground text-3xl font-bold">
-            {formatCurrency(pot.amount, { forceDecimals: true })}
+            <MoneyAmount amount={pot.amount} forceDecimals />
           </span>
         </div>
 
@@ -70,7 +70,9 @@ export function PotCard({ pot }: PotCardProps) {
 
         <div className="text-muted-foreground mt-3 flex items-center justify-between text-xs">
           <span>{percentage.toFixed(percentage < 10 ? 2 : 1)}%</span>
-          <span>Target of {formatCurrency(pot.target)}</span>
+          <span>
+            Target of <MoneyAmount amount={pot.target} />
+          </span>
         </div>
 
         {dueDateLabel ? (

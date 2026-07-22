@@ -2,7 +2,7 @@
 
 import type { ComponentProps } from "react"
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts"
-import { formatCurrency } from "@/lib/format"
+import { MoneyAmount } from "@/components/money-amount"
 import { getThemeColorCssVariable } from "@/lib/theme-colors"
 import type { Budget } from "@/lib/types"
 import { useReducedMotion } from "motion/react"
@@ -66,10 +66,16 @@ export function BudgetsChart({ budgets, spent, limit }: BudgetsChartProps) {
 
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
         <p className="text-foreground bg-card rounded-md px-1 text-3xl font-bold tracking-tight">
-          {formatCurrency(spent)}
+          <MoneyAmount amount={spent} />
         </p>
         <p className="text-muted-foreground mt-1 text-xs">
-          {hasBudgets ? `of ${formatCurrency(limit)} limit` : "No budgets yet"}
+          {hasBudgets ? (
+            <>
+              of <MoneyAmount amount={limit} /> limit
+            </>
+          ) : (
+            "No budgets yet"
+          )}
         </p>
       </div>
     </div>

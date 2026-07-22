@@ -9,8 +9,8 @@ import {
   CardTitle,
   cardActionLinkClasses,
 } from "@/components/ui/card"
+import { MoneyAmount } from "@/components/money-amount"
 import { useFinance } from "@/hooks/use-finance"
-import { formatCurrency } from "@/lib/format"
 import { BudgetItem } from "./budget-item"
 import { BudgetsChart } from "./budgets-chart"
 
@@ -61,7 +61,7 @@ function GhostBudgetItem() {
       <div className="flex min-w-0 flex-col items-start justify-center gap-1">
         <p className="text-muted-foreground text-xs">Empty</p>
         <p className="text-foreground text-sm font-bold">
-          {formatCurrency(0, { forceDecimals: true })}
+          <MoneyAmount amount={0} forceDecimals />
         </p>
       </div>
     </li>

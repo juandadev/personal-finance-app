@@ -10,13 +10,14 @@ import {
 
 import { ItemActions } from "@/components/actions"
 import { ContactAvatar } from "@/components/contact-avatar"
+import { MoneyAmount } from "@/components/money-amount"
 import { ArchiveBillDialog } from "@/components/recurring-bills/archive-bill-dialog"
 import { EditBillDialog } from "@/components/recurring-bills/bill-dialog"
 import { PayBillDialog } from "@/components/recurring-bills/pay-bill-dialog"
 import { SkipBillOccurrenceDialog } from "@/components/recurring-bills/skip-bill-occurrence-dialog"
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { TableCell, TableRow } from "@/components/ui/table"
-import { formatBillScheduleShortDate, formatCurrency } from "@/lib/format"
+import { formatBillScheduleShortDate } from "@/lib/format"
 import type { BillStatus, RecurringBill } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -319,9 +320,10 @@ export function BillTableRow({ bill }: BillTableRowProps) {
       <TableCell
         className={cn("text-right font-bold", amountClassName(bill.status))}
       >
-        {formatCurrency(bill.currentOccurrence?.amount ?? bill.amount, {
-          forceDecimals: true,
-        })}
+        <MoneyAmount
+          amount={bill.currentOccurrence?.amount ?? bill.amount}
+          forceDecimals
+        />
       </TableCell>
       <TableCell className="text-right">
         <div className="flex items-center justify-end gap-1">
@@ -370,9 +372,10 @@ export function MobileBillRow({ bill }: BillTableRowProps) {
             amountClassName(bill.status),
           )}
         >
-          {formatCurrency(bill.currentOccurrence?.amount ?? bill.amount, {
-            forceDecimals: true,
-          })}
+          <MoneyAmount
+            amount={bill.currentOccurrence?.amount ?? bill.amount}
+            forceDecimals
+          />
         </span>
         <BillActions bill={bill} variant="mobile" />
       </div>

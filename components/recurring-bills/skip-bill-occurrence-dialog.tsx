@@ -16,7 +16,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { FormStatusMessage } from "@/components/ui/form"
 import { useFinance } from "@/hooks/use-finance"
-import { formatCurrency, formatDisplayDate } from "@/lib/format"
+import { MoneyAmount } from "@/components/money-amount"
+import { formatDisplayDate } from "@/lib/format"
 import type { RecurringBill, RecurringBillOccurrence } from "@/lib/types"
 
 interface SkipBillOccurrenceDialogProps {
@@ -80,7 +81,7 @@ export function SkipBillOccurrenceDialog({
           <AlertDialogDescription variant="finance">
             Skipping records no money movement. The{" "}
             <strong>
-              {formatCurrency(occurrence.amount, { forceDecimals: true })}
+              <MoneyAmount amount={occurrence.amount} forceDecimals />
             </strong>{" "}
             to <strong>{bill.name}</strong> payment due{" "}
             <strong>{formatDisplayDate(occurrence.dueDate)} </strong> will be

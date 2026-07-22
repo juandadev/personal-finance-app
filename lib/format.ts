@@ -24,6 +24,8 @@ export function formatCurrency(
   return new Intl.NumberFormat(options?.locale ?? "en-US", {
     style: "currency",
     currency: options?.currency ?? "USD",
+    // Prefer "$1,000" over "MX$1,000" so currency codes don't inflate layout.
+    currencyDisplay: "narrowSymbol",
     minimumFractionDigits,
     maximumFractionDigits,
   }).format(value)
@@ -36,6 +38,7 @@ export function formatCompactCurrency(
   return new Intl.NumberFormat(options?.locale ?? "en-US", {
     style: "currency",
     currency: options?.currency ?? "USD",
+    currencyDisplay: "narrowSymbol",
     notation: "compact",
     maximumFractionDigits: 1,
   }).format(value)
@@ -54,6 +57,7 @@ export function formatSignedAmount(
   const formatted = new Intl.NumberFormat(options?.locale ?? "en-US", {
     style: "currency",
     currency: options?.currency ?? "USD",
+    currencyDisplay: "narrowSymbol",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(absolute)

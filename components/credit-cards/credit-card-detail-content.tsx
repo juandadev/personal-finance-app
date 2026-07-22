@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
 import { ArrowLeftIcon, LockIcon } from "@phosphor-icons/react"
 
 import {
@@ -17,15 +17,12 @@ import {
   EditScheduledCreditCardChargeDialog,
 } from "@/components/credit-cards/scheduled-credit-card-charge-dialog"
 import { EmptyDataCard } from "@/components/empty-data-card"
+import { MoneyAmount } from "@/components/money-amount"
+import { PrivacyValue } from "@/components/privacy-value"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { useFinance } from "@/hooks/use-finance"
-import {
-  formatCurrency,
-  formatDisplayDate,
-  formatDisplayDateRange,
-  formatSignedAmount,
-} from "@/lib/format"
+import { formatDisplayDate, formatDisplayDateRange } from "@/lib/format"
 import type {
   BillStatus,
   CreditCard,
@@ -127,11 +124,15 @@ export function CreditCardDetailContent({
             />
             <div>
               <h2 className="text-xl font-bold tracking-tight">
-                {creditCard.nickname}
+                <PrivacyValue hiddenLabel="Card name hidden. Turn off privacy mode to show it.">
+                  {creditCard.nickname}
+                </PrivacyValue>
               </h2>
               <p className="text-muted-foreground text-sm">
-                {creditCard.issuer} {creditCard.network} ••••{" "}
-                {creditCard.lastFour}
+                <PrivacyValue hiddenLabel="Card details hidden. Turn off privacy mode to show it.">
+                  {creditCard.issuer} {creditCard.network} ••••{" "}
+                  {creditCard.lastFour}
+                </PrivacyValue>
               </p>
             </div>
           </div>
@@ -173,16 +174,19 @@ export function CreditCardDetailContent({
         >
           <Metric
             label="Total Pending"
-            value={formatCurrency(creditCard.totalPendingAmount, {
-              forceDecimals: true,
-            })}
+            value={
+              <MoneyAmount
+                amount={creditCard.totalPendingAmount}
+                forceDecimals
+              />
+            }
             status={creditCard.dueStatus}
           />
           <Metric
             label="Available Credit"
-            value={formatCurrency(creditCard.availableCredit, {
-              forceDecimals: true,
-            })}
+            value={
+              <MoneyAmount amount={creditCard.availableCredit} forceDecimals />
+            }
             valueClassName={
               creditCard.availableCredit < 0 ? "text-destructive" : undefined
             }
@@ -190,16 +194,19 @@ export function CreditCardDetailContent({
           {hasReservedInstallments ? (
             <Metric
               label="Reserved Installments"
-              value={formatCurrency(creditCard.reservedInstallmentAmount, {
-                forceDecimals: true,
-              })}
+              value={
+                <MoneyAmount
+                  amount={creditCard.reservedInstallmentAmount}
+                  forceDecimals
+                />
+              }
             />
           ) : null}
           <Metric
             label="Credit Limit"
-            value={formatCurrency(creditCard.creditLimit, {
-              forceDecimals: true,
-            })}
+            value={
+              <MoneyAmount amount={creditCard.creditLimit} forceDecimals />
+            }
           />
         </div>
       </Card>
@@ -270,7 +277,7 @@ function ScheduledChargesCard({
               <div className="flex shrink-0 items-center gap-1">
                 <div className="text-right">
                   <p className="text-sm font-bold">
-                    {formatSignedAmount(charge.amount * -1)}
+                    <MoneyAmount amount={charge.amount * -1} variant="signed" />
                   </p>
                   {occurrence ? (
                     <p
@@ -338,15 +345,14 @@ function StatementsCard({ creditCard }: { creditCard: CreditCard }) {
               </div>
               <div className="flex flex-col items-start gap-2 sm:items-end">
                 <p className="text-sm font-bold">
-                  {formatCurrency(statement.totalAmount, {
-                    forceDecimals: true,
-                  })}
+                  <MoneyAmount amount={statement.totalAmount} forceDecimals />
                   {statement.pendingBillsAmount > 0 ? (
                     <span className="text-muted-foreground ml-1 text-xs font-normal">
                       incl.{" "}
-                      {formatCurrency(statement.pendingBillsAmount, {
-                        forceDecimals: true,
-                      })}{" "}
+                      <MoneyAmount
+                        amount={statement.pendingBillsAmount}
+                        forceDecimals
+                      />{" "}
                       pending bills
                     </span>
                   ) : null}
@@ -421,7 +427,7 @@ function TransactionsCard({
               </div>
               <div className="flex flex-col items-end gap-1">
                 <p className="text-muted-foreground text-sm font-bold">
-                  {formatSignedAmount(line.amount * -1)}
+                  <MoneyAmount amount={line.amount * -1} variant="signed" />
                 </p>
                 <p className="text-muted-foreground text-xs font-bold">
                   Pending
@@ -441,7 +447,7 @@ function TransactionsCard({
                 </p>
               </div>
               <p className="text-sm font-bold">
-                {formatSignedAmount(transaction.amount)}
+                <MoneyAmount amount={transaction.amount} variant="signed" />
               </p>
             </div>
           ))}
@@ -473,7 +479,7 @@ function PaymentsCard({ creditCard }: { creditCard: CreditCard }) {
                 </p>
               </div>
               <p className="text-sm font-bold">
-                {formatCurrency(payment.amount, { forceDecimals: true })}
+                <MoneyAmount amount={payment.amount} forceDecimals />
               </p>
             </div>
           ))}
@@ -494,7 +500,7 @@ function Metric({
   valueClassName,
 }: {
   label: string
-  value: string
+  value: ReactNode
   status?: CreditCardDueStatus
   valueClassName?: string
 }) {

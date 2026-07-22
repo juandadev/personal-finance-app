@@ -1,7 +1,20 @@
-import { describe, expect, test } from "bun:test"
-import { render, screen } from "@testing-library/react"
+import { afterEach, describe, expect, mock, test } from "bun:test"
+import { cleanup, render, screen } from "@testing-library/react"
 
-import { SpendingSummaryItem } from "./spending-summary-item"
+mock.module("@/hooks/use-finance", () => ({
+  useFinance: () => ({
+    state: {
+      preferences: {
+        hideAmounts: false,
+        default_currency: "USD",
+      },
+    },
+  }),
+}))
+
+const { SpendingSummaryItem } = await import("./spending-summary-item")
+
+afterEach(cleanup)
 
 describe("SpendingSummaryItem", () => {
   test("uses normal styling when within budget", () => {
@@ -20,8 +33,8 @@ describe("SpendingSummaryItem", () => {
     )
 
     const spent = screen.getByText("$200.00")
-    expect(spent.className).toContain("text-foreground")
-    expect(spent.className).not.toContain("text-destructive")
+    expect(spent.parentElement?.className).toContain("text-foreground")
+    expect(spent.parentElement?.className).not.toContain("text-destructive")
   })
 
   test("uses destructive styling for spent and percentage when over budget", () => {
@@ -42,7 +55,7 @@ describe("SpendingSummaryItem", () => {
     const spent = screen.getByText("$545.00")
     const percentage = screen.getByText("109.0%")
 
-    expect(spent.className).toContain("text-destructive")
+    expect(spent.parentElement?.className).toContain("text-destructive")
     expect(percentage.className).toContain("text-destructive")
   })
 })

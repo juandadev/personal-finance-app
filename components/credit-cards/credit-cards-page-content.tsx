@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import type { ReactNode } from "react"
 import { CreditCardIcon } from "@phosphor-icons/react"
 
 import { ItemActions } from "@/components/actions"
@@ -10,6 +11,8 @@ import { EditCreditCardDialog } from "@/components/credit-cards/credit-card-dial
 import { PayCreditCardStatementDialog } from "@/components/credit-cards/pay-credit-card-statement-dialog"
 import { CreditUtilizationBar } from "@/components/credit-cards/credit-utilization-bar"
 import { EmptyDataCard } from "@/components/empty-data-card"
+import { MoneyAmount } from "@/components/money-amount"
+import { PrivacyValue } from "@/components/privacy-value"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,11 +28,7 @@ import { Card } from "@/components/ui/card"
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { FormStatusMessage } from "@/components/ui/form"
 import { useFinance } from "@/hooks/use-finance"
-import {
-  formatCurrency,
-  formatDisplayDate,
-  formatDisplayDateRange,
-} from "@/lib/format"
+import { formatDisplayDate, formatDisplayDateRange } from "@/lib/format"
 import { themeColorClasses } from "@/lib/theme-colors"
 import type { CreditCard, CreditCardDueStatus } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -68,16 +67,14 @@ export function CreditCardsPageContent() {
         <Card padding="overview" variant="primary">
           <p className="text-primary-foreground text-sm">Total Pending</p>
           <p className="mt-3 text-3xl font-bold tracking-tight">
-            {formatCurrency(totalCreditCardPendingBalance, {
-              forceDecimals: true,
-            })}
+            <MoneyAmount amount={totalCreditCardPendingBalance} forceDecimals />
           </p>
         </Card>
         {creditCardSummary.map((summary) => (
           <Card key={summary.label} padding="overview">
             <p className="text-muted-foreground text-sm">{summary.label}</p>
             <p className="mt-3 text-3xl font-bold tracking-tight">
-              {formatCurrency(summary.amount, { forceDecimals: true })}
+              <MoneyAmount amount={summary.amount} forceDecimals />
             </p>
             <p className="text-muted-foreground mt-1 text-xs">
               {summary.count} card{summary.count === 1 ? "" : "s"}
@@ -127,11 +124,15 @@ function CreditCardTile({ creditCard }: { creditCard: CreditCard }) {
             />
             <div>
               <h2 className="text-xl font-bold tracking-tight">
-                {creditCard.nickname}
+                <PrivacyValue hiddenLabel="Card name hidden. Turn off privacy mode to show it.">
+                  {creditCard.nickname}
+                </PrivacyValue>
               </h2>
               <p className="text-muted-foreground text-sm">
-                {creditCard.issuer} {creditCard.network} ••••{" "}
-                {creditCard.lastFour}
+                <PrivacyValue hiddenLabel="Card details hidden. Turn off privacy mode to show it.">
+                  {creditCard.issuer} {creditCard.network} ••••{" "}
+                  {creditCard.lastFour}
+                </PrivacyValue>
               </p>
             </div>
           </div>
@@ -160,18 +161,16 @@ function CreditCardTile({ creditCard }: { creditCard: CreditCard }) {
         <div>
           <p className="text-muted-foreground mb-3 text-sm">
             Available Credit:{" "}
-            <span
+            <MoneyAmount
+              amount={creditCard.availableCredit}
+              forceDecimals
               className={cn(
                 "font-semibold",
                 creditCard.availableCredit < 0
                   ? "text-destructive"
                   : "text-foreground",
               )}
-            >
-              {formatCurrency(creditCard.availableCredit, {
-                forceDecimals: true,
-              })}
-            </span>
+            />
           </p>
           <CreditUtilizationBar
             creditLimit={creditCard.creditLimit}
@@ -183,17 +182,23 @@ function CreditCardTile({ creditCard }: { creditCard: CreditCard }) {
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <CreditValue
               label="Total Pending"
-              value={formatCurrency(creditCard.totalPendingAmount, {
-                forceDecimals: true,
-              })}
+              value={
+                <MoneyAmount
+                  amount={creditCard.totalPendingAmount}
+                  forceDecimals
+                />
+              }
               indicatorClassName={themeColorClasses[creditCard.color].bg}
             />
             {hasReservedInstallments ? (
               <CreditValue
                 label="Reserved Installments"
-                value={formatCurrency(creditCard.reservedInstallmentAmount, {
-                  forceDecimals: true,
-                })}
+                value={
+                  <MoneyAmount
+                    amount={creditCard.reservedInstallmentAmount}
+                    forceDecimals
+                  />
+                }
                 indicatorClassName="bg-muted-foreground/35"
               />
             ) : null}
@@ -205,9 +210,7 @@ function CreditCardTile({ creditCard }: { creditCard: CreditCard }) {
             <div>
               <dt className="text-muted-foreground text-xs">Credit Limit</dt>
               <dd className="text-foreground mt-1 font-bold">
-                {formatCurrency(creditCard.creditLimit, {
-                  forceDecimals: true,
-                })}
+                <MoneyAmount amount={creditCard.creditLimit} forceDecimals />
               </dd>
             </div>
             <div>
@@ -354,7 +357,7 @@ function CreditValue({
   indicatorClassName,
 }: {
   label: string
-  value: string
+  value: ReactNode
   indicatorClassName: string
 }) {
   return (

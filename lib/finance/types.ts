@@ -47,6 +47,7 @@ export interface UserPreferencesRecord {
   user_id: FinanceUserId
   default_currency: CurrencyCode
   timezone: string
+  hideAmounts: boolean
 }
 
 export interface AccountRecord {

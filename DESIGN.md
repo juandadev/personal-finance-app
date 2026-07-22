@@ -192,6 +192,30 @@ mobile.
 - Keep page content inside the `AppShell` main padding unless a screen has a
   documented reason to break out.
 - Page headings should sit above the main content and use `PageHeading`.
+- Mount app-wide controls in the fixed `GlobalMenu` (inside the authenticated
+  shell), not inside module `PageHeading` actions.
+
+### Global Menu and Privacy Mode
+
+`GlobalMenu` hosts app-wide toggles. On mobile (`< lg`), pin it to the
+bottom-right just above the bottom navigation. On desktop (`lg+`), pin it to
+the top-right.
+
+- v1 includes privacy mode only: a shadcn `Toggle` with Phosphor `EyeIcon` /
+  `EyeSlashIcon`.
+- Pressed means amounts are hidden (`hideAmounts: true`).
+- Icon-only toggle requires an action `aria-label` (“Hide amounts” /
+  “Show amounts”) and a tooltip that includes the same label plus a `Kbd`
+  shortcut hint (`⇧⌘.` on Apple platforms, `Ctrl+⇧+.` elsewhere).
+- Keyboard shortcut `Mod+Shift+.` toggles privacy anywhere in the signed-in
+  app, including while focused in form fields (`react-hotkeys-hook` with
+  `enableOnFormTags` and `enableOnContentEditable`).
+- Privacy preference syncs across devices via `profiles.ui_preferences`
+  JSONB. Do not store it in `localStorage`.
+- Default is amounts visible (`hideAmounts: false`).
+- `MoneyAmount` uses shared `PrivacyValue` for masking. For other sensitive
+  non-money UI, wrap content in `PrivacyValue` yourself after a manual
+  inspection — there is no requirement to mask everything by default.
 
 ### Page Headings
 
@@ -518,7 +542,19 @@ Today`, then `Due Soon`, then `Upcoming`. `Overdue` uses destructive text.
 
 ## Finance Data Rules
 
-- Use formatting helpers from `lib/format` for currency and signed amounts.
+- Render on-screen money with the shared `MoneyAmount` component. Keep raw
+  formatting in `lib/format`; do not call format helpers directly in product UI
+  for displayed amounts.
+- Active editable inputs (`CurrencyInput`) stay outside `MoneyAmount` and remain
+  visible while privacy mode is on.
+- When the absolute value is ≥ `$100,000`, `MoneyAmount` shows compact notation
+  at rest and reveals the full amount on hover/focus (privacy off only).
+- When privacy mode is on, `MoneyAmount` replaces the value with a static
+  (non-pulsing) skeleton sized to the resting text box. Do not reveal the number
+  via hover or the accessibility tree; announce that the amount is hidden and
+  privacy mode must be turned off.
+- Chart axis ticks, tooltips, and a11y value text that include money must respect
+  the same privacy flag.
 - Use `date-fns` through shared helpers in `lib/format` for all user-facing date
   text. Do not render raw ISO dates outside form controls that require them.
 - Positive amounts use a plus sign and `text-accent`.
@@ -571,6 +607,7 @@ Before shipping UI work:
 - Spacing and radius match existing app patterns.
 - Mobile and desktop states are both designed.
 - Keyboard, focus, labels, and contrast are covered.
-- Finance data uses shared format helpers.
+- Finance data uses `MoneyAmount` for on-screen amounts (formatters in
+  `lib/format`).
 - The UI uses existing shadcn/product components where possible.
 - `bun run format` has been run.
