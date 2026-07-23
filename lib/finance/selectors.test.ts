@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 
 import { selectFinanceViewModel } from "@/lib/finance/selectors"
 import type {
+  CreditCardPaymentRecord,
   CreditCardStatementRecord,
   FinanceState,
   RecurringBillPaymentRecord,
@@ -128,6 +129,23 @@ function makeStatement(
     statement_amount_cents: 0,
     lifecycle_status: "open",
     paid_at: null,
+    ...overrides,
+  }
+}
+
+function makeCreditCardPayment(
+  overrides: Partial<CreditCardPaymentRecord> & {
+    id: string
+    statement_id: string
+    amount_cents: number
+    paid_at: string
+  },
+): CreditCardPaymentRecord {
+  return {
+    user_id: "user-1",
+    credit_card_id: "card-1",
+    source_account_id: "account-1",
+    cashflow_transaction_id: `txn-${overrides.id}`,
     ...overrides,
   }
 }
@@ -441,14 +459,22 @@ describe("selectFinanceViewModel credit-card total pending", () => {
     ).toEqual({
       label: "Due Soon / Overdue",
       count: 1,
-      amount: 20_421.06,
+      amount: 19_046.19,
       color: "chart-2",
     })
     expect(
       viewModel.creditCardSummary.find(
         (summary) => summary.label === "Upcoming",
-      )?.count,
-    ).toBe(0)
+      ),
+    ).toEqual({
+      label: "Upcoming",
+      count: 1,
+      amount: 1374.87,
+      color: "chart-4",
+    })
+    expect(viewModel.creditCardSummary.map((summary) => summary.label)).toEqual(
+      ["Paid", "Due Soon / Overdue", "Upcoming"],
+    )
   })
 
   test("uses overdue status when any unpaid statement is past due", () => {
@@ -594,6 +620,223 @@ describe("selectFinanceViewModel recurring bill status presentation", () => {
       amount: 100,
       count: 1,
       color: "warning",
+    })
+  })
+})
+
+describe("selectFinanceViewModel month summaries", () => {
+  test("sums credit-card payments paid in the current month", () => {
+    const viewModel = selectFinanceViewModel(
+      makeState({
+        creditCardStatements: [
+          makeStatement({
+            id: "statement-paid-a",
+            period_start: "2026-05-21",
+            period_end: "2026-06-20",
+            payment_due_date: "2026-07-05",
+            statement_amount_cents: 120_000,
+            lifecycle_status: "paid",
+            paid_at: "2026-07-03",
+          }),
+          makeStatement({
+            id: "statement-paid-b",
+            period_start: "2026-06-21",
+            period_end: "2026-07-20",
+            payment_due_date: "2026-08-05",
+            statement_amount_cents: 80_000,
+            lifecycle_status: "paid",
+            paid_at: "2026-07-10",
+          }),
+        ],
+        creditCardPayments: [
+          makeCreditCardPayment({
+            id: "payment-a",
+            statement_id: "statement-paid-a",
+            amount_cents: 120_000,
+            paid_at: "2026-07-03",
+          }),
+          makeCreditCardPayment({
+            id: "payment-b",
+            statement_id: "statement-paid-b",
+            amount_cents: 80_000,
+            paid_at: "2026-07-10",
+          }),
+        ],
+      }),
+      "2026-07-22",
+    )
+
+    expect(
+      viewModel.creditCardSummary.find((summary) => summary.label === "Paid"),
+    ).toEqual({
+      label: "Paid",
+      count: 2,
+      amount: 2000,
+      color: "chart-1",
+    })
+  })
+
+  test("puts unpaid statements due next month in Upcoming", () => {
+    const viewModel = selectFinanceViewModel(
+      makeState({
+        creditCardStatements: [
+          makeStatement({
+            id: "statement-upcoming",
+            period_start: "2026-06-21",
+            period_end: "2026-07-20",
+            payment_due_date: "2026-08-15",
+            statement_amount_cents: 35_000,
+          }),
+        ],
+      }),
+      "2026-07-15",
+    )
+
+    expect(
+      viewModel.creditCardSummary.find(
+        (summary) => summary.label === "Upcoming",
+      ),
+    ).toEqual({
+      label: "Upcoming",
+      count: 1,
+      amount: 350,
+      color: "chart-4",
+    })
+    expect(
+      viewModel.creditCardSummary.find(
+        (summary) => summary.label === "Due Soon / Overdue",
+      )?.count,
+    ).toBe(0)
+  })
+
+  test("includes urgent next-month statements in both Due Soon / Overdue and Upcoming", () => {
+    const viewModel = selectFinanceViewModel(
+      makeState({
+        creditCardStatements: [
+          makeStatement({
+            id: "statement-urgent-next-month",
+            period_start: "2026-06-21",
+            period_end: "2026-07-20",
+            payment_due_date: "2026-08-05",
+            statement_amount_cents: 50_000,
+          }),
+        ],
+      }),
+      "2026-07-30",
+    )
+
+    expect(
+      viewModel.creditCardSummary.find(
+        (summary) => summary.label === "Due Soon / Overdue",
+      ),
+    ).toEqual({
+      label: "Due Soon / Overdue",
+      count: 1,
+      amount: 500,
+      color: "chart-2",
+    })
+    expect(
+      viewModel.creditCardSummary.find(
+        (summary) => summary.label === "Upcoming",
+      ),
+    ).toEqual({
+      label: "Upcoming",
+      count: 1,
+      amount: 500,
+      color: "chart-4",
+    })
+  })
+
+  test("keeps urgent this-month statements out of Upcoming", () => {
+    const viewModel = selectFinanceViewModel(
+      makeState({
+        creditCardStatements: [
+          makeStatement({
+            id: "statement-urgent-this-month",
+            period_start: "2026-05-21",
+            period_end: "2026-06-20",
+            payment_due_date: "2026-07-18",
+            statement_amount_cents: 42_000,
+          }),
+        ],
+      }),
+      "2026-07-15",
+    )
+
+    expect(
+      viewModel.creditCardSummary.find(
+        (summary) => summary.label === "Due Soon / Overdue",
+      ),
+    ).toEqual({
+      label: "Due Soon / Overdue",
+      count: 1,
+      amount: 420,
+      color: "chart-2",
+    })
+    expect(
+      viewModel.creditCardSummary.find(
+        (summary) => summary.label === "Upcoming",
+      )?.count,
+    ).toBe(0)
+  })
+
+  test("counts Paid Bills by paidAt month, not due-date month", () => {
+    const paidThisMonthForPriorDue = selectFinanceViewModel(
+      makeState(
+        {
+          recurringBillPayments: [
+            makePayment({
+              due_date: "2026-06-30",
+              amount_cents: 4900,
+              paid_at: "2026-07-03",
+            }),
+          ],
+        },
+        {
+          id: "bill-1",
+          credit_card_id: null,
+          first_due_date: "2026-06-30",
+          amount_cents: 4900,
+          total_payments: 1,
+        },
+      ),
+      "2026-07-22",
+    ).recurringBillsSummary.find((summary) => summary.label === "Paid Bills")
+
+    expect(paidThisMonthForPriorDue).toEqual({
+      label: "Paid Bills",
+      amount: 49,
+      count: 1,
+      color: "chart-1",
+    })
+
+    const paidOtherMonthForCurrentDue = selectFinanceViewModel(
+      makeState(
+        {
+          recurringBillPayments: [
+            makePayment({
+              due_date: "2026-07-15",
+              amount_cents: 4900,
+              paid_at: "2026-06-20",
+            }),
+          ],
+        },
+        {
+          id: "bill-1",
+          credit_card_id: null,
+          first_due_date: "2026-07-15",
+          amount_cents: 4900,
+          total_payments: 1,
+        },
+      ),
+      "2026-07-22",
+    ).recurringBillsSummary.find((summary) => summary.label === "Paid Bills")
+
+    expect(paidOtherMonthForCurrentDue).toEqual({
+      label: "Paid Bills",
+      amount: 0,
+      count: 0,
+      color: "chart-1",
     })
   })
 })

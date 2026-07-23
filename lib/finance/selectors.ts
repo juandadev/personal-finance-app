@@ -369,7 +369,7 @@ function selectRecurringBillsSummary(
       if (occurrence.status === "paid" || occurrence.status === "skipped") {
         if (
           occurrence.status === "paid" &&
-          occurrence.dueDate.slice(0, 7) === currentMonth
+          occurrence.paidAt?.slice(0, 7) === currentMonth
         ) {
           paidCount += 1
           paidAmount += occurrence.amount
@@ -679,47 +679,69 @@ function selectCreditCards(
   })
 }
 
+const URGENT_CREDIT_CARD_STATUSES = new Set([
+  "due-soon",
+  "due-today",
+  "overdue",
+])
+
+function getNextYearMonth(yearMonth: string): string {
+  const year = Number(yearMonth.slice(0, 4))
+  const month = Number(yearMonth.slice(5, 7))
+
+  if (month === 12) {
+    return `${year + 1}-01`
+  }
+
+  return `${year}-${String(month + 1).padStart(2, "0")}`
+}
+
 function selectCreditCardSummary(
   creditCards: CreditCard[],
+  today: string,
 ): FinanceViewModel["creditCardSummary"] {
+  const currentMonth = today.slice(0, 7)
+  const nextMonth = getNextYearMonth(currentMonth)
   const activeCards = creditCards.filter((card) => !card.archivedAt)
-  const paidCards = activeCards.filter(
-    (card) => card.currentStatement?.dueStatus === "paid",
+  const paidPayments = activeCards.flatMap((card) =>
+    card.payments.filter(
+      (payment) => payment.paidAt.slice(0, 7) === currentMonth,
+    ),
   )
-  const upcomingCards = activeCards.filter(
-    (card) => card.dueStatus === "upcoming",
+  const unpaidStatements = activeCards.flatMap((card) =>
+    card.statements.filter((statement) => statement.lifecycleStatus !== "paid"),
   )
-  const urgentCards = activeCards.filter(
-    (card) =>
-      card.dueStatus === "due-soon" ||
-      card.dueStatus === "due-today" ||
-      card.dueStatus === "overdue",
+  const urgentStatements = unpaidStatements.filter((statement) =>
+    URGENT_CREDIT_CARD_STATUSES.has(statement.dueStatus),
+  )
+  const upcomingStatements = unpaidStatements.filter(
+    (statement) => statement.paymentDueDate.slice(0, 7) === nextMonth,
   )
 
   return [
     {
       label: "Paid",
-      count: paidCards.length,
-      amount: paidCards.reduce((sum, card) => sum + card.totalPendingAmount, 0),
+      count: paidPayments.length,
+      amount: paidPayments.reduce((sum, payment) => sum + payment.amount, 0),
       color: "chart-1",
     },
     {
-      label: "Upcoming",
-      count: upcomingCards.length,
-      amount: upcomingCards.reduce(
-        (sum, card) => sum + card.totalPendingAmount,
-        0,
-      ),
-      color: "chart-4",
-    },
-    {
       label: "Due Soon / Overdue",
-      count: urgentCards.length,
-      amount: urgentCards.reduce(
-        (sum, card) => sum + card.totalPendingAmount,
+      count: urgentStatements.length,
+      amount: urgentStatements.reduce(
+        (sum, statement) => sum + statement.totalAmount,
         0,
       ),
       color: "chart-2",
+    },
+    {
+      label: "Upcoming",
+      count: upcomingStatements.length,
+      amount: upcomingStatements.reduce(
+        (sum, statement) => sum + statement.totalAmount,
+        0,
+      ),
+      color: "chart-4",
     },
   ]
 }
@@ -846,7 +868,7 @@ export function selectFinanceViewModel(
     categories,
     today,
   )
-  const creditCardSummary = selectCreditCardSummary(creditCards)
+  const creditCardSummary = selectCreditCardSummary(creditCards, today)
 
   return {
     summaryStats: selectSummaryStats(state),
