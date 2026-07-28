@@ -102,6 +102,7 @@ export interface TransactionRecord {
   credit_card_statement_id: FinanceRecordId | null
   posted_at: string
   description: string | null
+  created_at: string
 }
 
 export interface BudgetRecord {
@@ -266,7 +267,10 @@ export type NewCounterpartyRecord = Omit<
   CounterpartyRecord,
   "user_id" | "is_account_owner"
 >
-export type NewTransactionRecord = Omit<TransactionRecord, "user_id">
+export type NewTransactionRecord = Omit<
+  TransactionRecord,
+  "user_id" | "created_at"
+>
 export type NewCreditCardRecord = Omit<CreditCardRecord, "user_id">
 export type NewRecurringBillRecord = Omit<RecurringBillRecord, "user_id">
 export type NewCashForecastAdjustmentRecord = Omit<

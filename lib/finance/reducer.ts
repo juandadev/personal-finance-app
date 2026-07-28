@@ -26,6 +26,7 @@ import type {
   RecurringBillRecord,
   TransactionRecord,
 } from "./types"
+import { compareTransactionRecordsByDateThenCreatedAt } from "./transaction-sort"
 
 interface TransactionMutationPayload {
   transaction: TransactionRecord
@@ -367,7 +368,9 @@ export function financeReducer(
     case "transaction/add":
       return {
         ...state,
-        transactions: [...state.transactions, action.transaction],
+        transactions: [...state.transactions, action.transaction].sort(
+          compareTransactionRecordsByDateThenCreatedAt,
+        ),
       }
     case "transaction/save":
       return {
@@ -375,7 +378,7 @@ export function financeReducer(
         transactions: upsertById(
           state.transactions,
           action.payload.transaction,
-        ).sort((a, b) => b.posted_at.localeCompare(a.posted_at)),
+        ).sort(compareTransactionRecordsByDateThenCreatedAt),
         accounts: upsertManyById(state.accounts, action.payload.accounts),
         accountSummaries: upsertAccountSummaries(
           state.accountSummaries,
@@ -533,7 +536,7 @@ export function financeReducer(
         pots: upsertManyById(state.pots, action.payload.pots),
         transactions: action.payload.transaction
           ? upsertById(state.transactions, action.payload.transaction).sort(
-              (a, b) => b.posted_at.localeCompare(a.posted_at),
+              compareTransactionRecordsByDateThenCreatedAt,
             )
           : state.transactions,
         accounts: upsertManyById(state.accounts, action.payload.accounts),
@@ -569,8 +572,8 @@ export function financeReducer(
           action.billPayment,
         ),
         transactions: action.transaction
-          ? upsertById(state.transactions, action.transaction).sort((a, b) =>
-              b.posted_at.localeCompare(a.posted_at),
+          ? upsertById(state.transactions, action.transaction).sort(
+              compareTransactionRecordsByDateThenCreatedAt,
             )
           : state.transactions,
         accounts: action.accounts
@@ -628,7 +631,7 @@ export function financeReducer(
         transactions: upsertManyById(state.transactions, [
           ...(action.billTransactions ?? []),
           action.transaction,
-        ]).sort((a, b) => b.posted_at.localeCompare(a.posted_at)),
+        ]).sort(compareTransactionRecordsByDateThenCreatedAt),
         accounts: upsertManyById(state.accounts, action.accounts),
         accountSummaries: action.accountSummaries
           ? upsertAccountSummaries(

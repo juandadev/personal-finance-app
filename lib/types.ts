@@ -52,6 +52,7 @@ export interface Transaction {
   concept: string
   date: string
   postedAt: string
+  createdAt: string
   isVoucherExpense: boolean
   paymentMethod:
     "bank_account" | "credit_card" | "voucher" | "credit_card_payment"

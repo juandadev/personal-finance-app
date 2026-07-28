@@ -129,6 +129,7 @@ function makeTransaction(
     credit_card_statement_id: null,
     posted_at: "2026-07-10",
     description: null,
+    created_at: "2026-07-01T00:00:00.000Z",
     ...overrides,
   }
 }
@@ -941,6 +942,7 @@ describe("buildCashForecast projection", () => {
             credit_card_statement_id: "statement-1",
             posted_at: "2026-07-01",
             description: null,
+            created_at: "2026-07-01T00:00:00.000Z",
           },
         ],
       }),

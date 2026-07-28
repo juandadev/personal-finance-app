@@ -44,6 +44,51 @@ interface TransactionsTableProps {
   transactions: Transaction[]
 }
 
+function isCreditCardPaymentMethod(
+  paymentMethod: Transaction["paymentMethod"],
+) {
+  return (
+    paymentMethod === "credit_card" || paymentMethod === "credit_card_payment"
+  )
+}
+
+function TransactionPaymentMethodBadge({
+  transaction,
+  className,
+}: {
+  transaction: Transaction
+  className?: string
+}) {
+  const {
+    state: {
+      preferences: { hideAmounts },
+    },
+  } = useFinance()
+
+  if (transaction.paymentMethod === "bank_account") {
+    return null
+  }
+
+  const hideLabel =
+    hideAmounts && isCreditCardPaymentMethod(transaction.paymentMethod)
+
+  return (
+    <Badge
+      variant="secondary"
+      className={className}
+      aria-label={
+        hideLabel
+          ? "Card details hidden. Turn off privacy mode to show it."
+          : undefined
+      }
+    >
+      <span className={cn(hideLabel && "invisible")} aria-hidden={hideLabel}>
+        {transaction.paymentMethodLabel}
+      </span>
+    </Badge>
+  )
+}
+
 export function TransactionsTable({ transactions }: TransactionsTableProps) {
   const { budgets, actions } = useFinance()
   const [pendingTransactionId, setPendingTransactionId] = useState<
@@ -148,11 +193,10 @@ function MobileTransactionItem({ transaction }: { transaction: Transaction }) {
         <span className="text-muted-foreground block truncate text-xs">
           {transaction.name}
         </span>
-        {transaction.paymentMethod !== "bank_account" ? (
-          <Badge variant="secondary" className="mt-1 max-w-full truncate">
-            {transaction.paymentMethodLabel}
-          </Badge>
-        ) : null}
+        <TransactionPaymentMethodBadge
+          transaction={transaction}
+          className="mt-1 max-w-full truncate"
+        />
       </div>
       <div className="flex shrink-0 items-center gap-1">
         <div className="flex flex-col items-end">
@@ -215,9 +259,7 @@ function TransactionRow({
       >
         <div className="flex flex-col items-start gap-1">
           <span className="whitespace-nowrap">{transaction.concept}</span>
-          {transaction.paymentMethod !== "bank_account" ? (
-            <Badge variant="secondary">{transaction.paymentMethodLabel}</Badge>
-          ) : null}
+          <TransactionPaymentMethodBadge transaction={transaction} />
         </div>
       </TableCell>
       <TableCell className={cn(DESKTOP_TABLE_CELL, "text-muted-foreground")}>

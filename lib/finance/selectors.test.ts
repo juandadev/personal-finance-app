@@ -231,6 +231,7 @@ describe("selectFinanceViewModel summary stats", () => {
             credit_card_statement_id: null,
             posted_at: "2026-07-03",
             description: null,
+            created_at: "2026-07-03T00:00:00.000Z",
           },
           {
             id: "pot-withdrawal",
@@ -246,6 +247,7 @@ describe("selectFinanceViewModel summary stats", () => {
             credit_card_statement_id: null,
             posted_at: "2026-07-05",
             description: null,
+            created_at: "2026-07-05T00:00:00.000Z",
           },
         ],
       }),
@@ -780,7 +782,7 @@ describe("selectFinanceViewModel month summaries", () => {
     ).toBe(0)
   })
 
-  test("counts Paid Bills by paidAt month, not due-date month", () => {
+  test("counts Paid by paidAt month, not due-date month", () => {
     const paidThisMonthForPriorDue = selectFinanceViewModel(
       makeState(
         {
@@ -801,10 +803,10 @@ describe("selectFinanceViewModel month summaries", () => {
         },
       ),
       "2026-07-22",
-    ).recurringBillsSummary.find((summary) => summary.label === "Paid Bills")
+    ).recurringBillsSummary.find((summary) => summary.label === "Paid")
 
     expect(paidThisMonthForPriorDue).toEqual({
-      label: "Paid Bills",
+      label: "Paid",
       amount: 49,
       count: 1,
       color: "chart-1",
@@ -830,13 +832,107 @@ describe("selectFinanceViewModel month summaries", () => {
         },
       ),
       "2026-07-22",
-    ).recurringBillsSummary.find((summary) => summary.label === "Paid Bills")
+    ).recurringBillsSummary.find((summary) => summary.label === "Paid")
 
     expect(paidOtherMonthForCurrentDue).toEqual({
-      label: "Paid Bills",
+      label: "Paid",
       amount: 0,
       count: 0,
       color: "chart-1",
+    })
+  })
+
+  test("puts unsettled bills payable next month in Upcoming", () => {
+    const viewModel = selectFinanceViewModel(
+      makeState(
+        {},
+        {
+          id: "bill-1",
+          credit_card_id: null,
+          first_due_date: "2026-08-10",
+          amount_cents: 5500,
+          total_payments: 1,
+        },
+      ),
+      "2026-07-22",
+    )
+
+    expect(viewModel.recurringBillsSummary.map((row) => row.label)).toEqual([
+      "Paid",
+      "Due Soon",
+      "Upcoming",
+    ])
+    expect(
+      viewModel.recurringBillsSummary.find(
+        (summary) => summary.label === "Upcoming",
+      ),
+    ).toEqual({
+      label: "Upcoming",
+      amount: 55,
+      count: 1,
+      color: "chart-4",
+    })
+    expect(
+      viewModel.recurringBillsSummary.find(
+        (summary) => summary.label === "Due Soon",
+      )?.count,
+    ).toBe(0)
+  })
+
+  test("keeps unsettled bills payable this month out of Upcoming", () => {
+    const nonUrgentThisMonth = selectFinanceViewModel(
+      makeState(
+        {},
+        {
+          id: "bill-1",
+          credit_card_id: null,
+          first_due_date: "2026-07-28",
+          amount_cents: 5500,
+          total_payments: 1,
+        },
+      ),
+      "2026-07-15",
+    )
+
+    expect(
+      nonUrgentThisMonth.recurringBillsSummary.find(
+        (summary) => summary.label === "Upcoming",
+      )?.count,
+    ).toBe(0)
+    expect(
+      nonUrgentThisMonth.recurringBillsSummary.find(
+        (summary) => summary.label === "Due Soon",
+      )?.count,
+    ).toBe(0)
+
+    const urgentThisMonth = selectFinanceViewModel(
+      makeState(
+        {},
+        {
+          id: "bill-1",
+          credit_card_id: null,
+          first_due_date: "2026-07-18",
+          amount_cents: 5500,
+          total_payments: 1,
+        },
+      ),
+      "2026-07-15",
+    )
+
+    expect(
+      urgentThisMonth.recurringBillsSummary.find(
+        (summary) => summary.label === "Upcoming",
+      )?.count,
+    ).toBe(0)
+    expect(
+      urgentThisMonth.recurringBillsSummary.find(
+        (summary) => summary.label === "Due Soon",
+      ),
+    ).toEqual({
+      label: "Due Soon",
+      amount: 55,
+      count: 1,
+      color: "warning",
     })
   })
 })

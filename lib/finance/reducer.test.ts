@@ -100,6 +100,7 @@ describe("financeReducer pot movements", () => {
       credit_card_statement_id: null,
       posted_at: "2026-07-14",
       description: null,
+      created_at: "2026-07-14T00:00:00.000Z",
     }
     const summary: AccountSummaryRecord = {
       id: "summary-1",

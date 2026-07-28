@@ -10,7 +10,7 @@ import {
   recurringBillQueryParsers,
   transactionQueryParsers,
 } from "./query-state"
-import { filterTransactions } from "./transaction-filters"
+import { filterTransactions, sortTransactions } from "./transaction-filters"
 
 function makeTransaction(overrides: Partial<Transaction> = {}): Transaction {
   return {
@@ -26,6 +26,7 @@ function makeTransaction(overrides: Partial<Transaction> = {}): Transaction {
     concept: "Weekly groceries",
     date: "Jul 10, 2026",
     postedAt: "2026-07-10",
+    createdAt: "2026-07-10T00:00:00.000Z",
     isVoucherExpense: false,
     paymentMethod: "bank_account",
     paymentMethodLabel: "Bank Account",
@@ -141,6 +142,51 @@ describe("query parsers and normalization", () => {
     })
 
     expect(filters.page).toBe(1)
+  })
+})
+
+describe("transaction sort", () => {
+  test("orders same-day transactions by createdAt for latest and oldest", () => {
+    const older = makeTransaction({
+      id: "older",
+      postedAt: "2026-07-10",
+      createdAt: "2026-07-10T10:00:00.000Z",
+    })
+    const newer = makeTransaction({
+      id: "newer",
+      postedAt: "2026-07-10",
+      createdAt: "2026-07-10T12:00:00.000Z",
+    })
+
+    expect(
+      sortTransactions([older, newer], "latest").map(
+        (transaction) => transaction.id,
+      ),
+    ).toEqual(["newer", "older"])
+    expect(
+      sortTransactions([newer, older], "oldest").map(
+        (transaction) => transaction.id,
+      ),
+    ).toEqual(["older", "newer"])
+  })
+
+  test("prefers postedAt over createdAt when dates differ", () => {
+    const earlierDay = makeTransaction({
+      id: "earlier-day",
+      postedAt: "2026-07-09",
+      createdAt: "2026-07-11T12:00:00.000Z",
+    })
+    const laterDay = makeTransaction({
+      id: "later-day",
+      postedAt: "2026-07-10",
+      createdAt: "2026-07-08T12:00:00.000Z",
+    })
+
+    expect(
+      sortTransactions([earlierDay, laterDay], "latest").map(
+        (transaction) => transaction.id,
+      ),
+    ).toEqual(["later-day", "earlier-day"])
   })
 })
 

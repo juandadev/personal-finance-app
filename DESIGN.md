@@ -216,6 +216,10 @@ the top-right.
 - `MoneyAmount` uses shared `PrivacyValue` for masking. For other sensitive
   non-money UI, wrap content in `PrivacyValue` yourself after a manual
   inspection — there is no requirement to mask everything by default.
+- In the transactions list, credit-card payment-method badges keep their
+  chrome and only hide the label text while privacy mode is on (card nickname
+  / last four / payment labels). Voucher and other non-card badges stay
+  visible. Do not wrap these badges in `PrivacyValue`.
 
 ### Page Headings
 

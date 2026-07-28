@@ -1,4 +1,8 @@
 import type { Transaction } from "@/lib/types"
+import {
+  compareCreatedAtThenId,
+  compareTransactionsByDateThenCreatedAt,
+} from "@/lib/finance/transaction-sort"
 import type { TransactionFilters } from "./normalize"
 
 function matchesAny(values: Set<string>, value?: string) {
@@ -35,25 +39,46 @@ function matchesDirection(
   return direction === "income" ? amount > 0 : amount < 0
 }
 
+function comparePrimarySort(
+  left: Transaction,
+  right: Transaction,
+  sort: TransactionFilters["sort"],
+) {
+  switch (sort) {
+    case "latest":
+    case "oldest":
+      return 0
+    case "a-z":
+      return left.name.localeCompare(right.name)
+    case "z-a":
+      return right.name.localeCompare(left.name)
+    case "highest":
+      return right.amount - left.amount
+    case "lowest":
+      return left.amount - right.amount
+  }
+}
+
 export function sortTransactions(
   transactions: Transaction[],
   sort: TransactionFilters["sort"],
 ) {
   return [...transactions].sort((left, right) => {
-    switch (sort) {
-      case "latest":
-        return right.postedAt.localeCompare(left.postedAt)
-      case "oldest":
-        return left.postedAt.localeCompare(right.postedAt)
-      case "a-z":
-        return left.name.localeCompare(right.name)
-      case "z-a":
-        return right.name.localeCompare(left.name)
-      case "highest":
-        return right.amount - left.amount
-      case "lowest":
-        return left.amount - right.amount
+    if (sort === "latest" || sort === "oldest") {
+      return compareTransactionsByDateThenCreatedAt(
+        left,
+        right,
+        sort === "latest" ? "desc" : "asc",
+      )
     }
+
+    const primaryComparison = comparePrimarySort(left, right, sort)
+
+    if (primaryComparison !== 0) {
+      return primaryComparison
+    }
+
+    return compareCreatedAtThenId(left, right, "desc")
   })
 }
 

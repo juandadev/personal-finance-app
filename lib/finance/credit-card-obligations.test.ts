@@ -65,6 +65,7 @@ const transaction: TransactionRecord = {
   credit_card_statement_id: statement.id,
   posted_at: "2026-07-02",
   description: null,
+  created_at: "2026-07-02T00:00:00.000Z",
 }
 
 function build(

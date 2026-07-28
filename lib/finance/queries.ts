@@ -132,6 +132,7 @@ const transactionSelectColumns = [
   "credit_card_statement_id",
   "posted_at::text AS posted_at",
   "description",
+  "created_at::text AS created_at",
 ]
 const budgetSummaryColumns = ["user_id", "budget_id", "spent_cents"]
 const budgetAssignmentColumns = [
@@ -406,7 +407,7 @@ export async function loadFinanceState(
       [userId],
     )
     const transactions = await client.query<TransactionRecord>(
-      `SELECT ${transactionSelectColumns.join(", ")} FROM transactions WHERE user_id = $1 ORDER BY posted_at DESC, id`,
+      `SELECT ${transactionSelectColumns.join(", ")} FROM transactions WHERE user_id = $1 ORDER BY posted_at DESC, created_at DESC, id`,
       [userId],
     )
     const budgets = await client.query<BudgetRecord>(

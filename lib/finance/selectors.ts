@@ -135,6 +135,7 @@ function selectTransactions(
       concept: transaction.concept,
       date: formatDisplayDate(transaction.posted_at),
       postedAt: transaction.posted_at,
+      createdAt: transaction.created_at,
       isVoucherExpense: transaction.is_voucher_expense,
       paymentMethod: transaction.payment_method,
       creditCardId: transaction.credit_card_id ?? undefined,
@@ -350,11 +351,23 @@ function selectRecurringBills(
 
 const URGENT_BILL_STATUSES = new Set(["due-soon", "due-today", "overdue"])
 
+function getNextYearMonth(yearMonth: string): string {
+  const year = Number(yearMonth.slice(0, 4))
+  const month = Number(yearMonth.slice(5, 7))
+
+  if (month === 12) {
+    return `${year + 1}-01`
+  }
+
+  return `${year}-${String(month + 1).padStart(2, "0")}`
+}
+
 function selectRecurringBillsSummary(
   recurringBills: RecurringBill[],
   today: string,
 ): FinanceViewModel["recurringBillsSummary"] {
   const currentMonth = today.slice(0, 7)
+  const nextMonth = getNextYearMonth(currentMonth)
   const activeBills = recurringBills.filter((bill) => !bill.archivedAt)
 
   let paidCount = 0
@@ -378,8 +391,12 @@ function selectRecurringBillsSummary(
         continue
       }
 
-      upcomingCount += 1
-      upcomingAmount += occurrence.amount
+      const payDate = occurrence.statusDueDate ?? occurrence.dueDate
+
+      if (payDate.slice(0, 7) === nextMonth) {
+        upcomingCount += 1
+        upcomingAmount += occurrence.amount
+      }
 
       if (URGENT_BILL_STATUSES.has(occurrence.status)) {
         dueSoonCount += 1
@@ -390,22 +407,22 @@ function selectRecurringBillsSummary(
 
   return [
     {
-      label: "Paid Bills",
+      label: "Paid",
       amount: paidAmount,
       count: paidCount,
       color: "chart-1",
-    },
-    {
-      label: "Total Upcoming",
-      amount: upcomingAmount,
-      count: upcomingCount,
-      color: "chart-4",
     },
     {
       label: "Due Soon",
       amount: dueSoonAmount,
       count: dueSoonCount,
       color: "warning",
+    },
+    {
+      label: "Upcoming",
+      amount: upcomingAmount,
+      count: upcomingCount,
+      color: "chart-4",
     },
   ]
 }
@@ -684,17 +701,6 @@ const URGENT_CREDIT_CARD_STATUSES = new Set([
   "due-today",
   "overdue",
 ])
-
-function getNextYearMonth(yearMonth: string): string {
-  const year = Number(yearMonth.slice(0, 4))
-  const month = Number(yearMonth.slice(5, 7))
-
-  if (month === 12) {
-    return `${year + 1}-01`
-  }
-
-  return `${year}-${String(month + 1).padStart(2, "0")}`
-}
 
 function selectCreditCardSummary(
   creditCards: CreditCard[],

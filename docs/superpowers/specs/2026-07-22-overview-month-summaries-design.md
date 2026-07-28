@@ -12,9 +12,8 @@ payments. Recurring Bills “Paid Bills” keys off due-date month instead of wh
 the payment happened.
 
 Fix the shared selectors so Paid reflects cash paid this month, Credit Cards
-Upcoming is unpaid statements due next calendar month, and Credit Cards Due
-Soon / Overdue stays urgency-based. Leave Recurring Bills Upcoming / Due Soon
-as they are today.
+and Recurring Bills Upcoming are unpaid obligations due next calendar month,
+and Due Soon stays urgency-based.
 
 ## Goals
 
@@ -24,20 +23,22 @@ as they are today.
   month.
 - Keep Credit Cards **Due Soon / Overdue** as a live urgency window (any month).
 - Order Credit Cards summary rows Paid → Due Soon / Overdue → Upcoming.
-- Keep Recurring Bills **Total Upcoming** and **Due Soon** behavior unchanged.
+- Scope Recurring Bills **Upcoming** to unsettled occurrences payable in the
+  next calendar month (`statusDueDate ?? dueDate`).
+- Keep Recurring Bills **Due Soon** as a live urgency window (any month).
+- Order Recurring Bills summary rows Paid → Due Soon → Upcoming.
 - Apply the same summary arrays everywhere they are already shared (overview,
   Credit Cards page, Recurring Bills page).
 - Cover the new rules with selector unit tests.
 
 ## Non-Goals
 
-- UI copy, layout, or card component changes.
+- Broader UI layout changes beyond summary label/order updates.
 - Changing card-level `totalPendingAmount`, utilization, or payment actions.
 - Changing occurrence generation, statement cycles, or due-status windows.
 - Database migrations or SQL-side month aggregation.
 - Timezone preference changes for `today` (continue using the view model’s
   existing `today` / `todayIsoDate()`).
-- Month-scoping Recurring Bills Upcoming / Due Soon.
 
 ## Month Definition
 
@@ -68,11 +69,19 @@ Notes:
 
 ### Recurring Bills (`recurringBillsSummary`)
 
-| Label          | Rule                                                                                                                               |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Paid Bills     | Active bills only. Count/sum occurrences with `status === "paid"` and `paidAt` in `currentMonth`. Skipped occurrences never count. |
-| Total Upcoming | Unchanged: all unsettled occurrences in the generated horizon.                                                                     |
-| Due Soon       | Unchanged: unsettled occurrences with status `due-soon`, `due-today`, or `overdue` (subset of Total Upcoming).                     |
+Row order: **Paid → Due Soon → Upcoming**.
+
+| Label    | Rule                                                                                                                               |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Paid     | Active bills only. Count/sum occurrences with `status === "paid"` and `paidAt` in `currentMonth`. Skipped occurrences never count. |
+| Due Soon | Unsettled occurrences with status `due-soon`, `due-today`, or `overdue` (any month).                                               |
+| Upcoming | Unsettled occurrences whose payable date (`statusDueDate ?? dueDate`) is in the **next** calendar month.                           |
+
+Notes:
+
+- Upcoming is next-month unpaid obligations only (not the current month).
+- A next-month occurrence that is also urgent can appear in both Due Soon and
+  Upcoming.
 
 ## Implementation
 
@@ -102,12 +111,11 @@ Suggested local helpers (same file, not exported unless tests need them):
 
 ### Recurring Bills selector change
 
-Replace the Paid Bills month check:
-
-- From: `occurrence.dueDate.slice(0, 7) === currentMonth`
-- To: `occurrence.paidAt?.slice(0, 7) === currentMonth`
-
-Occurrences without `paidAt` do not count as Paid Bills.
+- Paid uses `paidAt` month (not due-date month).
+- Upcoming uses payable date month (`statusDueDate ?? dueDate`) equal to next
+  month.
+- Return order is Paid → Due Soon → Upcoming; labels drop the old
+  “Paid Bills” / “Total Upcoming” wording.
 
 ## Testing
 
@@ -120,12 +128,13 @@ Add or update tests in `lib/finance/selectors.test.ts`:
    and Upcoming.
 4. An unpaid urgent statement due this month contributes to Due Soon / Overdue
    only (not Upcoming).
-5. Summary row order is Paid → Due Soon / Overdue → Upcoming.
-6. A bill paid this month for a prior-month due date counts in Paid Bills.
+5. Credit Cards summary row order is Paid → Due Soon / Overdue → Upcoming.
+6. A bill paid this month for a prior-month due date counts in Paid.
 7. A bill with due date this month but `paidAt` in another month does not count
-   in this month’s Paid Bills.
-8. Existing Due Soon recurring-bill aggregate expectations remain valid where
-   behavior is unchanged.
+   in this month’s Paid.
+8. An unsettled bill payable next month contributes to Upcoming.
+9. An unsettled bill payable this month does not contribute to Upcoming.
+10. Recurring Bills summary row order is Paid → Due Soon → Upcoming.
 
 ## Example
 
@@ -136,12 +145,12 @@ On 2026-07-22:
 - One unpaid statement due 2026-08-15, total `$350` → Upcoming `$350`.
 - One unpaid statement due 2026-08-05, status `due-soon`, total `$500` →
   Due Soon / Overdue `$500` and Upcoming `$500`.
-- Recurring bill due 2026-06-30, paid on 2026-07-03 for `$49` → Paid Bills
-  includes `$49`.
+- Recurring bill due 2026-06-30, paid on 2026-07-03 for `$49` → Paid includes
+  `$49`.
+- Recurring bill payable 2026-08-10 for `$55` → Upcoming `$55`.
 
 ## Out of Scope Follow-Ups
 
 - Aligning `today` with user timezone preferences.
-- Month-scoping Recurring Bills Upcoming / Due Soon.
 - Showing payment counts on the overview cards (overview still shows amount
   only; dedicated pages keep showing count where they already do).
