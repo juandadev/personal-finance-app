@@ -94,6 +94,7 @@ function makeState(
     creditCardPayments: [],
     cashForecastSettings: null,
     cashForecastAdjustments: [],
+    cashForecastExclusions: [],
     ...overrides,
   }
 }

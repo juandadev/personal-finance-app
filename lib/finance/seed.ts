@@ -24,5 +24,6 @@ export function createInitialFinanceState(): FinanceState {
     creditCardPayments: [],
     cashForecastSettings: null,
     cashForecastAdjustments: [],
+    cashForecastExclusions: [],
   }
 }

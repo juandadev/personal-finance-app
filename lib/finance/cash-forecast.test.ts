@@ -51,6 +51,7 @@ function makeState(overrides: Partial<FinanceState> = {}): FinanceState {
       updated_at: "2026-07-01T00:00:00.000Z",
     },
     cashForecastAdjustments: [],
+    cashForecastExclusions: [],
     ...overrides,
   }
 }
@@ -1592,5 +1593,310 @@ describe("buildCashForecast budget projections", () => {
     )
 
     expect(forecast.months[1]?.budgetProjectionOutflowCents).toBe(0)
+  })
+})
+
+describe("buildCashForecast month exclusions", () => {
+  test("excludes default income for one month while keeping the activity visible", () => {
+    const forecast = expectReady(
+      makeState({
+        cashForecastExclusions: [
+          {
+            id: "exclusion-income",
+            user_id: "user-1",
+            source_type: "default_income",
+            source_key: "default_income",
+            period: "2026-08",
+            created_at: "2026-07-01T00:00:00.000Z",
+          },
+        ],
+      }),
+    )
+    const august = forecast.months[1]
+    const september = forecast.months[2]
+    const incomeActivity = august?.activities.find(
+      (activity) => activity.sourceType === "default_income",
+    )
+
+    expect(august).toMatchObject({
+      period: "2026-08",
+      defaultIncomeCents: 0,
+    })
+    expect(incomeActivity).toMatchObject({
+      amountCents: 200_000,
+      excludedFromProjection: true,
+    })
+    expect(september).toMatchObject({
+      period: "2026-09",
+      defaultIncomeCents: 200_000,
+    })
+    expect(
+      september?.activities.some(
+        (activity) =>
+          activity.sourceType === "default_income" &&
+          !activity.excludedFromProjection,
+      ),
+    ).toBe(true)
+  })
+
+  test("excludes a recurring bill for one period only", () => {
+    const forecast = expectReady(
+      makeState({
+        cashForecastSettings: {
+          ...makeState().cashForecastSettings!,
+          default_monthly_income_cents: 0,
+        },
+        recurringBills: [
+          makeBill({
+            id: "bill-rent",
+            first_due_date: "2026-08-20",
+          }),
+        ],
+        cashForecastExclusions: [
+          {
+            id: "exclusion-bill",
+            user_id: "user-1",
+            source_type: "recurring_bill",
+            source_key: "bill-rent",
+            period: "2026-08",
+            created_at: "2026-07-01T00:00:00.000Z",
+          },
+        ],
+      }),
+    )
+    const august = forecast.months[1]
+    const september = forecast.months[2]
+    const augustBill = august?.activities.find(
+      (activity) => activity.sourceType === "recurring_bill",
+    )
+
+    expect(august?.directBillOutflowCents).toBe(0)
+    expect(augustBill).toMatchObject({
+      amountCents: -10_000,
+      excludedFromProjection: true,
+    })
+    expect(september?.directBillOutflowCents).toBe(10_000)
+    expect(
+      september?.activities.some(
+        (activity) =>
+          activity.sourceType === "recurring_bill" &&
+          !activity.excludedFromProjection,
+      ),
+    ).toBe(true)
+  })
+
+  test("excludes a budget projection by category and period", () => {
+    const categoryId = "11111111-1111-4111-8111-111111111111"
+    const budgetId = "22222222-2222-4222-8222-222222222222"
+    const oopCents = 100_000
+    const forecast = expectReady(
+      makeState({
+        categories: [
+          {
+            id: categoryId,
+            user_id: "user-1",
+            name: "Groceries",
+            slug: "groceries",
+            theme_color: "chart-3",
+          },
+        ],
+        budgets: [
+          {
+            id: budgetId,
+            user_id: "user-1",
+            category_id: categoryId,
+            period: "2026-07",
+            limit_cents: oopCents,
+            monthly_voucher_coverage_cents: 0,
+            theme_color: "chart-3",
+          },
+        ],
+        cashForecastSettings: {
+          ...makeState().cashForecastSettings!,
+          default_monthly_income_cents: 0,
+          included_budget_category_ids: [categoryId],
+        },
+        cashForecastExclusions: [
+          {
+            id: "exclusion-budget",
+            user_id: "user-1",
+            source_type: "budget_projection",
+            source_key: categoryId,
+            period: "2026-08",
+            created_at: "2026-07-01T00:00:00.000Z",
+          },
+        ],
+      }),
+    )
+    const august = forecast.months[1]
+    const september = forecast.months[2]
+    const augustBudget = august?.activities.find(
+      (activity) => activity.sourceType === "budget_projection",
+    )
+
+    expect(august?.budgetProjectionOutflowCents).toBe(0)
+    expect(augustBudget).toMatchObject({
+      amountCents: -oopCents,
+      excludedFromProjection: true,
+    })
+    expect(september?.budgetProjectionOutflowCents).toBe(oopCents)
+  })
+
+  test("ignores budget exclusions when the category is not opted in", () => {
+    const categoryId = "11111111-1111-4111-8111-111111111111"
+    const forecast = expectReady(
+      makeState({
+        categories: [
+          {
+            id: categoryId,
+            user_id: "user-1",
+            name: "Groceries",
+            slug: "groceries",
+            theme_color: "chart-3",
+          },
+        ],
+        budgets: [
+          {
+            id: "budget-1",
+            user_id: "user-1",
+            category_id: categoryId,
+            period: "2026-07",
+            limit_cents: 100_000,
+            monthly_voucher_coverage_cents: 0,
+            theme_color: "chart-3",
+          },
+        ],
+        cashForecastSettings: {
+          ...makeState().cashForecastSettings!,
+          default_monthly_income_cents: 0,
+          included_budget_category_ids: [],
+        },
+        cashForecastExclusions: [
+          {
+            id: "exclusion-budget",
+            user_id: "user-1",
+            source_type: "budget_projection",
+            source_key: categoryId,
+            period: "2026-08",
+            created_at: "2026-07-01T00:00:00.000Z",
+          },
+        ],
+      }),
+    )
+
+    expect(
+      forecast.months.some((month) =>
+        month.activities.some(
+          (activity) => activity.sourceType === "budget_projection",
+        ),
+      ),
+    ).toBe(false)
+    expect(
+      forecast.months.every(
+        (month) => month.budgetProjectionOutflowCents === 0,
+      ),
+    ).toBe(true)
+  })
+
+  test("excludes a monthly planned outflow for one period only", () => {
+    const adjustmentId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+    const forecast = expectReady(
+      makeState({
+        cashForecastSettings: {
+          ...makeState().cashForecastSettings!,
+          default_monthly_income_cents: 0,
+        },
+        cashForecastAdjustments: [
+          makeAdjustment({
+            id: adjustmentId,
+            kind: "planned_outflow",
+            name: "Insurance",
+            amount_cents: 15_000,
+            start_period: "2026-08",
+            recurrence: "monthly",
+          }),
+        ],
+        cashForecastExclusions: [
+          {
+            id: "exclusion-outflow",
+            user_id: "user-1",
+            source_type: "planned_outflow",
+            source_key: adjustmentId,
+            period: "2026-08",
+            created_at: "2026-07-01T00:00:00.000Z",
+          },
+        ],
+      }),
+    )
+    const august = forecast.months[1]
+    const september = forecast.months[2]
+    const augustActivity = august?.activities.find(
+      (activity) => activity.sourceId === adjustmentId,
+    )
+
+    expect(august?.plannedOutflowCents).toBe(0)
+    expect(augustActivity).toMatchObject({
+      amountCents: -15_000,
+      excludedFromProjection: true,
+    })
+    expect(september?.plannedOutflowCents).toBe(15_000)
+    expect(
+      september?.activities.some(
+        (activity) =>
+          activity.sourceId === adjustmentId &&
+          !activity.excludedFromProjection,
+      ),
+    ).toBe(true)
+  })
+
+  test("excludes monthly additional income for one period only", () => {
+    const adjustmentId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+    const forecast = expectReady(
+      makeState({
+        cashForecastSettings: {
+          ...makeState().cashForecastSettings!,
+          default_monthly_income_cents: 0,
+        },
+        cashForecastAdjustments: [
+          makeAdjustment({
+            id: adjustmentId,
+            kind: "additional_income",
+            name: "Bonus",
+            amount_cents: 25_000,
+            start_period: "2026-08",
+            recurrence: "monthly",
+          }),
+        ],
+        cashForecastExclusions: [
+          {
+            id: "exclusion-income-adj",
+            user_id: "user-1",
+            source_type: "additional_income",
+            source_key: adjustmentId,
+            period: "2026-08",
+            created_at: "2026-07-01T00:00:00.000Z",
+          },
+        ],
+      }),
+    )
+    const august = forecast.months[1]
+    const september = forecast.months[2]
+    const augustActivity = august?.activities.find(
+      (activity) => activity.sourceId === adjustmentId,
+    )
+
+    expect(august?.additionalIncomeCents).toBe(0)
+    expect(augustActivity).toMatchObject({
+      amountCents: 25_000,
+      excludedFromProjection: true,
+    })
+    expect(september?.additionalIncomeCents).toBe(25_000)
+    expect(
+      september?.activities.some(
+        (activity) =>
+          activity.sourceId === adjustmentId &&
+          !activity.excludedFromProjection,
+      ),
+    ).toBe(true)
   })
 })

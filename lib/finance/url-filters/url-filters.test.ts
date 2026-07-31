@@ -5,7 +5,10 @@ import {
   normalizeTransactionFilters,
 } from "./normalize"
 import { getFilteredPagination } from "./pagination"
-import { filterRecurringBills } from "./recurring-bill-filters"
+import {
+  filterRecurringBills,
+  sortRecurringBills,
+} from "./recurring-bill-filters"
 import {
   recurringBillQueryParsers,
   transactionQueryParsers,
@@ -289,6 +292,124 @@ describe("recurring bill filters", () => {
     expect(filterRecurringBills([matching, archived], filters)).toEqual([
       matching,
     ])
+  })
+})
+
+describe("recurring bill sort", () => {
+  test("orders latest by urgency then soonest due date", () => {
+    const paid = makeBill({
+      id: "paid",
+      status: "paid",
+      currentOccurrence: {
+        dueDate: "2026-07-01",
+        sequence: 1,
+        amount: 60,
+        status: "paid",
+      },
+    })
+    const upcomingLater = makeBill({
+      id: "upcoming-later",
+      status: "upcoming",
+      currentOccurrence: {
+        dueDate: "2026-12-01",
+        sequence: 1,
+        amount: 60,
+        status: "upcoming",
+      },
+    })
+    const upcomingSooner = makeBill({
+      id: "upcoming-sooner",
+      status: "upcoming",
+      currentOccurrence: {
+        dueDate: "2026-08-05",
+        sequence: 1,
+        amount: 60,
+        status: "upcoming",
+      },
+    })
+    const dueSoon = makeBill({
+      id: "due-soon",
+      status: "due-soon",
+      currentOccurrence: {
+        dueDate: "2026-07-15",
+        sequence: 1,
+        amount: 60,
+        status: "due-soon",
+      },
+    })
+    const overdue = makeBill({
+      id: "overdue",
+      status: "overdue",
+      currentOccurrence: {
+        dueDate: "2026-07-01",
+        sequence: 1,
+        amount: 60,
+        status: "overdue",
+      },
+    })
+
+    expect(
+      sortRecurringBills(
+        [paid, upcomingLater, upcomingSooner, dueSoon, overdue],
+        "latest",
+      ).map((bill) => bill.id),
+    ).toEqual([
+      "overdue",
+      "due-soon",
+      "upcoming-sooner",
+      "upcoming-later",
+      "paid",
+    ])
+  })
+
+  test("orders oldest by urgency then furthest due date", () => {
+    const paid = makeBill({
+      id: "paid",
+      status: "paid",
+      currentOccurrence: {
+        dueDate: "2026-07-01",
+        sequence: 1,
+        amount: 60,
+        status: "paid",
+      },
+    })
+    const upcomingLater = makeBill({
+      id: "upcoming-later",
+      status: "upcoming",
+      currentOccurrence: {
+        dueDate: "2026-12-01",
+        sequence: 1,
+        amount: 60,
+        status: "upcoming",
+      },
+    })
+    const upcomingSooner = makeBill({
+      id: "upcoming-sooner",
+      status: "upcoming",
+      currentOccurrence: {
+        dueDate: "2026-08-05",
+        sequence: 1,
+        amount: 60,
+        status: "upcoming",
+      },
+    })
+    const overdue = makeBill({
+      id: "overdue",
+      status: "overdue",
+      currentOccurrence: {
+        dueDate: "2026-07-10",
+        sequence: 1,
+        amount: 60,
+        status: "overdue",
+      },
+    })
+
+    expect(
+      sortRecurringBills(
+        [paid, upcomingSooner, upcomingLater, overdue],
+        "oldest",
+      ).map((bill) => bill.id),
+    ).toEqual(["overdue", "upcoming-later", "upcoming-sooner", "paid"])
   })
 })
 

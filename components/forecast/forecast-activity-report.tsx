@@ -8,6 +8,7 @@ import { DeleteForecastItemDialog } from "@/components/forecast/delete-forecast-
 import { EditForecastItemDialog } from "@/components/forecast/forecast-item-dialog"
 import { getForecastActivityPagination } from "@/components/forecast/forecast-ui-state"
 import { MoneyAmount } from "@/components/money-amount"
+import { useFinance } from "@/hooks/use-finance"
 import { Button } from "@/components/ui/button"
 import {
   Collapsible,
@@ -33,6 +34,7 @@ import type {
 } from "@/lib/finance/cash-forecast"
 import type {
   CashForecastAdjustmentRecord,
+  CashForecastExclusionSourceType,
   CurrencyCode,
 } from "@/lib/finance/types"
 import { themeColorClasses, type ThemeColor } from "@/lib/theme-colors"
@@ -75,7 +77,11 @@ export function ForecastActivityReport({
   month,
   periods,
 }: ForecastActivityReportProps) {
+  const { state } = useFinance()
   const [currentPage, setCurrentPage] = useState(1)
+  const [pendingExclusionKeys, setPendingExclusionKeys] = useState<Set<string>>(
+    () => new Set(),
+  )
   const { totalPages, safePage, startIndex, endIndex } =
     getForecastActivityPagination(
       month.activities.length,
@@ -85,6 +91,9 @@ export function ForecastActivityReport({
   const pageRows = month.activities.slice(startIndex, endIndex)
   const adjustmentsById = new Map(
     adjustments.map((adjustment) => [adjustment.id, adjustment]),
+  )
+  const budgetsById = new Map(
+    state.budgets.map((budget) => [budget.id, budget]),
   )
   const emptyState = month.isCurrentPeriod
     ? "No actual cash activity or pending items"
@@ -99,6 +108,18 @@ export function ForecastActivityReport({
           PARENT_ROWS_PER_PAGE,
         ).safePage,
     )
+  }
+
+  const setExclusionPending = (activityKey: string, pending: boolean) => {
+    setPendingExclusionKeys((current) => {
+      const next = new Set(current)
+      if (pending) {
+        next.add(activityKey)
+      } else {
+        next.delete(activityKey)
+      }
+      return next
+    })
   }
 
   return (
@@ -185,9 +206,12 @@ export function ForecastActivityReport({
                     activity,
                     budgetColorsById,
                   )}
+                  budgetsById={budgetsById}
                   currency={currency}
+                  exclusionPending={pendingExclusionKeys.has(activity.key)}
                   periods={periods}
                   onDeleted={handleRowDeleted}
+                  onExclusionPendingChange={setExclusionPending}
                 />
               ))
             )}
@@ -229,9 +253,12 @@ export function ForecastActivityReport({
                       activity,
                       budgetColorsById,
                     )}
+                    budgetsById={budgetsById}
                     currency={currency}
+                    exclusionPending={pendingExclusionKeys.has(activity.key)}
                     periods={periods}
                     onDeleted={handleRowDeleted}
+                    onExclusionPendingChange={setExclusionPending}
                   />
                 ))
               )}
@@ -274,14 +301,20 @@ function DesktopActivityRows({
   activity,
   adjustment,
   budgetColor,
+  budgetsById,
   currency,
+  exclusionPending,
   periods,
   onDeleted,
+  onExclusionPendingChange,
 }: ActivityRowProps) {
   const [open, setOpen] = useState(false)
   const hasChildren = Boolean(activity.children?.length)
-  const budgetTextClassName = budgetColor
-    ? themeColorClasses[budgetColor].text
+  const excluded = Boolean(activity.excludedFromProjection)
+  const budgetTextClassName =
+    !excluded && budgetColor ? themeColorClasses[budgetColor].text : undefined
+  const excludedClassName = excluded
+    ? "text-muted-foreground line-through"
     : undefined
 
   return (
@@ -297,7 +330,13 @@ function DesktopActivityRows({
                   childCount={activity.children?.length ?? 0}
                 />
               ) : null}
-              <span className={cn("font-bold", budgetTextClassName)}>
+              <span
+                className={cn(
+                  "font-bold",
+                  budgetTextClassName,
+                  excludedClassName,
+                )}
+              >
                 {activity.label}
               </span>
             </div>
@@ -307,7 +346,14 @@ function DesktopActivityRows({
               {activity.sourceType === "credit_card_statement" ? (
                 <CreditCardIcon weight="fill" className="size-4" aria-hidden />
               ) : null}
-              {sourceLabel(activity, adjustment)}
+              <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span>{sourceLabel(activity, adjustment)}</span>
+                {isExcludableActivity(activity) ? (
+                  <span className="text-muted-foreground text-xs">
+                    Projected
+                  </span>
+                ) : null}
+              </span>
             </span>
           </TableCell>
           <TableCell className="text-muted-foreground">
@@ -318,7 +364,8 @@ function DesktopActivityRows({
           <TableCell
             className={cn(
               "text-right font-bold tabular-nums",
-              budgetTextClassName ??
+              excludedClassName ??
+                budgetTextClassName ??
                 (activity.amountCents > 0 ? "text-accent" : undefined),
             )}
           >
@@ -331,9 +378,19 @@ function DesktopActivityRows({
           <TableCell className="text-right">
             {adjustment ? (
               <ForecastActivityActions
+                activity={activity}
                 adjustment={adjustment}
                 periods={periods}
+                pending={exclusionPending}
                 onDeleted={onDeleted}
+                onPendingChange={onExclusionPendingChange}
+              />
+            ) : isExcludableActivity(activity) ? (
+              <ForecastExclusionAction
+                activity={activity}
+                budgetsById={budgetsById}
+                pending={exclusionPending}
+                onPendingChange={onExclusionPendingChange}
               />
             ) : (
               <span className="text-muted-foreground text-xs">Read-only</span>
@@ -361,14 +418,20 @@ function MobileActivityRow({
   activity,
   adjustment,
   budgetColor,
+  budgetsById,
   currency,
+  exclusionPending,
   periods,
   onDeleted,
+  onExclusionPendingChange,
 }: ActivityRowProps) {
   const [open, setOpen] = useState(false)
   const hasChildren = Boolean(activity.children?.length)
-  const budgetTextClassName = budgetColor
-    ? themeColorClasses[budgetColor].text
+  const excluded = Boolean(activity.excludedFromProjection)
+  const budgetTextClassName =
+    !excluded && budgetColor ? themeColorClasses[budgetColor].text : undefined
+  const excludedClassName = excluded
+    ? "text-muted-foreground line-through"
     : undefined
 
   return (
@@ -388,23 +451,26 @@ function MobileActivityRow({
                 className={cn(
                   "truncate text-sm font-bold",
                   budgetTextClassName,
+                  excludedClassName,
                 )}
               >
                 {activity.label}
               </p>
               <p className="text-muted-foreground mt-1 text-xs">
                 {sourceLabel(activity, adjustment)}
+                {isExcludableActivity(activity) ? " · Projected" : ""}
                 {activity.effectiveDate
                   ? ` · ${formatDisplayDate(activity.effectiveDate)}`
                   : ""}
               </p>
             </div>
           </div>
-          <div className="flex shrink-0 items-start gap-1">
+          <div className="flex shrink-0 flex-col items-end gap-1">
             <span
               className={cn(
                 "pt-2 text-sm font-bold tabular-nums",
-                budgetTextClassName ??
+                excludedClassName ??
+                  budgetTextClassName ??
                   (activity.amountCents > 0 ? "text-accent" : undefined),
               )}
             >
@@ -416,9 +482,19 @@ function MobileActivityRow({
             </span>
             {adjustment ? (
               <ForecastActivityActions
+                activity={activity}
                 adjustment={adjustment}
                 periods={periods}
+                pending={exclusionPending}
                 onDeleted={onDeleted}
+                onPendingChange={onExclusionPendingChange}
+              />
+            ) : isExcludableActivity(activity) ? (
+              <ForecastExclusionAction
+                activity={activity}
+                budgetsById={budgetsById}
+                pending={exclusionPending}
+                onPendingChange={onExclusionPendingChange}
               />
             ) : null}
           </div>
@@ -441,9 +517,12 @@ interface ActivityRowProps {
   activity: CashForecastActivity
   adjustment?: CashForecastAdjustmentRecord
   budgetColor?: ThemeColor
+  budgetsById: Map<string, { id: string; category_id: string }>
   currency: CurrencyCode
+  exclusionPending: boolean
   periods: string[]
   onDeleted: () => void
+  onExclusionPendingChange: (activityKey: string, pending: boolean) => void
 }
 
 function StatementDisclosure({
@@ -515,20 +594,32 @@ function StatementChildren({
 }
 
 function ForecastActivityActions({
+  activity,
   adjustment,
   periods,
+  pending,
   onDeleted,
+  onPendingChange,
 }: {
+  activity: CashForecastActivity
   adjustment: CashForecastAdjustmentRecord
   periods: string[]
+  pending: boolean
   onDeleted: () => void
+  onPendingChange: (activityKey: string, pending: boolean) => void
 }) {
+  const { actions } = useFinance()
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const excluded = Boolean(activity.excludedFromProjection)
+  const identity = getExclusionIdentity(activity, new Map())
 
   return (
     <>
-      <ItemActions ariaLabel={`More options for ${adjustment.name}`}>
+      <ItemActions
+        ariaLabel={`More options for ${adjustment.name}`}
+        disabled={pending}
+      >
         <DropdownMenuItem onSelect={() => setIsEditOpen(true)}>
           Edit Forecast Item
         </DropdownMenuItem>
@@ -538,6 +629,24 @@ function ForecastActivityActions({
         >
           Delete Forecast Item
         </DropdownMenuItem>
+        {identity ? (
+          <DropdownMenuItem
+            onSelect={() => {
+              void (async () => {
+                onPendingChange(activity.key, true)
+                await actions.setCashForecastExclusion({
+                  sourceType: identity.sourceType,
+                  sourceKey: identity.sourceKey,
+                  period: activity.period,
+                  excluded: !excluded,
+                })
+                onPendingChange(activity.key, false)
+              })()
+            }}
+          >
+            {excluded ? "Include" : "Exclude"}
+          </DropdownMenuItem>
+        ) : null}
       </ItemActions>
       <EditForecastItemDialog
         adjustment={adjustment}
@@ -552,6 +661,48 @@ function ForecastActivityActions({
         onDeleted={onDeleted}
       />
     </>
+  )
+}
+
+function ForecastExclusionAction({
+  activity,
+  budgetsById,
+  pending,
+  onPendingChange,
+}: {
+  activity: CashForecastActivity
+  budgetsById: Map<string, { id: string; category_id: string }>
+  pending: boolean
+  onPendingChange: (activityKey: string, pending: boolean) => void
+}) {
+  const { actions } = useFinance()
+  const identity = getExclusionIdentity(activity, budgetsById)
+  const excluded = Boolean(activity.excludedFromProjection)
+
+  if (!identity) {
+    return <span className="text-muted-foreground text-xs">Read-only</span>
+  }
+
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      className="text-muted-foreground h-8 px-2 text-xs"
+      disabled={pending}
+      onClick={async () => {
+        onPendingChange(activity.key, true)
+        await actions.setCashForecastExclusion({
+          sourceType: identity.sourceType,
+          sourceKey: identity.sourceKey,
+          period: activity.period,
+          excluded: !excluded,
+        })
+        onPendingChange(activity.key, false)
+      }}
+    >
+      {excluded ? "Include" : "Exclude"}
+    </Button>
   )
 }
 
@@ -573,6 +724,57 @@ function isAdjustmentActivity(activity: CashForecastActivity) {
     activity.sourceType === "additional_income" ||
     activity.sourceType === "planned_outflow"
   )
+}
+
+function isExcludableActivity(activity: CashForecastActivity) {
+  return (
+    activity.sourceType === "budget_projection" ||
+    activity.sourceType === "default_income" ||
+    activity.sourceType === "recurring_bill"
+  )
+}
+
+function getExclusionIdentity(
+  activity: CashForecastActivity,
+  budgetsById: Map<string, { id: string; category_id: string }>,
+): { sourceType: CashForecastExclusionSourceType; sourceKey: string } | null {
+  if (activity.sourceType === "default_income") {
+    return { sourceType: "default_income", sourceKey: "default_income" }
+  }
+
+  if (activity.sourceType === "recurring_bill") {
+    if (!activity.sourceId) {
+      return null
+    }
+
+    return { sourceType: "recurring_bill", sourceKey: activity.sourceId }
+  }
+
+  if (activity.sourceType === "budget_projection") {
+    if (!activity.sourceId) {
+      return null
+    }
+
+    const categoryId = budgetsById.get(activity.sourceId)?.category_id
+    if (!categoryId) {
+      return null
+    }
+
+    return { sourceType: "budget_projection", sourceKey: categoryId }
+  }
+
+  if (
+    activity.sourceType === "additional_income" ||
+    activity.sourceType === "planned_outflow"
+  ) {
+    if (!activity.sourceId) {
+      return null
+    }
+
+    return { sourceType: activity.sourceType, sourceKey: activity.sourceId }
+  }
+
+  return null
 }
 
 function getBudgetProjectionColor(

@@ -4,6 +4,7 @@ import type {
   BudgetRecord,
   BudgetTransactionAssignmentRecord,
   CashForecastAdjustmentRecord,
+  CashForecastExclusionRecord,
   CashForecastSettingsRecord,
   CategoryRecord,
   CounterpartyRecord,
@@ -131,6 +132,16 @@ export type FinanceAction =
       adjustment: CashForecastAdjustmentRecord
     }
   | { type: "cash-forecast/adjustment-delete"; id: string }
+  | {
+      type: "cash-forecast/exclusion-upsert"
+      exclusion: CashForecastExclusionRecord
+    }
+  | {
+      type: "cash-forecast/exclusion-delete"
+      source_type: CashForecastExclusionRecord["source_type"]
+      source_key: string
+      period: string
+    }
   | { type: "preferences/ui-update"; hideAmounts: boolean }
 
 export interface FinanceActions {
@@ -239,6 +250,12 @@ export interface FinanceActions {
     adjustment: Omit<NewCashForecastAdjustmentRecord, "id">,
   ) => Promise<FinanceMutationResult>
   deleteCashForecastAdjustment: (id: string) => Promise<FinanceMutationResult>
+  setCashForecastExclusion: (input: {
+    sourceType: CashForecastExclusionRecord["source_type"]
+    sourceKey: string
+    period: string
+    excluded: boolean
+  }) => Promise<FinanceMutationResult>
   updateUiPreferences: (hideAmounts: boolean) => Promise<FinanceMutationResult>
 }
 
@@ -680,6 +697,22 @@ export function financeReducer(
           action.id,
         ),
       }
+    case "cash-forecast/exclusion-upsert":
+      return {
+        ...state,
+        cashForecastExclusions: upsertCashForecastExclusionRecord(
+          state.cashForecastExclusions,
+          action.exclusion,
+        ),
+      }
+    case "cash-forecast/exclusion-delete":
+      return {
+        ...state,
+        cashForecastExclusions: removeCashForecastExclusionRecord(
+          state.cashForecastExclusions,
+          action,
+        ),
+      }
     case "preferences/ui-update":
       return {
         ...state,
@@ -691,4 +724,42 @@ export function financeReducer(
     default:
       return state
   }
+}
+
+function upsertCashForecastExclusionRecord(
+  exclusions: CashForecastExclusionRecord[],
+  exclusion: CashForecastExclusionRecord,
+) {
+  const index = exclusions.findIndex(
+    (candidate) =>
+      candidate.source_type === exclusion.source_type &&
+      candidate.source_key === exclusion.source_key &&
+      candidate.period === exclusion.period,
+  )
+
+  if (index === -1) {
+    return [...exclusions, exclusion]
+  }
+
+  const next = exclusions.slice()
+  next[index] = exclusion
+  return next
+}
+
+function removeCashForecastExclusionRecord(
+  exclusions: CashForecastExclusionRecord[],
+  key: {
+    source_type: CashForecastExclusionRecord["source_type"]
+    source_key: string
+    period: string
+  },
+) {
+  return exclusions.filter(
+    (exclusion) =>
+      !(
+        exclusion.source_type === key.source_type &&
+        exclusion.source_key === key.source_key &&
+        exclusion.period === key.period
+      ),
+  )
 }

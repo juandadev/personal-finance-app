@@ -8,13 +8,30 @@ import type {
   CashForecastMonth,
 } from "@/lib/finance/cash-forecast"
 
+const setCashForecastExclusion = mock(() =>
+  Promise.resolve({
+    ok: true as const,
+    message: "Excluded from this month’s projection.",
+  }),
+)
+
 mock.module("@/hooks/use-finance", () => ({
   useFinance: () => ({
     state: {
       preferences: {
+        user_id: "user-1",
         hideAmounts: false,
         default_currency: "USD",
       },
+      budgets: [
+        {
+          id: "budget-1",
+          category_id: "11111111-1111-4111-8111-111111111111",
+        },
+      ],
+    },
+    actions: {
+      setCashForecastExclusion,
     },
   }),
 }))
@@ -24,6 +41,37 @@ mock.module("@/components/forecast/delete-forecast-item-dialog", () => ({
 }))
 mock.module("@/components/forecast/forecast-item-dialog", () => ({
   EditForecastItemDialog: () => null,
+}))
+mock.module("@/components/actions", () => ({
+  ItemActions: ({
+    ariaLabel,
+    children,
+    disabled,
+  }: {
+    ariaLabel: string
+    children: ReactNode
+    disabled?: boolean
+  }) => (
+    <div data-disabled={disabled ? "true" : "false"}>
+      <button type="button" aria-label={ariaLabel} disabled={disabled}>
+        More
+      </button>
+      {children}
+    </div>
+  ),
+}))
+mock.module("@/components/ui/dropdown-menu", () => ({
+  DropdownMenuItem: ({
+    children,
+    onSelect,
+  }: {
+    children: ReactNode
+    onSelect?: () => void
+  }) => (
+    <button type="button" onClick={() => onSelect?.()}>
+      {children}
+    </button>
+  ),
 }))
 
 interface CollapsibleState {
@@ -288,6 +336,7 @@ describe("ForecastActivityReport budget projection source", () => {
     expect(
       screen.getAllByText("Pending · Budget projection").length,
     ).toBeGreaterThan(0)
+    expect(screen.getAllByText("Projected").length).toBeGreaterThan(0)
     expect(
       screen
         .getAllByText("Groceries")[0]
@@ -298,5 +347,257 @@ describe("ForecastActivityReport budget projection source", () => {
         .getAllByText("-$886.00")[0]
         ?.parentElement?.className.includes("text-finance-purple"),
     ).toBe(true)
+  })
+})
+
+describe("ForecastActivityReport month exclusions", () => {
+  test("shows Exclude for excludable rows and Read-only for cash and cards", () => {
+    render(
+      <ForecastActivityReport
+        adjustments={[]}
+        currency="USD"
+        month={makeMonth([
+          {
+            key: "default-income:2026-08",
+            sourceType: "default_income",
+            label: "Default Monthly Income",
+            period: "2026-08",
+            amountCents: 200_000,
+            status: "pending",
+          },
+          {
+            key: "cash-transaction:salary",
+            sourceType: "cash_transaction",
+            sourceId: "salary",
+            label: "Salary",
+            period: "2026-08",
+            amountCents: 100_000,
+            effectiveDate: "2026-08-05",
+            status: "actual",
+          },
+          {
+            key: "credit-card-payment:travel-card",
+            sourceType: "credit_card_statement",
+            label: "Travel Card Statement",
+            period: "2026-08",
+            amountCents: -45_000,
+            effectiveDate: "2026-08-18",
+            status: "pending",
+          },
+        ])}
+        periods={["2026-08"]}
+      />,
+    )
+
+    expect(
+      screen.getAllByRole("button", { name: "Exclude" }).length,
+    ).toBeGreaterThan(0)
+    expect(screen.getAllByText("Read-only").length).toBeGreaterThan(0)
+    expect(screen.queryByRole("button", { name: "Include" })).toBeNull()
+  })
+
+  test("mutes and strikes excluded rows and offers Include", () => {
+    render(
+      <ForecastActivityReport
+        adjustments={[]}
+        currency="USD"
+        month={makeMonth([
+          {
+            key: "default-income:2026-08",
+            sourceType: "default_income",
+            label: "Default Monthly Income",
+            period: "2026-08",
+            amountCents: 200_000,
+            status: "pending",
+            excludedFromProjection: true,
+          },
+        ])}
+        periods={["2026-08"]}
+      />,
+    )
+
+    expect(
+      screen.getAllByRole("button", { name: "Include" }).length,
+    ).toBeGreaterThan(0)
+    expect(
+      screen
+        .getAllByText("Default Monthly Income")[0]
+        ?.className.includes("line-through"),
+    ).toBe(true)
+    const amountNode =
+      screen.queryAllByText("+$2,000.00")[0] ?? screen.queryAllByText("+$2K")[0]
+    expect(amountNode?.parentElement?.className.includes("line-through")).toBe(
+      true,
+    )
+  })
+
+  test("calls setCashForecastExclusion when Exclude is pressed", async () => {
+    const user = userEvent.setup()
+    setCashForecastExclusion.mockClear()
+
+    render(
+      <ForecastActivityReport
+        adjustments={[]}
+        currency="USD"
+        month={makeMonth([
+          {
+            key: "default-income:2026-08",
+            sourceType: "default_income",
+            label: "Default Monthly Income",
+            period: "2026-08",
+            amountCents: 200_000,
+            status: "pending",
+          },
+        ])}
+        periods={["2026-08"]}
+      />,
+    )
+
+    await user.click(screen.getAllByRole("button", { name: "Exclude" })[0]!)
+
+    expect(setCashForecastExclusion).toHaveBeenCalledWith({
+      sourceType: "default_income",
+      sourceKey: "default_income",
+      period: "2026-08",
+      excluded: true,
+    })
+  })
+
+  test("shows Exclude in the adjustment overflow menu", () => {
+    const adjustmentId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+
+    render(
+      <ForecastActivityReport
+        adjustments={[
+          {
+            id: adjustmentId,
+            user_id: "user-1",
+            kind: "planned_outflow",
+            name: "Insurance",
+            amount_cents: 15_000,
+            start_period: "2026-08",
+            recurrence: "monthly",
+            created_at: "2026-07-01T00:00:00.000Z",
+            updated_at: "2026-07-01T00:00:00.000Z",
+          },
+        ]}
+        currency="USD"
+        month={makeMonth([
+          {
+            key: `forecast-adjustment:${adjustmentId}:2026-08`,
+            sourceType: "planned_outflow",
+            sourceId: adjustmentId,
+            label: "Insurance",
+            period: "2026-08",
+            amountCents: -15_000,
+            status: "pending",
+          },
+        ])}
+        periods={["2026-08"]}
+      />,
+    )
+
+    expect(
+      screen.getAllByRole("button", { name: "More options for Insurance" })
+        .length,
+    ).toBeGreaterThan(0)
+    expect(
+      screen.getAllByRole("button", { name: "Exclude" }).length,
+    ).toBeGreaterThan(0)
+    expect(
+      screen.getAllByRole("button", { name: "Edit Forecast Item" }).length,
+    ).toBeGreaterThan(0)
+    expect(
+      screen.getAllByRole("button", { name: "Delete Forecast Item" }).length,
+    ).toBeGreaterThan(0)
+  })
+
+  test("mutes excluded adjustment rows and offers Include in the menu", () => {
+    const adjustmentId = "dddddddd-dddd-4ddd-8ddd-dddddddddddd"
+
+    render(
+      <ForecastActivityReport
+        adjustments={[
+          {
+            id: adjustmentId,
+            user_id: "user-1",
+            kind: "additional_income",
+            name: "Bonus",
+            amount_cents: 25_000,
+            start_period: "2026-08",
+            recurrence: "once",
+            created_at: "2026-07-01T00:00:00.000Z",
+            updated_at: "2026-07-01T00:00:00.000Z",
+          },
+        ]}
+        currency="USD"
+        month={makeMonth([
+          {
+            key: `forecast-adjustment:${adjustmentId}:2026-08`,
+            sourceType: "additional_income",
+            sourceId: adjustmentId,
+            label: "Bonus",
+            period: "2026-08",
+            amountCents: 25_000,
+            status: "pending",
+            excludedFromProjection: true,
+          },
+        ])}
+        periods={["2026-08"]}
+      />,
+    )
+
+    expect(
+      screen.getAllByRole("button", { name: "Include" }).length,
+    ).toBeGreaterThan(0)
+    expect(
+      screen.getAllByText("Bonus")[0]?.className.includes("line-through"),
+    ).toBe(true)
+  })
+
+  test("calls setCashForecastExclusion for a custom adjustment", async () => {
+    const user = userEvent.setup()
+    const adjustmentId = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"
+    setCashForecastExclusion.mockClear()
+
+    render(
+      <ForecastActivityReport
+        adjustments={[
+          {
+            id: adjustmentId,
+            user_id: "user-1",
+            kind: "planned_outflow",
+            name: "Insurance",
+            amount_cents: 15_000,
+            start_period: "2026-08",
+            recurrence: "monthly",
+            created_at: "2026-07-01T00:00:00.000Z",
+            updated_at: "2026-07-01T00:00:00.000Z",
+          },
+        ]}
+        currency="USD"
+        month={makeMonth([
+          {
+            key: `forecast-adjustment:${adjustmentId}:2026-08`,
+            sourceType: "planned_outflow",
+            sourceId: adjustmentId,
+            label: "Insurance",
+            period: "2026-08",
+            amountCents: -15_000,
+            status: "pending",
+          },
+        ])}
+        periods={["2026-08"]}
+      />,
+    )
+
+    await user.click(screen.getAllByRole("button", { name: "Exclude" })[0]!)
+
+    expect(setCashForecastExclusion).toHaveBeenCalledWith({
+      sourceType: "planned_outflow",
+      sourceKey: adjustmentId,
+      period: "2026-08",
+      excluded: true,
+    })
   })
 })

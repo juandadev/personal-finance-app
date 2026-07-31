@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useState, type ReactNode } from "react"
-import { ArrowLeftIcon, LockIcon } from "@phosphor-icons/react"
+import { ArrowLeftIcon, CaretRightIcon, LockIcon } from "@phosphor-icons/react"
 
 import {
   HeaderMenuItem,
@@ -19,8 +19,9 @@ import {
 import { EmptyDataCard } from "@/components/empty-data-card"
 import { MoneyAmount } from "@/components/money-amount"
 import { PrivacyValue } from "@/components/privacy-value"
+import { EditBillDialog } from "@/components/recurring-bills/bill-dialog"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
+import { Card, cardActionLinkClasses } from "@/components/ui/card"
 import { useFinance } from "@/hooks/use-finance"
 import { formatDisplayDate, formatDisplayDateRange } from "@/lib/format"
 import type {
@@ -56,12 +57,33 @@ function statusClassName(status: CreditCardDueStatus) {
       : "text-muted-foreground"
 }
 
+function billOccurrenceStatusClassName(status: BillStatus) {
+  return status === "overdue"
+    ? "text-destructive"
+    : status === "due-soon" || status === "due-today"
+      ? "text-warning"
+      : "text-muted-foreground"
+}
+
+function nextBillDueDate(bill: RecurringBill) {
+  return bill.currentOccurrence?.dueDate ?? bill.firstDueDate
+}
+
+function sortCardRecurringBills(left: RecurringBill, right: RecurringBill) {
+  const leftArchived = Boolean(left.archivedAt)
+  const rightArchived = Boolean(right.archivedAt)
+  if (leftArchived !== rightArchived) {
+    return leftArchived ? 1 : -1
+  }
+  return nextBillDueDate(left).localeCompare(nextBillDueDate(right))
+}
+
 export function CreditCardDetailContent({
   creditCardId,
 }: {
   creditCardId: string
 }) {
-  const { creditCards, recurringBills, transactions } = useFinance()
+  const { creditCards, recurringBills } = useFinance()
   const [isScheduledChargeDialogOpen, setIsScheduledChargeDialogOpen] =
     useState(false)
   const [isMobilePayDialogOpen, setIsMobilePayDialogOpen] = useState(false)
@@ -82,9 +104,6 @@ export function CreditCardDetailContent({
     )
   }
 
-  const cardTransactions = transactions.filter(
-    (transaction) => transaction.creditCardId === creditCard.id,
-  )
   const scheduledCharges = recurringBills.filter(
     (bill) =>
       bill.frequency === "one_time" &&
@@ -93,6 +112,13 @@ export function CreditCardDetailContent({
       bill.currentOccurrence?.status !== "paid" &&
       bill.currentOccurrence?.status !== "skipped",
   )
+  const cardRecurringBills = recurringBills
+    .filter(
+      (bill) =>
+        bill.creditCardId === creditCard.id &&
+        (bill.frequency === "monthly" || bill.frequency === "yearly"),
+    )
+    .toSorted(sortCardRecurringBills)
   const hasReservedInstallments = creditCard.reservedInstallmentAmount > 0
   const canPayStatement = Boolean(
     creditCard.oldestPayableStatement &&
@@ -232,11 +258,8 @@ export function CreditCardDetailContent({
         creditCard={creditCard}
         scheduledCharges={scheduledCharges}
       />
+      <RecurringBillsCard creditCard={creditCard} bills={cardRecurringBills} />
       <StatementsCard creditCard={creditCard} />
-      <TransactionsCard
-        creditCard={creditCard}
-        transactions={cardTransactions}
-      />
       <PaymentsCard creditCard={creditCard} />
     </div>
   )
@@ -283,12 +306,7 @@ function ScheduledChargesCard({
                     <p
                       className={cn(
                         "text-xs font-bold",
-                        occurrence.status === "overdue"
-                          ? "text-destructive"
-                          : occurrence.status === "due-soon" ||
-                              occurrence.status === "due-today"
-                            ? "text-warning"
-                            : "text-muted-foreground",
+                        billOccurrenceStatusClassName(occurrence.status),
                       )}
                     >
                       {billStatusLabels[occurrence.status]}
@@ -321,6 +339,96 @@ function ScheduledChargesCard({
   )
 }
 
+function RecurringBillsCard({
+  creditCard,
+  bills,
+}: {
+  creditCard: CreditCard
+  bills: RecurringBill[]
+}) {
+  const [editingBill, setEditingBill] = useState<RecurringBill | null>(null)
+
+  if (bills.length === 0) {
+    return null
+  }
+
+  return (
+    <Card padding="fixed">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-xl font-bold tracking-tight">Recurring Bills</h2>
+        <Link
+          href={`/recurring-bills?card=${encodeURIComponent(creditCard.id)}`}
+          className={cardActionLinkClasses}
+        >
+          Manage recurring bills
+          <CaretRightIcon weight="fill" className="size-2" aria-hidden />
+        </Link>
+      </div>
+      <div className="divide-muted-foreground/10 mt-4 divide-y">
+        {bills.map((bill) => {
+          const occurrence = bill.currentOccurrence
+          const isArchived = Boolean(bill.archivedAt)
+          const frequencyLabel =
+            bill.frequency === "yearly" ? "Yearly" : "Monthly"
+
+          return (
+            <div
+              key={bill.id}
+              className={cn(
+                "flex items-center justify-between gap-4 py-4",
+                isArchived && "opacity-70",
+              )}
+            >
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold">{bill.concept}</p>
+                <p className="text-muted-foreground text-xs">
+                  {bill.name} · {frequencyLabel} · Due{" "}
+                  {formatDisplayDate(nextBillDueDate(bill))}
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
+                <div className="text-right">
+                  <p className="text-sm font-bold">
+                    <MoneyAmount amount={bill.amount * -1} variant="signed" />
+                  </p>
+                  {occurrence ? (
+                    <p
+                      className={cn(
+                        "text-xs font-bold",
+                        billOccurrenceStatusClassName(occurrence.status),
+                      )}
+                    >
+                      {billStatusLabels[occurrence.status]}
+                    </p>
+                  ) : null}
+                </div>
+                {!isArchived ? (
+                  <ItemActions ariaLabel={`More options for ${bill.concept}`}>
+                    <HeaderMenuItem onSelect={() => setEditingBill(bill)}>
+                      Edit
+                    </HeaderMenuItem>
+                  </ItemActions>
+                ) : null}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      {editingBill ? (
+        <EditBillDialog
+          bill={editingBill}
+          open
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditingBill(null)
+            }
+          }}
+        />
+      ) : null}
+    </Card>
+  )
+}
+
 function StatementsCard({ creditCard }: { creditCard: CreditCard }) {
   return (
     <Card padding="fixed">
@@ -330,18 +438,33 @@ function StatementsCard({ creditCard }: { creditCard: CreditCard }) {
           {creditCard.statements.map((statement) => (
             <div
               key={statement.id}
-              className="flex flex-col gap-2 py-4 sm:flex-row sm:items-center sm:justify-between"
+              className="flex flex-col gap-2 py-4 sm:flex-row sm:items-stretch sm:justify-between"
             >
-              <div>
-                <p className="text-sm font-bold">
-                  {formatDisplayDateRange(
-                    statement.periodStart,
-                    statement.periodEnd,
-                  )}
-                </p>
-                <p className="text-muted-foreground text-xs">
-                  Due {formatDisplayDate(statement.paymentDueDate)}
-                </p>
+              <div className="flex flex-col justify-between gap-3">
+                <div>
+                  <p className="text-sm font-bold">
+                    {formatDisplayDateRange(
+                      statement.periodStart,
+                      statement.periodEnd,
+                    )}
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    Due {formatDisplayDate(statement.paymentDueDate)}
+                  </p>
+                </div>
+                {statement.amount > 0 || statement.pendingBillsAmount > 0 ? (
+                  <Link
+                    href={`/transactions?card=${encodeURIComponent(creditCard.id)}&from=${encodeURIComponent(statement.periodStart)}&to=${encodeURIComponent(statement.periodEnd)}`}
+                    className={cardActionLinkClasses}
+                  >
+                    View statement transactions
+                    <CaretRightIcon
+                      weight="fill"
+                      className="size-2"
+                      aria-hidden
+                    />
+                  </Link>
+                ) : null}
               </div>
               <div className="flex flex-col items-start gap-2 sm:items-end">
                 <p className="text-sm font-bold">
@@ -388,73 +511,6 @@ function StatementsCard({ creditCard }: { creditCard: CreditCard }) {
         <p className="text-muted-foreground mt-4 text-sm">
           No statements yet. Credit-card purchases will create statement
           activity.
-        </p>
-      )}
-    </Card>
-  )
-}
-
-function TransactionsCard({
-  creditCard,
-  transactions,
-}: {
-  creditCard: CreditCard
-  transactions: ReturnType<typeof useFinance>["transactions"]
-}) {
-  const pendingBillLines = creditCard.statements
-    .filter((statement) => statement.lifecycleStatus !== "paid")
-    .flatMap((statement) => statement.pendingBills)
-    .sort((a, b) => b.dueDate.localeCompare(a.dueDate))
-  const hasActivity = transactions.length > 0 || pendingBillLines.length > 0
-
-  return (
-    <Card padding="fixed">
-      <h2 className="text-xl font-bold tracking-tight">Card Transactions</h2>
-      {hasActivity ? (
-        <div className="divide-muted-foreground/10 mt-4 divide-y">
-          {pendingBillLines.map((line) => (
-            <div
-              key={`${line.billId}-${line.dueDate}`}
-              className="flex items-center justify-between gap-4 py-4 opacity-70"
-            >
-              <div>
-                <p className="text-muted-foreground text-sm font-bold">
-                  {line.concept}
-                </p>
-                <p className="text-muted-foreground text-xs">
-                  Recurring bill · Due {formatDisplayDate(line.dueDate)}
-                </p>
-              </div>
-              <div className="flex flex-col items-end gap-1">
-                <p className="text-muted-foreground text-sm font-bold">
-                  <MoneyAmount amount={line.amount * -1} variant="signed" />
-                </p>
-                <p className="text-muted-foreground text-xs font-bold">
-                  Pending
-                </p>
-              </div>
-            </div>
-          ))}
-          {transactions.map((transaction) => (
-            <div
-              key={transaction.id}
-              className="flex items-center justify-between gap-4 py-4"
-            >
-              <div>
-                <p className="text-sm font-bold">{transaction.concept}</p>
-                <p className="text-muted-foreground text-xs">
-                  {transaction.name} · {transaction.date}
-                </p>
-              </div>
-              <p className="text-sm font-bold">
-                <MoneyAmount amount={transaction.amount} variant="signed" />
-              </p>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="text-muted-foreground mt-4 text-sm">
-          No transactions have been assigned to {creditCard.nickname} yet.
         </p>
       )}
     </Card>

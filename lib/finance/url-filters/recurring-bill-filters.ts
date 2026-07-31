@@ -1,7 +1,7 @@
 import type { RecurringBill } from "@/lib/types"
 import type { RecurringBillFilters } from "./normalize"
 
-const latestSortStatusPriority: Partial<
+const urgencySortStatusPriority: Partial<
   Record<RecurringBill["status"], number>
 > = {
   overdue: 0,
@@ -46,8 +46,8 @@ export function nextDueDate(bill: RecurringBill) {
   return bill.currentOccurrence?.dueDate ?? bill.firstDueDate
 }
 
-function latestSortRank(bill: RecurringBill) {
-  return latestSortStatusPriority[bill.status] ?? Number.POSITIVE_INFINITY
+function urgencySortRank(bill: RecurringBill) {
+  return urgencySortStatusPriority[bill.status] ?? Number.POSITIVE_INFINITY
 }
 
 export function sortRecurringBills(
@@ -56,15 +56,18 @@ export function sortRecurringBills(
 ) {
   return [...bills].sort((left, right) => {
     switch (sort) {
-      case "latest": {
-        const statusComparison = latestSortRank(left) - latestSortRank(right)
+      case "latest":
+      case "oldest": {
+        const statusComparison = urgencySortRank(left) - urgencySortRank(right)
 
-        return statusComparison !== 0
-          ? statusComparison
+        if (statusComparison !== 0) {
+          return statusComparison
+        }
+
+        return sort === "latest"
+          ? nextDueDate(left).localeCompare(nextDueDate(right))
           : nextDueDate(right).localeCompare(nextDueDate(left))
       }
-      case "oldest":
-        return nextDueDate(left).localeCompare(nextDueDate(right))
       case "a-z":
         return left.name.localeCompare(right.name)
       case "z-a":

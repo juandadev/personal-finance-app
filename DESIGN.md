@@ -474,9 +474,15 @@ Button labels should be action-specific: `Add Money`, `Create Budget`,
 - User-created additional-income and planned-outflow adjustments may be
   one-time or repeat monthly from their selected start month. They remain
   pending forecast-only entries until edited or deleted.
-- Only user-created forecast adjustments expose item-level Edit and Delete
-  actions. Generated income, bill, card, and budget-projection rows are
-  read-only.
+- User-created forecast adjustments expose item-level Edit and Delete in an
+  overflow menu, plus Exclude/Include for the pinned month only. Excludable
+  generated rows (`budget_projection`, `default_income`, `recurring_bill`)
+  expose Exclude/Include as a text action. Exclusions persist and keep the row
+  visible muted and struck through while totals and the chart ignore the
+  amount. Generated excludable rows also show a compact muted `Projected` cue
+  beside the Source text. Credit card and actual cash rows remain plain
+  Read-only. Global Budget projections opt-in remains the horizon-wide budget
+  gate.
 - Inside the summary chart card, above the color legend and chart, a
   collapsible Budget projections control (collapsed by default) lists active
   budgets as compact checkbox + name rows. Desktop wraps them in a row; mobile
@@ -514,12 +520,16 @@ Button labels should be action-specific: `Add Money`, `Create Budget`,
   icon when the bill charges to a credit card.
 - The due-date column shows the schedule label (`Monthly`, `Yearly`, or
   `Payment N of M` for finite bills) with a short anchor date (`1st`,
-  `Aug 15th`, etc.) plus the occurrence status label and icon.
-- `Latest` sort keeps the due-date ordering, but surfaces actionable bills
-  first in this order: `Overdue`, `Due Today`, `Due Soon`, then `Upcoming`.
+  `Aug 15th`, etc.) plus the occurrence status label and icon. Hovering the
+  short date shows a tooltip with the next due date as
+  `Monday, 27 Jul, 2026` (`EEEE, d MMM, yyyy` via `formatDisplayDate`).
+- `Latest` and `Oldest` sort by urgency first (`Overdue`, `Due Today`,
+  `Due Soon`, `Upcoming`, then paid/other). Within each status, `Latest` is
+  soonest next due date first and `Oldest` is furthest first.
 - Mobile bill rows stay compact: avatar, concept, contact, a short schedule line
   (`Monthly - 1st`, `Yearly - Aug 15th`) with the status icon, amount, and an
-  overflow menu. `Pay Bill` and `Skip` live in that menu on mobile.
+  overflow menu. The short date uses the same full-date hover tooltip as
+  desktop. `Pay Bill` and `Skip` live in that menu on mobile.
 - The bill dialog locks `frequency` and `first due date` once a bill has any
   settled payment. Locked fields render disabled with helper text explaining
   to archive and recreate the bill to reschedule.
@@ -543,6 +553,18 @@ Today`, then `Due Soon`, then `Upcoming`. `Overdue` uses destructive text.
 - When a card-level payment targets the oldest payable statement, the dialog
   explains that selection, emphasizes the statement period, and offers a
   secondary route to card details for choosing another statement.
+- On Credit Card Details, each statement with a non-zero purchase amount or
+  pending bills exposes a `View statement transactions` text link under the
+  period and due date (shared card action-link styling). It opens Transactions
+  filtered to that card and inclusive statement period (`card`, `from`, `to`).
+- Credit Card Details does not list Card Transactions inline; statement-scoped
+  review and edits happen on Transactions via that deep-link.
+- Credit Card Details shows a Recurring Bills section for monthly and yearly
+  bills assigned to the card, including archived bills (muted, no actions).
+  Active rows expose edit-only actions via the shared bill dialog. One-time
+  card charges remain in Scheduled Charges only.
+- The Recurring Bills section header includes a `Manage recurring bills` link
+  that opens Recurring Bills filtered by that card (`card`).
 
 ## Finance Data Rules
 

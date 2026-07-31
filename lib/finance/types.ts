@@ -22,6 +22,12 @@ export type TransactionPaymentMethod =
 export type CreditCardStatementLifecycleStatus = "open" | "closed" | "paid"
 export type CashForecastAdjustmentKind = "additional_income" | "planned_outflow"
 export type CashForecastAdjustmentRecurrence = "once" | "monthly"
+export type CashForecastExclusionSourceType =
+  | "budget_projection"
+  | "default_income"
+  | "recurring_bill"
+  | "additional_income"
+  | "planned_outflow"
 export type PotMovementDirection = "deposit" | "withdraw"
 export type PotMovementSource =
   | { type: "direct" }
@@ -260,6 +266,15 @@ export interface CashForecastAdjustmentRecord {
   updated_at: string
 }
 
+export interface CashForecastExclusionRecord {
+  id: FinanceRecordId
+  user_id: FinanceUserId
+  source_type: CashForecastExclusionSourceType
+  source_key: string
+  period: string
+  created_at: string
+}
+
 export type NewBudgetRecord = Omit<BudgetRecord, "user_id">
 export type NewPotRecord = Omit<PotRecord, "user_id">
 export type NewCategoryRecord = Omit<CategoryRecord, "user_id">
@@ -296,6 +311,7 @@ export interface FinanceState {
   creditCardPayments: CreditCardPaymentRecord[]
   cashForecastSettings: CashForecastSettingsRecord | null
   cashForecastAdjustments: CashForecastAdjustmentRecord[]
+  cashForecastExclusions: CashForecastExclusionRecord[]
 }
 
 export interface FinanceViewModel {

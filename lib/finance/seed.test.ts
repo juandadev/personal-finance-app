@@ -27,6 +27,7 @@ describe("createInitialFinanceState", () => {
       creditCardPayments: [],
       cashForecastSettings: null,
       cashForecastAdjustments: [],
+      cashForecastExclusions: [],
     })
   })
 
@@ -38,5 +39,6 @@ describe("createInitialFinanceState", () => {
     expect(first.cashForecastAdjustments).not.toBe(
       second.cashForecastAdjustments,
     )
+    expect(first.cashForecastExclusions).not.toBe(second.cashForecastExclusions)
   })
 })

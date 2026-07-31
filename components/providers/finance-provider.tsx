@@ -31,6 +31,7 @@ import {
   createTransactionAction,
   deleteBudgetAction,
   deleteCashForecastAdjustmentAction,
+  setCashForecastExclusionAction,
   deleteCategoryAction,
   deleteCounterpartyAction,
   deletePotAction,
@@ -634,6 +635,76 @@ export function FinanceProvider({
             return result
           }),
         ),
+      setCashForecastExclusion: (input) => {
+        const previousExclusion =
+          stateRef.current.cashForecastExclusions.find(
+            (exclusion) =>
+              exclusion.source_type === input.sourceType &&
+              exclusion.source_key === input.sourceKey &&
+              exclusion.period === input.period,
+          ) ?? null
+
+        if (input.excluded) {
+          const optimisticExclusion = {
+            id: previousExclusion?.id ?? crypto.randomUUID(),
+            user_id: stateRef.current.preferences.user_id,
+            source_type: input.sourceType,
+            source_key: input.sourceKey,
+            period: input.period,
+            created_at:
+              previousExclusion?.created_at ?? new Date().toISOString(),
+          }
+          dispatch({
+            type: "cash-forecast/exclusion-upsert",
+            exclusion: optimisticExclusion,
+          })
+        } else {
+          dispatch({
+            type: "cash-forecast/exclusion-delete",
+            source_type: input.sourceType,
+            source_key: input.sourceKey,
+            period: input.period,
+          })
+        }
+
+        return runFinanceAction(() =>
+          setCashForecastExclusionAction(input).then((result) => {
+            if (!result.ok) {
+              if (previousExclusion) {
+                dispatch({
+                  type: "cash-forecast/exclusion-upsert",
+                  exclusion: previousExclusion,
+                })
+              } else {
+                dispatch({
+                  type: "cash-forecast/exclusion-delete",
+                  source_type: input.sourceType,
+                  source_key: input.sourceKey,
+                  period: input.period,
+                })
+              }
+              toast.error(result.message)
+              return result
+            }
+
+            if (result.data.exclusion) {
+              dispatch({
+                type: "cash-forecast/exclusion-upsert",
+                exclusion: result.data.exclusion,
+              })
+            } else {
+              dispatch({
+                type: "cash-forecast/exclusion-delete",
+                source_type: input.sourceType,
+                source_key: input.sourceKey,
+                period: input.period,
+              })
+            }
+
+            return result
+          }),
+        )
+      },
       updateUiPreferences: (hideAmounts: boolean) => {
         const previousHideAmounts = stateRef.current.preferences.hideAmounts
         dispatch({ type: "preferences/ui-update", hideAmounts })

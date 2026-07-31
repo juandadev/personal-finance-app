@@ -19,16 +19,26 @@ import {
 interface OverflowActionsProps {
   ariaLabel: string
   children: ReactNode
+  disabled?: boolean
 }
 
-function OverflowActions({ ariaLabel, children }: OverflowActionsProps) {
+function OverflowActions({
+  ariaLabel,
+  children,
+  disabled = false,
+}: OverflowActionsProps) {
   return (
     <DropdownMenu>
       <TooltipProvider skipDelayDuration={0}>
         <Tooltip>
           <TooltipTrigger asChild>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-lg" aria-label={ariaLabel}>
+            <DropdownMenuTrigger asChild disabled={disabled}>
+              <Button
+                variant="ghost"
+                size="icon-lg"
+                aria-label={ariaLabel}
+                disabled={disabled}
+              >
                 <DotsThreeIcon weight="bold" className="size-4" aria-hidden />
               </Button>
             </DropdownMenuTrigger>
@@ -83,6 +93,14 @@ export function HeaderMenuItem(props: ComponentProps<typeof DropdownMenuItem>) {
   return <DropdownMenuItem {...props} />
 }
 
-export function ItemActions({ ariaLabel, children }: OverflowActionsProps) {
-  return <OverflowActions ariaLabel={ariaLabel}>{children}</OverflowActions>
+export function ItemActions({
+  ariaLabel,
+  children,
+  disabled,
+}: OverflowActionsProps) {
+  return (
+    <OverflowActions ariaLabel={ariaLabel} disabled={disabled}>
+      {children}
+    </OverflowActions>
+  )
 }

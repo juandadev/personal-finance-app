@@ -19,6 +19,7 @@ import { resolveRecurringBillOccurrences } from "@/lib/finance/recurring-bill-sc
 import type {
   BudgetRecord,
   CashForecastAdjustmentRecord,
+  CashForecastExclusionSourceType,
   CurrencyCode,
   FinanceState,
   RecurringBillPaymentRecord,
@@ -62,6 +63,7 @@ export interface CashForecastActivity {
   effectiveDate?: string
   status: CashForecastActivityStatus
   children?: CashForecastActivityChild[]
+  excludedFromProjection?: boolean
 }
 
 export interface CashForecastBridge {
@@ -265,6 +267,7 @@ function adjustmentApplies(
 function adjustmentActivity(
   adjustment: CashForecastAdjustmentRecord,
   period: string,
+  excludedFromProjection = false,
 ): CashForecastActivity {
   const isIncome = adjustment.kind === "additional_income"
 
@@ -276,6 +279,7 @@ function adjustmentActivity(
     period,
     amountCents: adjustment.amount_cents * (isIncome ? 1 : -1),
     status: "pending",
+    ...(excludedFromProjection ? { excludedFromProjection: true } : {}),
   }
 }
 
@@ -557,6 +561,7 @@ function budgetProjectionActivity(
   participant: BudgetProjectionParticipant,
   period: string,
   amountCents: number,
+  excludedFromProjection = false,
 ): CashForecastActivity {
   return {
     key: `budget-projection:${participant.budget.id}:${period}`,
@@ -566,7 +571,28 @@ function budgetProjectionActivity(
     period,
     amountCents: -amountCents,
     status: "pending",
+    ...(excludedFromProjection ? { excludedFromProjection: true } : {}),
   }
+}
+
+function exclusionKey(
+  sourceType: CashForecastExclusionSourceType,
+  sourceKey: string,
+  period: string,
+) {
+  return `${sourceType}:${sourceKey}:${period}`
+}
+
+function buildExclusionIndex(state: FinanceState) {
+  return new Set(
+    state.cashForecastExclusions.map((exclusion) =>
+      exclusionKey(
+        exclusion.source_type,
+        exclusion.source_key,
+        exclusion.period,
+      ),
+    ),
+  )
 }
 
 export function buildCashForecast(
@@ -643,8 +669,17 @@ export function buildCashForecast(
   const currentCardObligations = cardObligations.filter(
     (obligation) => obligation.paymentDueDate <= currentPeriodEnd,
   )
+  const exclusionIndex = buildExclusionIndex(state)
+  const isExcluded = (
+    sourceType: CashForecastExclusionSourceType,
+    sourceKey: string,
+    period: string,
+  ) => exclusionIndex.has(exclusionKey(sourceType, sourceKey, period))
   const directBillObligationsCents = currentDirectBills.reduce(
-    (sum, projection) => sum + projection.amountCents,
+    (sum, projection) =>
+      isExcluded("recurring_bill", projection.bill.id, currentPeriod)
+        ? sum
+        : sum + projection.amountCents,
     0,
   )
   const creditCardObligationsCents = currentCardObligations.reduce(
@@ -665,24 +700,39 @@ export function buildCashForecast(
       adjustmentApplies(adjustment, currentPeriod),
   )
   const pendingAdditionalIncomeCents = currentAdditionalIncome.reduce(
-    (sum, adjustment) => sum + adjustment.amount_cents,
+    (sum, adjustment) =>
+      isExcluded("additional_income", adjustment.id, currentPeriod)
+        ? sum
+        : sum + adjustment.amount_cents,
     0,
   )
   const pendingPlannedOutflowCents = currentPlannedOutflows.reduce(
-    (sum, adjustment) => sum + adjustment.amount_cents,
+    (sum, adjustment) =>
+      isExcluded("planned_outflow", adjustment.id, currentPeriod)
+        ? sum
+        : sum + adjustment.amount_cents,
     0,
   )
   const pendingBudgetProjectionCents = budgetProjectionParticipants.reduce(
-    (sum, participant) =>
-      sum +
-      computeBudgetProjectionCents(
-        participant,
-        currentPeriod,
-        true,
-        state,
-        cardAttributionByCategoryPeriod,
-        chargeDuePeriodByTransactionId,
-      ),
+    (sum, participant) => {
+      if (
+        isExcluded("budget_projection", participant.categoryId, currentPeriod)
+      ) {
+        return sum
+      }
+
+      return (
+        sum +
+        computeBudgetProjectionCents(
+          participant,
+          currentPeriod,
+          true,
+          state,
+          cardAttributionByCategoryPeriod,
+          chargeDuePeriodByTransactionId,
+        )
+      )
+    },
     0,
   )
   const pendingOutflowsCents =
@@ -736,9 +786,12 @@ export function buildCashForecast(
   const currentOpeningBalanceCents =
     primaryAccount.current_balance_cents - reconciliationNetMovementCents
   const bridgeActivities = sortDatedActivities([
-    ...currentDirectBills.map((projection) =>
-      directBillActivity(projection, currentPeriod),
-    ),
+    ...currentDirectBills.map((projection) => {
+      const activity = directBillActivity(projection, currentPeriod)
+      return isExcluded("recurring_bill", projection.bill.id, currentPeriod)
+        ? { ...activity, excludedFromProjection: true }
+        : activity
+    }),
     ...currentCardObligations.map((obligation) =>
       cardObligationActivity(obligation, currentPeriod),
     ),
@@ -746,9 +799,13 @@ export function buildCashForecast(
   let openingBalanceCents = currentOpeningBalanceCents
   const months = periods.map((period): CashForecastMonth => {
     const isCurrentPeriod = period === currentPeriod
-    const defaultIncomeCents = isCurrentPeriod
+    const rawDefaultIncomeCents = isCurrentPeriod
       ? remainingDefaultIncomeCents
       : savedDefaultIncomeCents
+    const defaultIncomeExcluded =
+      rawDefaultIncomeCents > 0 &&
+      isExcluded("default_income", "default_income", period)
+    const defaultIncomeCents = defaultIncomeExcluded ? 0 : rawDefaultIncomeCents
     const additionalIncome = sortedAdjustments.filter(
       (adjustment) =>
         adjustment.kind === "additional_income" &&
@@ -775,20 +832,49 @@ export function buildCashForecast(
     const monthActualOutflowCents = isCurrentPeriod
       ? forecastActualOutflowCents
       : 0
-    const additionalIncomeCents = additionalIncome.reduce(
-      (sum, adjustment) => sum + adjustment.amount_cents,
+    const additionalIncomeActivities = additionalIncome.map((adjustment) =>
+      adjustmentActivity(
+        adjustment,
+        period,
+        isExcluded("additional_income", adjustment.id, period),
+      ),
+    )
+    const additionalIncomeCents = additionalIncomeActivities.reduce(
+      (sum, activity) =>
+        activity.excludedFromProjection
+          ? sum
+          : sum + Math.abs(activity.amountCents),
       0,
     )
-    const directBillOutflowCents = monthDirectBills.reduce(
-      (sum, projection) => sum + projection.amountCents,
+    const directBillActivities = monthDirectBills.map((projection) => {
+      const activity = directBillActivity(projection, period)
+      return isExcluded("recurring_bill", projection.bill.id, period)
+        ? { ...activity, excludedFromProjection: true }
+        : activity
+    })
+    const directBillOutflowCents = directBillActivities.reduce(
+      (sum, activity) =>
+        activity.excludedFromProjection
+          ? sum
+          : sum + Math.abs(activity.amountCents),
       0,
     )
     const creditCardOutflowCents = monthCardObligations.reduce(
       (sum, obligation) => sum + obligation.amountCents,
       0,
     )
-    const plannedOutflowCents = plannedOutflows.reduce(
-      (sum, adjustment) => sum + adjustment.amount_cents,
+    const plannedOutflowActivities = plannedOutflows.map((adjustment) =>
+      adjustmentActivity(
+        adjustment,
+        period,
+        isExcluded("planned_outflow", adjustment.id, period),
+      ),
+    )
+    const plannedOutflowCents = plannedOutflowActivities.reduce(
+      (sum, activity) =>
+        activity.excludedFromProjection
+          ? sum
+          : sum + Math.abs(activity.amountCents),
       0,
     )
     const budgetProjectionActivities = budgetProjectionParticipants.flatMap(
@@ -802,13 +888,26 @@ export function buildCashForecast(
           chargeDuePeriodByTransactionId,
         )
 
-        return amountCents > 0
-          ? [budgetProjectionActivity(participant, period, amountCents)]
-          : []
+        if (amountCents <= 0) {
+          return []
+        }
+
+        const excluded = isExcluded(
+          "budget_projection",
+          participant.categoryId,
+          period,
+        )
+
+        return [
+          budgetProjectionActivity(participant, period, amountCents, excluded),
+        ]
       },
     )
     const budgetProjectionOutflowCents = budgetProjectionActivities.reduce(
-      (sum, activity) => sum + Math.abs(activity.amountCents),
+      (sum, activity) =>
+        activity.excludedFromProjection
+          ? sum
+          : sum + Math.abs(activity.amountCents),
       0,
     )
     const totalIncomeCents =
@@ -822,9 +921,7 @@ export function buildCashForecast(
     const monthlyChangeCents = totalIncomeCents - totalOutflowsCents
     const endingBalanceCents = openingBalanceCents + monthlyChangeCents
     const datedOutflows = sortDatedActivities([
-      ...monthDirectBills.map((projection) =>
-        directBillActivity(projection, period),
-      ),
+      ...directBillActivities,
       ...monthCardObligations.map((obligation) =>
         cardObligationActivity(obligation, period),
       ),
@@ -835,7 +932,7 @@ export function buildCashForecast(
             actualTransactionActivity(transaction, period),
           )
         : []),
-      ...(defaultIncomeCents === 0
+      ...(rawDefaultIncomeCents === 0
         ? []
         : [
             {
@@ -845,17 +942,16 @@ export function buildCashForecast(
                 ? "Remaining Monthly Income"
                 : "Default Monthly Income",
               period,
-              amountCents: defaultIncomeCents,
+              amountCents: rawDefaultIncomeCents,
               status: "pending" as const,
+              ...(defaultIncomeExcluded
+                ? { excludedFromProjection: true }
+                : {}),
             },
           ]),
-      ...additionalIncome.map((adjustment) =>
-        adjustmentActivity(adjustment, period),
-      ),
+      ...additionalIncomeActivities,
       ...datedOutflows,
-      ...plannedOutflows.map((adjustment) =>
-        adjustmentActivity(adjustment, period),
-      ),
+      ...plannedOutflowActivities,
       ...budgetProjectionActivities,
     ]
     const month = {

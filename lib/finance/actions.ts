@@ -8,6 +8,7 @@ import {
   assignTransactionToBudget,
   closeZeroBalanceCreditCardStatement,
   deleteCashForecastAdjustment,
+  deleteCashForecastExclusion,
   deleteBudget,
   deleteCategory,
   deleteCounterparty,
@@ -38,6 +39,7 @@ import {
   updateTransaction,
   updateCashForecastIncludedBudgets,
   updateUiPreferences,
+  upsertCashForecastExclusion,
   upsertCashForecastSettings,
 } from "@/lib/finance/queries"
 import { uiPreferencesSchema } from "@/lib/finance/ui-preferences"
@@ -49,6 +51,7 @@ import type {
   BudgetSummaryRecord,
   BudgetTransactionAssignmentRecord,
   CashForecastAdjustmentRecord,
+  CashForecastExclusionRecord,
   CashForecastSettingsRecord,
   CategoryRecord,
   CounterpartyRecord,
@@ -169,6 +172,39 @@ const budgetUpdateSchema = z
   )
 
 const includedBudgetCategoryIdsSchema = z.array(recordIdSchema)
+const cashForecastExclusionSchema = z
+  .object({
+    sourceType: z.enum([
+      "budget_projection",
+      "default_income",
+      "recurring_bill",
+      "additional_income",
+      "planned_outflow",
+    ]),
+    sourceKey: z.string().trim().min(1),
+    period: forecastPeriodSchema,
+    excluded: z.boolean(),
+  })
+  .superRefine((value, context) => {
+    if (value.sourceType === "default_income") {
+      if (value.sourceKey !== "default_income") {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Invalid default income exclusion key.",
+          path: ["sourceKey"],
+        })
+      }
+      return
+    }
+
+    if (!recordIdSchema.safeParse(value.sourceKey).success) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Choose a valid exclusion source.",
+        path: ["sourceKey"],
+      })
+    }
+  })
 
 const nameSchema = z.string().trim().min(1).max(60)
 const categoryNameSchema = z.string().trim().min(1).max(40)
@@ -1308,6 +1344,53 @@ export async function deleteCashForecastAdjustmentAction(
       ok: true,
       message: "Forecast item deleted.",
       data,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function setCashForecastExclusionAction(input: {
+  sourceType:
+    | "budget_projection"
+    | "default_income"
+    | "recurring_bill"
+    | "additional_income"
+    | "planned_outflow"
+  sourceKey: string
+  period: string
+  excluded: boolean
+}): Promise<
+  FinanceActionResult<{
+    excluded: boolean
+    exclusion: CashForecastExclusionRecord | null
+  }>
+> {
+  try {
+    const userId = await getUserId()
+    const parsed = cashForecastExclusionSchema.parse(input)
+    const key = {
+      source_type: parsed.sourceType,
+      source_key: parsed.sourceKey,
+      period: parsed.period,
+    }
+
+    if (parsed.excluded) {
+      const exclusion = await upsertCashForecastExclusion(userId, key)
+
+      return {
+        ok: true,
+        message: "Excluded from this month’s projection.",
+        data: { excluded: true, exclusion },
+      }
+    }
+
+    const exclusion = await deleteCashForecastExclusion(userId, key)
+
+    return {
+      ok: true,
+      message: "Included in this month’s projection.",
+      data: { excluded: false, exclusion },
     }
   } catch (error) {
     return handleFinanceActionError(error)

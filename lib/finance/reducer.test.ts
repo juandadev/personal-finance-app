@@ -6,6 +6,7 @@ import type {
   AccountRecord,
   AccountSummaryRecord,
   CashForecastAdjustmentRecord,
+  CashForecastExclusionRecord,
   PotRecord,
   TransactionRecord,
 } from "@/lib/finance/types"
@@ -61,6 +62,45 @@ describe("financeReducer cash forecast events", () => {
     expect(added.cashForecastAdjustments[0]?.amount_cents).toBe(10_000)
     expect(updated.cashForecastAdjustments[0]?.amount_cents).toBe(20_000)
     expect(deleted.cashForecastAdjustments).toEqual([])
+  })
+
+  test("upserts and deletes exclusions by source identity", () => {
+    const exclusion: CashForecastExclusionRecord = {
+      id: "exclusion-1",
+      user_id: "user-1",
+      source_type: "default_income",
+      source_key: "default_income",
+      period: "2026-08",
+      created_at: "2026-07-01T00:00:00.000Z",
+    }
+    const state = createInitialFinanceState()
+    const added = financeReducer(state, {
+      type: "cash-forecast/exclusion-upsert",
+      exclusion,
+    })
+    const replaced = financeReducer(added, {
+      type: "cash-forecast/exclusion-upsert",
+      exclusion: {
+        ...exclusion,
+        id: "exclusion-2",
+      },
+    })
+    const deleted = financeReducer(replaced, {
+      type: "cash-forecast/exclusion-delete",
+      source_type: "default_income",
+      source_key: "default_income",
+      period: "2026-08",
+    })
+
+    expect(state.cashForecastExclusions).toEqual([])
+    expect(added.cashForecastExclusions).toEqual([exclusion])
+    expect(replaced.cashForecastExclusions).toEqual([
+      {
+        ...exclusion,
+        id: "exclusion-2",
+      },
+    ])
+    expect(deleted.cashForecastExclusions).toEqual([])
   })
 })
 

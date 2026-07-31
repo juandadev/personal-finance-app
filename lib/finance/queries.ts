@@ -20,6 +20,8 @@ import type {
   BudgetSummaryRecord,
   BudgetTransactionAssignmentRecord,
   CashForecastAdjustmentRecord,
+  CashForecastExclusionRecord,
+  CashForecastExclusionSourceType,
   CashForecastSettingsRecord,
   CategoryRecord,
   CounterpartyRecord,
@@ -228,6 +230,14 @@ const cashForecastAdjustmentColumns = [
   "recurrence",
   "created_at::text AS created_at",
   "updated_at::text AS updated_at",
+]
+const cashForecastExclusionColumns = [
+  "user_id",
+  "id",
+  "source_type",
+  "source_key",
+  "period",
+  "created_at::text AS created_at",
 ]
 
 async function ensureUserProfile(
@@ -466,6 +476,11 @@ export async function loadFinanceState(
         `SELECT ${cashForecastAdjustmentColumns.join(", ")} FROM cash_forecast_adjustments WHERE user_id = $1 ORDER BY created_at, id`,
         [userId],
       )
+    const cashForecastExclusions =
+      await client.query<CashForecastExclusionRecord>(
+        `SELECT ${cashForecastExclusionColumns.join(", ")} FROM cash_forecast_exclusions WHERE user_id = $1 ORDER BY period, source_type, source_key, id`,
+        [userId],
+      )
 
     return {
       preferences,
@@ -485,6 +500,7 @@ export async function loadFinanceState(
       creditCardPayments: creditCardPayments.rows,
       cashForecastSettings: cashForecastSettings.rows[0] ?? null,
       cashForecastAdjustments: cashForecastAdjustments.rows,
+      cashForecastExclusions: cashForecastExclusions.rows,
     }
   })
 }
@@ -3096,6 +3112,60 @@ export async function deleteCashForecastAdjustment(userId: string, id: string) {
     }
 
     return result.rows[0]
+  })
+}
+
+export async function upsertCashForecastExclusion(
+  userId: string,
+  exclusion: {
+    source_type: CashForecastExclusionSourceType
+    source_key: string
+    period: string
+  },
+) {
+  return withFinanceTransaction(userId, async (client) => {
+    const result = await client.query<CashForecastExclusionRecord>(
+      `
+        INSERT INTO cash_forecast_exclusions (
+          user_id,
+          source_type,
+          source_key,
+          period
+        )
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (user_id, source_type, source_key, period)
+        DO UPDATE SET source_key = EXCLUDED.source_key
+        RETURNING ${cashForecastExclusionColumns.join(", ")}
+      `,
+      [userId, exclusion.source_type, exclusion.source_key, exclusion.period],
+    )
+
+    return result.rows[0]
+  })
+}
+
+export async function deleteCashForecastExclusion(
+  userId: string,
+  exclusion: {
+    source_type: CashForecastExclusionSourceType
+    source_key: string
+    period: string
+  },
+) {
+  return withFinanceTransaction(userId, async (client) => {
+    const result = await client.query<CashForecastExclusionRecord>(
+      `
+        DELETE FROM cash_forecast_exclusions
+        WHERE user_id = $1
+          AND source_type = $2
+          AND source_key = $3
+          AND period = $4
+        RETURNING ${cashForecastExclusionColumns.join(", ")}
+      `,
+      [userId, exclusion.source_type, exclusion.source_key, exclusion.period],
+    )
+
+    return result.rows[0] ?? null
   })
 }
 

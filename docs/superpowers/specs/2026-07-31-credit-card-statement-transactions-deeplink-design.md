@@ -14,8 +14,8 @@ second, incomplete list on the detail page.
 
 - Let users jump from a statement row to Transactions filtered by that credit
   card and inclusive statement period.
-- Keep the control compact: icon-only ghost button with tooltip and accessible
-  label.
+- Keep the control clear: a `View statement transactions` text link using the
+  shared card action-link styling.
 - Remove the Card Transactions card from Credit Card Details so the detail page
   no longer duplicates a transaction list.
 
@@ -55,14 +55,12 @@ URL-only deep-links such as budget “See All”.
 
 ## UI
 
-- Place the control directly below the statement’s period range and due-date
-  text (left column of the row), not beside Pay / Close.
-- Use an icon-only ghost button with the shared tooltip pattern
-  (`TooltipProvider` with `skipDelayDuration={0}`, descriptive `aria-label`,
-  matching tooltip copy).
-- Label: “View transactions for this statement”.
-- Icon: a list-style Phosphor icon (e.g. `ListBulletsIcon`), fill weight,
-  consistent with nearby icon-only actions.
+- Place the control in the left column under the period range and due-date
+  text, not beside Pay / Close. Stack that column with vertical
+  `justify-between` (and stretch the row on `sm+`) so the link sits apart from
+  the dates.
+- Use a `View statement transactions` text link with the shared
+  `cardActionLinkClasses` treatment and trailing `CaretRightIcon`.
 - Remove the entire Card Transactions card (pending bill lines + unscoped card
   purchase list) from the detail page.
 - Remaining detail sections stay in order: Statements, then Payment History /
@@ -79,8 +77,8 @@ Under Credit Cards, document:
 
 ## Testing
 
-- Eligible statement renders a link whose `href` includes the card ID and the
-  statement’s `from` / `to` period bounds.
+- Eligible statement renders a `View statement transactions` link whose `href`
+  includes the card ID and the statement’s `from` / `to` period bounds.
 - Zero-activity statement (`amount` and `pendingBillsAmount` both zero) does not
   render the control.
 - Credit Card Details no longer renders the Card Transactions heading/section.

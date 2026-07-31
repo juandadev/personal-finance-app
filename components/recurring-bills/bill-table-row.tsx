@@ -17,9 +17,17 @@ import { PayBillDialog } from "@/components/recurring-bills/pay-bill-dialog"
 import { SkipBillOccurrenceDialog } from "@/components/recurring-bills/skip-bill-occurrence-dialog"
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { TableCell, TableRow } from "@/components/ui/table"
-import { formatBillScheduleShortDate } from "@/lib/format"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { formatBillScheduleShortDate, formatDisplayDate } from "@/lib/format"
 import type { BillStatus, RecurringBill } from "@/lib/types"
 import { cn } from "@/lib/utils"
+
+const FULL_DUE_DATE_FORMAT = "EEEE, d MMM, yyyy"
 
 interface BillTableRowProps {
   bill: RecurringBill
@@ -76,28 +84,27 @@ function scheduleLabel(bill: RecurringBill) {
   return bill.frequency === "yearly" ? "Yearly" : "Monthly"
 }
 
-function mobileDueDateLabel(bill: RecurringBill) {
-  const shortDate = formatBillScheduleShortDate(
-    bill.firstDueDate,
-    bill.frequency,
-  )
-  const frequency =
-    bill.frequency === "yearly"
-      ? "Yearly"
-      : bill.frequency === "one_time"
-        ? "One-Time"
-        : "Monthly"
-
-  return `${frequency} - ${shortDate}`
+function nextDueDate(bill: RecurringBill) {
+  return bill.currentOccurrence?.dueDate ?? bill.firstDueDate
 }
 
-function dueDateLabel(bill: RecurringBill) {
+function BillScheduleShortDate({ bill }: { bill: RecurringBill }) {
   const shortDate = formatBillScheduleShortDate(
     bill.firstDueDate,
     bill.frequency,
   )
+  const fullDate = formatDisplayDate(nextDueDate(bill), FULL_DUE_DATE_FORMAT)
 
-  return `${scheduleLabel(bill)} - ${shortDate}`
+  return (
+    <TooltipProvider skipDelayDuration={0}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="cursor-default">{shortDate}</span>
+        </TooltipTrigger>
+        <TooltipContent side="top">{fullDate}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  )
 }
 
 function StatusIcon({
@@ -152,7 +159,7 @@ function StatusIndicator({
   return (
     <span className="flex items-center gap-1.5">
       <span className={cn("text-sm", statusClassName(status))}>
-        {dueDateLabel(bill)} ·{" "}
+        {scheduleLabel(bill)} - <BillScheduleShortDate bill={bill} /> ·{" "}
         <span className="font-semibold">{statusLabels[status]}</span>
       </span>
       <StatusIcon status={status} iconClassName={iconClassName} />
@@ -162,6 +169,12 @@ function StatusIndicator({
 
 function MobileDueDateIndicator({ bill }: { bill: RecurringBill }) {
   const status = bill.status
+  const frequency =
+    bill.frequency === "yearly"
+      ? "Yearly"
+      : bill.frequency === "one_time"
+        ? "One-Time"
+        : "Monthly"
 
   return (
     <span
@@ -170,7 +183,9 @@ function MobileDueDateIndicator({ bill }: { bill: RecurringBill }) {
         statusClassName(status),
       )}
     >
-      <span className="truncate">{mobileDueDateLabel(bill)}</span>
+      <span className="truncate">
+        {frequency} - <BillScheduleShortDate bill={bill} />
+      </span>
       <StatusIcon status={status} iconClassName="size-3.5 shrink-0" />
     </span>
   )
