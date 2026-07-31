@@ -9,6 +9,7 @@ import VisaIcon from "@/components/icons/VisaIcon"
 import { ThemeSelect } from "@/components/theme-select"
 import { Button } from "@/components/ui/button"
 import { CurrencyInput } from "@/components/ui/currency-input"
+import { Switch } from "@/components/ui/switch"
 import {
   Dialog,
   DialogCloseButton,
@@ -29,8 +30,14 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useFinance } from "@/hooks/use-finance"
-import { formatDollarInput, themeOptions } from "@/lib/finance/form-utils"
+import { splitAnnualityAmounts } from "@/lib/finance/credit-card-annuality"
+import {
+  formatDollarInput,
+  parseDollarAmount,
+  themeOptions,
+} from "@/lib/finance/form-utils"
 import type { CreditCardRecord, NewCreditCardRecord } from "@/lib/finance/types"
+import { formatCurrency } from "@/lib/format"
 import {
   currencyCentsSchema,
   requiredStringSchema,
@@ -55,24 +62,49 @@ function toCardNetwork(value: string | null | undefined): CardNetwork {
     : "Visa"
 }
 
-const creditCardFormSchema = z.object({
-  nickname: requiredStringSchema("Enter a card nickname.", 40),
-  issuer: requiredStringSchema("Enter the issuer.", 40),
-  network: z.enum(["Visa", "Master Card", "American Express"], {
-    required_error: "Choose a card network.",
-  }),
-  lastFour: z.string().regex(/^\d{4}$/, "Enter exactly the last 4 digits."),
-  expirationMonth: z.coerce.number().int().min(1).max(12),
-  expirationYear: z.coerce
-    .number()
-    .int()
-    .min(new Date().getFullYear())
-    .max(2100),
-  creditLimit: currencyCentsSchema("Enter a credit limit greater than $0."),
-  closingDay: z.coerce.number().int().min(1).max(31),
-  paymentDueDay: z.coerce.number().int().min(1).max(31),
-  themeColor: themeColorSchema,
-})
+const creditCardFormSchema = z
+  .object({
+    nickname: requiredStringSchema("Enter a card nickname.", 40),
+    issuer: requiredStringSchema("Enter the issuer.", 40),
+    network: z.enum(["Visa", "Master Card", "American Express"], {
+      required_error: "Choose a card network.",
+    }),
+    lastFour: z.string().regex(/^\d{4}$/, "Enter exactly the last 4 digits."),
+    expirationMonth: z.coerce.number().int().min(1).max(12),
+    expirationYear: z.coerce
+      .number()
+      .int()
+      .min(new Date().getFullYear())
+      .max(2100),
+    creditLimit: currencyCentsSchema("Enter a credit limit greater than $0."),
+    closingDay: z.coerce.number().int().min(1).max(31),
+    paymentDueDay: z.coerce.number().int().min(1).max(31),
+    themeColor: themeColorSchema,
+    annualityEnabled: z.boolean(),
+    annualityAmount: z.string(),
+    annualityAnniversaryMonth: z.coerce.number().int().min(1).max(12),
+    annualityAnniversaryDay: z.coerce.number().int().min(1).max(31),
+    annualityPaymentCount: z.coerce.number().int().min(1).max(12),
+  })
+  .superRefine((value, context) => {
+    if (!value.annualityEnabled) {
+      return
+    }
+
+    const amountCents = currencyCentsSchema(
+      "Enter an annual fee greater than $0.",
+    ).safeParse(value.annualityAmount)
+
+    if (!amountCents.success) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["annualityAmount"],
+        message:
+          amountCents.error.issues[0]?.message ??
+          "Enter an annual fee greater than $0.",
+      })
+    }
+  })
 
 type CreditCardFormValues = z.input<typeof creditCardFormSchema>
 
@@ -155,6 +187,13 @@ function CreditCardDialog({
         closingDay: creditCard?.closing_day_of_month ?? 30,
         paymentDueDay: creditCard?.payment_due_day_of_month ?? 15,
         themeColor: creditCard?.theme_color ?? themeOptions[0].value,
+        annualityEnabled: creditCard?.annuality_enabled ?? false,
+        annualityAmount: creditCard?.annuality_amount_cents
+          ? formatDollarInput(creditCard.annuality_amount_cents / 100)
+          : "",
+        annualityAnniversaryMonth: creditCard?.annuality_anniversary_month ?? 1,
+        annualityAnniversaryDay: creditCard?.annuality_anniversary_day ?? 1,
+        annualityPaymentCount: creditCard?.annuality_payment_count ?? 1,
       }) satisfies CreditCardFormValues,
     [creditCard],
   )
@@ -178,6 +217,19 @@ function CreditCardDialog({
         payment_due_day_of_month: value.paymentDueDay,
         theme_color: value.themeColor,
         archived_at: creditCard?.archived_at ?? null,
+        annuality_enabled: value.annualityEnabled,
+        annuality_amount_cents: value.annualityEnabled
+          ? (parseDollarAmount(String(value.annualityAmount)) ?? 0)
+          : null,
+        annuality_anniversary_month: value.annualityEnabled
+          ? value.annualityAnniversaryMonth
+          : null,
+        annuality_anniversary_day: value.annualityEnabled
+          ? value.annualityAnniversaryDay
+          : null,
+        annuality_payment_count: value.annualityEnabled
+          ? value.annualityPaymentCount
+          : null,
       }
       const result = creditCard
         ? await actions.updateCreditCard(creditCard.id, payload)
@@ -337,6 +389,110 @@ function CreditCardDialog({
               />
             )}
           </form.form.Field>
+          <div className="border-border space-y-4 border-t pt-4">
+            <form.form.Field name="annualityEnabled">
+              {(field) => (
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">Annuality</p>
+                    <p className="text-muted-foreground text-xs">
+                      Charge annual fee on this card
+                    </p>
+                  </div>
+                  <Switch
+                    id="card-annuality-enabled"
+                    checked={Boolean(field.state.value)}
+                    onCheckedChange={(checked) =>
+                      form.setValue("annualityEnabled", checked)
+                    }
+                  />
+                </div>
+              )}
+            </form.form.Field>
+            <form.form.Subscribe
+              selector={(state) => ({
+                enabled: state.values.annualityEnabled,
+                amount: state.values.annualityAmount,
+                paymentCount: state.values.annualityPaymentCount,
+              })}
+            >
+              {({ enabled, amount, paymentCount }) => {
+                if (!enabled) {
+                  return null
+                }
+
+                const amountCents = Number(
+                  String(amount).trim().replaceAll(",", ""),
+                )
+                const parsedCents = Number.isFinite(amountCents)
+                  ? Math.round(amountCents * 100)
+                  : 0
+                const count = Number(paymentCount) || 1
+                const splits =
+                  parsedCents > 0
+                    ? splitAnnualityAmounts(parsedCents, count)
+                    : []
+                const preview =
+                  splits.length === 1
+                    ? `${formatCurrency(splits[0]! / 100, { forceDecimals: true })} once on the anniversary statement`
+                    : splits.length > 1
+                      ? `${formatCurrency(splits[0]! / 100, { forceDecimals: true })} × ${splits.length} consecutive statement cycles`
+                      : null
+
+                return (
+                  <>
+                    <form.form.Field name="annualityAmount">
+                      {(field) => (
+                        <FormField
+                          id="card-annuality-amount"
+                          label="Full annual amount"
+                          error={form.fieldErrors.annualityAmount}
+                        >
+                          {(fieldProps) => (
+                            <CurrencyInput
+                              {...fieldProps}
+                              value={String(field.state.value)}
+                              onChange={(event) =>
+                                form.setValue(
+                                  "annualityAmount",
+                                  event.target.value,
+                                )
+                              }
+                              onBlur={field.handleBlur}
+                              placeholder="e.g. 1200"
+                            />
+                          )}
+                        </FormField>
+                      )}
+                    </form.form.Field>
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      <FormNumberField
+                        form={form}
+                        name="annualityAnniversaryMonth"
+                        id="card-annuality-month"
+                        label="Anniversary month"
+                      />
+                      <FormNumberField
+                        form={form}
+                        name="annualityAnniversaryDay"
+                        id="card-annuality-day"
+                        label="Anniversary day"
+                      />
+                      <FormNumberField
+                        form={form}
+                        name="annualityPaymentCount"
+                        id="card-annuality-payments"
+                        label="Payments"
+                      />
+                    </div>
+                    {preview ? (
+                      <p className="text-muted-foreground text-xs">{preview}</p>
+                    ) : null}
+                  </>
+                )
+              }}
+            </form.form.Subscribe>
+          </div>
         </DialogFinanceForm>
       </DialogContent>
     </Dialog>

@@ -1,6 +1,11 @@
+import {
+  ANNUALITY_CONCEPT,
+  resolveCreditCardAnnualityInstallments,
+} from "@/lib/finance/credit-card-annuality"
 import { getBillOccurrenceStatementCycle } from "@/lib/finance/recurring-bill-schedule"
 import { resolveRecurringBillOccurrences } from "@/lib/finance/recurring-bill-schedule"
 import type {
+  CreditCardAnnualityOverrideRecord,
   CreditCardPaymentRecord,
   CreditCardRecord,
   CreditCardStatementRecord,
@@ -14,6 +19,15 @@ export interface CreditCardPendingBillObligationLine {
   billId: string
   counterpartyId: string
   categoryId: string
+  label: string
+  dueDate: string
+  amountCents: number
+}
+
+export interface CreditCardPendingAnnualityObligationLine {
+  key: string
+  anniversaryYear: number
+  installmentIndex: number
   label: string
   dueDate: string
   amountCents: number
@@ -37,12 +51,14 @@ export interface CreditCardObligation {
   paymentDueDate: string
   statementAmountCents: number
   pendingBillAmountCents: number
+  pendingAnnualityAmountCents: number
   amountCents: number
   lifecycleStatus: CreditCardStatementRecord["lifecycle_status"]
   paidAt: string | null
   isPaid: boolean
   isVirtual: boolean
   pendingBillLines: CreditCardPendingBillObligationLine[]
+  pendingAnnualityLines: CreditCardPendingAnnualityObligationLine[]
   statementChargeLines: CreditCardStatementChargeLine[]
 }
 
@@ -53,6 +69,7 @@ interface CreditCardObligationInput {
   transactions: TransactionRecord[]
   recurringBills: RecurringBillRecord[]
   recurringBillPayments: RecurringBillPaymentRecord[]
+  creditCardAnnualityOverrides?: CreditCardAnnualityOverrideRecord[]
   asOfDate: string
   throughDate: string
   archiveCutoffTimezone?: string
@@ -64,6 +81,7 @@ interface PendingCycle {
   periodEnd: string
   paymentDueDate: string
   lines: CreditCardPendingBillObligationLine[]
+  annualityLines: CreditCardPendingAnnualityObligationLine[]
 }
 
 function groupBillPayments(payments: RecurringBillPaymentRecord[]) {
@@ -139,6 +157,7 @@ function buildPendingCycles(
         periodEnd: cycle.periodEnd,
         paymentDueDate: cycle.paymentDueDate,
         lines: [],
+        annualityLines: [],
       }
 
       group.lines.push({
@@ -154,6 +173,45 @@ function buildPendingCycles(
     }
   }
 
+  const overrides = input.creditCardAnnualityOverrides ?? []
+
+  for (const card of input.cards) {
+    const installments = resolveCreditCardAnnualityInstallments({
+      card,
+      overrides,
+      statements: statementsByCardId.get(card.id) ?? [],
+      transactions: input.transactions,
+      asOfDate: input.asOfDate,
+      throughDate: input.throughDate,
+    })
+
+    for (const installment of installments) {
+      if (installment.status !== "pending") {
+        continue
+      }
+
+      const cycleKey = `${card.id}:${installment.periodStart}`
+      const group = cycles.get(cycleKey) ?? {
+        cardId: card.id,
+        periodStart: installment.periodStart,
+        periodEnd: installment.periodEnd,
+        paymentDueDate: installment.paymentDueDate,
+        lines: [],
+        annualityLines: [],
+      }
+
+      group.annualityLines.push({
+        key: installment.key,
+        anniversaryYear: installment.anniversaryYear,
+        installmentIndex: installment.installmentIndex,
+        label: ANNUALITY_CONCEPT,
+        dueDate: installment.dueDate,
+        amountCents: installment.amountCents,
+      })
+      cycles.set(cycleKey, group)
+    }
+  }
+
   for (const cycle of cycles.values()) {
     cycle.lines.sort((left, right) => {
       const dueDateComparison = left.dueDate.localeCompare(right.dueDate)
@@ -162,6 +220,9 @@ function buildPendingCycles(
         ? dueDateComparison
         : left.billId.localeCompare(right.billId)
     })
+    cycle.annualityLines.sort(
+      (left, right) => left.installmentIndex - right.installmentIndex,
+    )
   }
 
   return cycles
@@ -220,8 +281,14 @@ export function buildCreditCardObligations(
     (statement) => {
       const card = cardsById.get(statement.credit_card_id)
       const cycleKey = `${statement.credit_card_id}:${statement.period_start}`
-      const pendingBillLines = pendingCycles.get(cycleKey)?.lines ?? []
+      const pendingCycle = pendingCycles.get(cycleKey)
+      const pendingBillLines = pendingCycle?.lines ?? []
+      const pendingAnnualityLines = pendingCycle?.annualityLines ?? []
       const pendingBillAmountCents = pendingBillLines.reduce(
+        (sum, line) => sum + line.amountCents,
+        0,
+      )
+      const pendingAnnualityAmountCents = pendingAnnualityLines.reduce(
         (sum, line) => sum + line.amountCents,
         0,
       )
@@ -238,7 +305,11 @@ export function buildCreditCardObligations(
         paymentDueDate: statement.payment_due_date,
         statementAmountCents: statement.statement_amount_cents,
         pendingBillAmountCents,
-        amountCents: statement.statement_amount_cents + pendingBillAmountCents,
+        pendingAnnualityAmountCents,
+        amountCents:
+          statement.statement_amount_cents +
+          pendingBillAmountCents +
+          pendingAnnualityAmountCents,
         lifecycleStatus: statement.lifecycle_status,
         paidAt: statement.paid_at,
         isPaid:
@@ -246,6 +317,7 @@ export function buildCreditCardObligations(
           paidStatementIds.has(statement.id),
         isVirtual: false,
         pendingBillLines,
+        pendingAnnualityLines,
         statementChargeLines: chargeLinesByStatementId.get(statement.id) ?? [],
       }
     },
@@ -261,6 +333,10 @@ export function buildCreditCardObligations(
       (sum, line) => sum + line.amountCents,
       0,
     )
+    const pendingAnnualityAmountCents = cycle.annualityLines.reduce(
+      (sum, line) => sum + line.amountCents,
+      0,
+    )
 
     obligations.push({
       key: `virtual-statement:${cycle.cardId}:${cycle.periodStart}`,
@@ -272,12 +348,14 @@ export function buildCreditCardObligations(
       paymentDueDate: cycle.paymentDueDate,
       statementAmountCents: 0,
       pendingBillAmountCents,
-      amountCents: pendingBillAmountCents,
+      pendingAnnualityAmountCents,
+      amountCents: pendingBillAmountCents + pendingAnnualityAmountCents,
       lifecycleStatus: "open",
       paidAt: null,
       isPaid: false,
       isVirtual: true,
       pendingBillLines: cycle.lines,
+      pendingAnnualityLines: cycle.annualityLines,
       statementChargeLines: [],
     })
   }

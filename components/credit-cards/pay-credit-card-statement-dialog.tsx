@@ -165,7 +165,7 @@ export function PayCreditCardStatementDialog({
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-muted-foreground">
-                    Recurring Bills ({selectedStatement.pendingBills.length})
+                    Pending charges ({selectedStatement.pendingBills.length})
                   </dt>
                   <dd className="text-right">
                     <MoneyAmount
@@ -188,8 +188,8 @@ export function PayCreditCardStatementDialog({
           </dl>
           {selectedStatement.pendingBillsAmount > 0 ? (
             <p className="text-muted-foreground text-xs leading-normal">
-              Paying this statement also records the due recurring bills as card
-              transactions and marks them as paid.
+              Paying this statement also records due recurring bills and
+              annuality charges as card transactions.
             </p>
           ) : null}
           <div className="space-y-2">

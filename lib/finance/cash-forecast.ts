@@ -223,6 +223,14 @@ function cardObligationActivity(
       amountCents: -line.amountCents,
       effectiveDate: line.dueDate,
     })),
+    ...obligation.pendingAnnualityLines.map((line) => ({
+      key: `${obligation.key}:${line.key}`,
+      sourceType: "credit_card_charge" as const,
+      sourceId: line.key,
+      label: line.label,
+      amountCents: -line.amountCents,
+      effectiveDate: line.dueDate,
+    })),
   ]
   const itemizedAmountCents = knownChildren.reduce(
     (sum, child) => sum + Math.abs(child.amountCents),
@@ -628,6 +636,7 @@ export function buildCashForecast(
     transactions: state.transactions,
     recurringBills: state.recurringBills,
     recurringBillPayments: state.recurringBillPayments,
+    creditCardAnnualityOverrides: state.creditCardAnnualityOverrides,
     asOfDate,
     throughDate: forecastEnd,
     archiveCutoffTimezone: timezone,

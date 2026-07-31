@@ -3,6 +3,12 @@ import "server-only"
 import type { PoolClient } from "pg"
 
 import { withFinanceTransaction } from "@/lib/db/transaction"
+import {
+  ANNUALITY_CONCEPT,
+  annualityDescription,
+  getPendingAnnualityInstallmentsForPeriod,
+  parseAnnualityDescription,
+} from "@/lib/finance/credit-card-annuality"
 import { getCreditCardStatementCycle } from "@/lib/finance/credit-card-cycle"
 import {
   getBillOccurrenceStatementCycle,
@@ -25,6 +31,7 @@ import type {
   CashForecastSettingsRecord,
   CategoryRecord,
   CounterpartyRecord,
+  CreditCardAnnualityOverrideRecord,
   CreditCardPaymentRecord,
   CreditCardRecord,
   CreditCardStatementRecord,
@@ -191,6 +198,21 @@ const creditCardColumns = [
   "payment_due_day_of_month",
   "theme_color",
   "archived_at::text AS archived_at",
+  "annuality_enabled",
+  "annuality_amount_cents",
+  "annuality_anniversary_month",
+  "annuality_anniversary_day",
+  "annuality_payment_count",
+]
+const creditCardAnnualityOverrideColumns = [
+  "user_id",
+  "id",
+  "credit_card_id",
+  "anniversary_year",
+  "installment_index",
+  "amount_cents",
+  "created_at::text AS created_at",
+  "updated_at::text AS updated_at",
 ]
 const creditCardStatementColumns = [
   "user_id",
@@ -467,6 +489,11 @@ export async function loadFinanceState(
       `SELECT ${creditCardPaymentColumns.join(", ")} FROM credit_card_payments WHERE user_id = $1 ORDER BY paid_at DESC, id`,
       [userId],
     )
+    const creditCardAnnualityOverrides =
+      await client.query<CreditCardAnnualityOverrideRecord>(
+        `SELECT ${creditCardAnnualityOverrideColumns.join(", ")} FROM credit_card_annuality_overrides WHERE user_id = $1 ORDER BY anniversary_year, installment_index, id`,
+        [userId],
+      )
     const cashForecastSettings = await client.query<CashForecastSettingsRecord>(
       `SELECT ${cashForecastSettingsColumns.join(", ")} FROM cash_forecast_settings WHERE user_id = $1`,
       [userId],
@@ -498,6 +525,7 @@ export async function loadFinanceState(
       creditCards: creditCards.rows,
       creditCardStatements: creditCardStatements.rows,
       creditCardPayments: creditCardPayments.rows,
+      creditCardAnnualityOverrides: creditCardAnnualityOverrides.rows,
       cashForecastSettings: cashForecastSettings.rows[0] ?? null,
       cashForecastAdjustments: cashForecastAdjustments.rows,
       cashForecastExclusions: cashForecastExclusions.rows,
@@ -1435,9 +1463,17 @@ export async function insertCreditCard(
           closing_day_of_month,
           payment_due_day_of_month,
           theme_color,
-          archived_at
+          archived_at,
+          annuality_enabled,
+          annuality_amount_cents,
+          annuality_anniversary_month,
+          annuality_anniversary_day,
+          annuality_payment_count
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+          $14, $15, $16, $17, $18
+        )
         RETURNING ${creditCardColumns.join(", ")}
       `,
       [
@@ -1454,6 +1490,11 @@ export async function insertCreditCard(
         creditCard.payment_due_day_of_month,
         creditCard.theme_color,
         creditCard.archived_at,
+        creditCard.annuality_enabled,
+        creditCard.annuality_amount_cents,
+        creditCard.annuality_anniversary_month,
+        creditCard.annuality_anniversary_day,
+        creditCard.annuality_payment_count,
       ],
     )
 
@@ -1524,8 +1565,28 @@ export async function updateCreditCard(
           closing_day_of_month = COALESCE($9, closing_day_of_month),
           payment_due_day_of_month = COALESCE($10, payment_due_day_of_month),
           theme_color = COALESCE($11, theme_color),
-          archived_at = CASE WHEN $12::boolean THEN $13::timestamptz ELSE archived_at END
-        WHERE user_id = $1 AND id = $14
+          archived_at = CASE WHEN $12::boolean THEN $13::timestamptz ELSE archived_at END,
+          annuality_enabled = CASE
+            WHEN $14::boolean THEN $15::boolean
+            ELSE annuality_enabled
+          END,
+          annuality_amount_cents = CASE
+            WHEN $14::boolean THEN $16::integer
+            ELSE annuality_amount_cents
+          END,
+          annuality_anniversary_month = CASE
+            WHEN $14::boolean THEN $17::smallint
+            ELSE annuality_anniversary_month
+          END,
+          annuality_anniversary_day = CASE
+            WHEN $14::boolean THEN $18::smallint
+            ELSE annuality_anniversary_day
+          END,
+          annuality_payment_count = CASE
+            WHEN $14::boolean THEN $19::integer
+            ELSE annuality_payment_count
+          END
+        WHERE user_id = $1 AND id = $20
         RETURNING ${creditCardColumns.join(", ")}
       `,
       [
@@ -1542,6 +1603,24 @@ export async function updateCreditCard(
         updates.theme_color ?? null,
         updates.archived_at !== undefined,
         updates.archived_at ?? null,
+        updates.annuality_enabled !== undefined,
+        updates.annuality_enabled ?? false,
+        updates.annuality_enabled === false
+          ? null
+          : (updates.annuality_amount_cents ??
+            existingCard.annuality_amount_cents),
+        updates.annuality_enabled === false
+          ? null
+          : (updates.annuality_anniversary_month ??
+            existingCard.annuality_anniversary_month),
+        updates.annuality_enabled === false
+          ? null
+          : (updates.annuality_anniversary_day ??
+            existingCard.annuality_anniversary_day),
+        updates.annuality_enabled === false
+          ? null
+          : (updates.annuality_payment_count ??
+            existingCard.annuality_payment_count),
         id,
       ],
     )
@@ -1757,6 +1836,62 @@ async function getPendingBillOccurrencesForStatement(
   return pending
 }
 
+async function getPendingAnnualityForStatement(
+  client: PoolClient,
+  userId: string,
+  card: CreditCardRecord,
+  statement: Pick<CreditCardStatementRecord, "period_start">,
+  today: string,
+) {
+  const [overridesResult, statementsResult, transactionsResult] =
+    await Promise.all([
+      client.query<CreditCardAnnualityOverrideRecord>(
+        `
+          SELECT ${creditCardAnnualityOverrideColumns.join(", ")}
+          FROM credit_card_annuality_overrides
+          WHERE user_id = $1 AND credit_card_id = $2
+        `,
+        [userId, card.id],
+      ),
+      client.query<
+        Pick<
+          CreditCardStatementRecord,
+          "period_start" | "period_end" | "lifecycle_status"
+        >
+      >(
+        `
+          SELECT
+            period_start::text AS period_start,
+            period_end::text AS period_end,
+            lifecycle_status
+          FROM credit_card_statements
+          WHERE user_id = $1 AND credit_card_id = $2
+        `,
+        [userId, card.id],
+      ),
+      client.query<TransactionRecord>(
+        `
+          SELECT ${transactionSelectColumns.join(", ")}
+          FROM transactions
+          WHERE user_id = $1
+            AND credit_card_id = $2
+            AND payment_method = 'credit_card'
+            AND concept = $3
+        `,
+        [userId, card.id, ANNUALITY_CONCEPT],
+      ),
+    ])
+
+  return getPendingAnnualityInstallmentsForPeriod({
+    card,
+    overrides: overridesResult.rows,
+    statements: statementsResult.rows,
+    transactions: transactionsResult.rows,
+    asOfDate: today,
+    periodStart: statement.period_start,
+  })
+}
+
 async function payCreditCardStatementWithClient(
   client: PoolClient,
   userId: string,
@@ -1854,12 +1989,61 @@ async function payCreditCardStatementWithClient(
     }
   }
 
+  const category = await getDefaultPaymentCategory(client, userId)
+  const counterparty = await ensureCardPaymentCounterparty(client, userId, card)
+  const pendingAnnuality = await getPendingAnnualityForStatement(
+    client,
+    userId,
+    card,
+    statement,
+    localToday,
+  )
+
+  for (const installment of pendingAnnuality) {
+    const annualityTransaction = await insertTransactionRecord(client, userId, {
+      id: crypto.randomUUID(),
+      account_id: sourceAccount.id,
+      counterparty_id: counterparty.id,
+      category_id: category.id,
+      concept: ANNUALITY_CONCEPT,
+      amount_cents: installment.amountCents * -1,
+      is_voucher_expense: false,
+      payment_method: "credit_card",
+      credit_card_id: card.id,
+      credit_card_statement_id: statement.id,
+      posted_at: installment.dueDate,
+      description: annualityDescription(
+        installment.anniversaryYear,
+        installment.installmentIndex,
+      ),
+    })
+    const annualityEffects = await applyAccountEffectsIfNeeded(
+      client,
+      userId,
+      annualityTransaction,
+      1,
+    )
+    const updatedStatement = await applyCreditCardStatementEffectIfNeeded(
+      client,
+      userId,
+      annualityTransaction,
+      1,
+    )
+
+    billTransactions.push(annualityTransaction)
+
+    if (annualityEffects?.accountSummary) {
+      accountSummaries.push(annualityEffects.accountSummary)
+    }
+
+    if (updatedStatement) {
+      statementAmountCents = updatedStatement.statement_amount_cents
+    }
+  }
+
   if (statementAmountCents <= 0) {
     throw new Error("This statement does not have a balance to pay.")
   }
-
-  const category = await getDefaultPaymentCategory(client, userId)
-  const counterparty = await ensureCardPaymentCounterparty(client, userId, card)
   const savedTransaction = await insertTransactionRecord(client, userId, {
     id: crypto.randomUUID(),
     account_id: sourceAccount.id,
@@ -2011,17 +2195,25 @@ export async function closeZeroBalanceCreditCardStatement(
     }
 
     const localToday = await getUserLocalToday(client, userId)
+    const card = cardResult.rows[0]
     const pendingOccurrences = await getPendingBillOccurrencesForStatement(
       client,
       userId,
-      cardResult.rows[0],
+      card,
+      statement,
+      localToday,
+    )
+    const pendingAnnuality = await getPendingAnnualityForStatement(
+      client,
+      userId,
+      card,
       statement,
       localToday,
     )
 
-    if (pendingOccurrences.length > 0) {
+    if (pendingOccurrences.length > 0 || pendingAnnuality.length > 0) {
       throw new Error(
-        "This statement has recurring bills due. Pay the statement instead.",
+        "This statement has pending charges due. Pay the statement instead.",
       )
     }
 
@@ -3189,5 +3381,126 @@ export async function updateUiPreferences(
     }
 
     return parseUiPreferences(result.rows[0].ui_preferences)
+  })
+}
+
+export async function saveCreditCardAnnualityOverrides(
+  userId: string,
+  creditCardId: string,
+  anniversaryYear: number,
+  overrides: Array<{ installmentIndex: number; amountCents: number }>,
+) {
+  return withFinanceTransaction(userId, async (client) => {
+    const card = await getCreditCard(client, userId, creditCardId)
+
+    if (
+      !card.annuality_enabled ||
+      card.annuality_amount_cents == null ||
+      card.annuality_payment_count == null
+    ) {
+      throw new Error("Enable annuality on this card before saving amounts.")
+    }
+
+    if (
+      overrides.some(
+        (override) =>
+          override.installmentIndex < 1 ||
+          override.installmentIndex > card.annuality_payment_count!,
+      )
+    ) {
+      throw new Error("Installment index is outside this year's schedule.")
+    }
+
+    const annualityTransactions = await client.query<TransactionRecord>(
+      `
+        SELECT ${transactionSelectColumns.join(", ")}
+        FROM transactions
+        WHERE user_id = $1
+          AND credit_card_id = $2
+          AND payment_method = 'credit_card'
+          AND concept = $3
+      `,
+      [userId, creditCardId, ANNUALITY_CONCEPT],
+    )
+    const materializedSum = annualityTransactions.rows.reduce(
+      (sum, transaction) => {
+        const parsed = parseAnnualityDescription(transaction.description)
+
+        if (parsed?.anniversaryYear !== anniversaryYear) {
+          return sum
+        }
+
+        return sum + Math.abs(transaction.amount_cents)
+      },
+      0,
+    )
+    const overrideSum = overrides.reduce(
+      (sum, override) => sum + override.amountCents,
+      0,
+    )
+
+    if (overrideSum + materializedSum !== card.annuality_amount_cents) {
+      throw new Error("Installment amounts must add up to the full annual fee.")
+    }
+
+    await client.query(
+      `
+        DELETE FROM credit_card_annuality_overrides
+        WHERE user_id = $1
+          AND credit_card_id = $2
+          AND anniversary_year = $3
+      `,
+      [userId, creditCardId, anniversaryYear],
+    )
+
+    const saved: CreditCardAnnualityOverrideRecord[] = []
+
+    for (const override of overrides) {
+      const result = await client.query<CreditCardAnnualityOverrideRecord>(
+        `
+          INSERT INTO credit_card_annuality_overrides (
+            user_id,
+            credit_card_id,
+            anniversary_year,
+            installment_index,
+            amount_cents
+          )
+          VALUES ($1, $2, $3, $4, $5)
+          RETURNING ${creditCardAnnualityOverrideColumns.join(", ")}
+        `,
+        [
+          userId,
+          creditCardId,
+          anniversaryYear,
+          override.installmentIndex,
+          override.amountCents,
+        ],
+      )
+      saved.push(result.rows[0])
+    }
+
+    return saved
+  })
+}
+
+export async function resetCreditCardAnnualityOverrides(
+  userId: string,
+  creditCardId: string,
+  anniversaryYear: number,
+) {
+  return withFinanceTransaction(userId, async (client) => {
+    await getCreditCard(client, userId, creditCardId)
+
+    await client.query(
+      `
+        DELETE FROM credit_card_annuality_overrides
+        WHERE user_id = $1
+          AND credit_card_id = $2
+          AND anniversary_year = $3
+      `,
+      [userId, creditCardId, anniversaryYear],
+    )
+
+    return [] as CreditCardAnnualityOverrideRecord[]
   })
 }

@@ -25,6 +25,7 @@ describe("createInitialFinanceState", () => {
       creditCards: [],
       creditCardStatements: [],
       creditCardPayments: [],
+      creditCardAnnualityOverrides: [],
       cashForecastSettings: null,
       cashForecastAdjustments: [],
       cashForecastExclusions: [],

@@ -83,28 +83,28 @@ the statement is paid or closed.
 
 ### `credit_cards` (new columns)
 
-| Column | Type | Notes |
-|--------|------|--------|
-| `annuality_enabled` | `boolean NOT NULL DEFAULT false` | Master switch |
-| `annuality_amount_cents` | `integer NULL` | Required when enabled; must be > 0 |
-| `annuality_anniversary_month` | `smallint NULL` | 1–12 when enabled |
-| `annuality_anniversary_day` | `smallint NULL` | 1–31 when enabled; clamp on use |
-| `annuality_payment_count` | `integer NULL` | ≥ 1 and ≤ 12 when enabled; default 1 |
+| Column                        | Type                             | Notes                                |
+| ----------------------------- | -------------------------------- | ------------------------------------ |
+| `annuality_enabled`           | `boolean NOT NULL DEFAULT false` | Master switch                        |
+| `annuality_amount_cents`      | `integer NULL`                   | Required when enabled; must be > 0   |
+| `annuality_anniversary_month` | `smallint NULL`                  | 1–12 when enabled                    |
+| `annuality_anniversary_day`   | `smallint NULL`                  | 1–31 when enabled; clamp on use      |
+| `annuality_payment_count`     | `integer NULL`                   | ≥ 1 and ≤ 12 when enabled; default 1 |
 
 When `annuality_enabled` is false, the other annuality columns may be null or
 retained for re-enable convenience; derivation ignores them until enabled again.
 
 ### `credit_card_annuality_overrides`
 
-| Column | Type | Notes |
-|--------|------|--------|
-| `id` | uuid / text | Primary key (match project convention) |
-| `user_id` | text | Owner |
-| `credit_card_id` | fk → `credit_cards` | Cascade on card delete |
-| `anniversary_year` | integer | Year of that schedule’s first installment |
-| `installment_index` | integer | 1…N |
-| `amount_cents` | integer | > 0 |
-| `created_at` / `updated_at` | timestamptz | Standard |
+| Column                      | Type                | Notes                                     |
+| --------------------------- | ------------------- | ----------------------------------------- |
+| `id`                        | uuid / text         | Primary key (match project convention)    |
+| `user_id`                   | text                | Owner                                     |
+| `credit_card_id`            | fk → `credit_cards` | Cascade on card delete                    |
+| `anniversary_year`          | integer             | Year of that schedule’s first installment |
+| `installment_index`         | integer             | 1…N                                       |
+| `amount_cents`              | integer             | > 0                                       |
+| `created_at` / `updated_at` | timestamptz         | Standard                                  |
 
 Unique: `(credit_card_id, anniversary_year, installment_index)`.
 
@@ -168,7 +168,7 @@ When amount or payment count changes:
   default).
 - When on: full amount, anniversary month/day, payment count (default 1).
 - Live preview of the equal-split schedule (e.g. `$400.00 × 3 consecutive
-  statement cycles`, or full amount once when count is 1).
+statement cycles`, or full amount once when count is 1).
 
 ### Card detail
 

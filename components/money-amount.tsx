@@ -74,10 +74,12 @@ export function MoneyAmount({
     ? formatCompactAmount(amount, variant, currency)
     : fullAmount
 
+  const amountClassName = cn("tabular-nums tracking-tight", className)
+
   if (!shouldCompact) {
     return (
       <PrivacyValue
-        className={className}
+        className={amountClassName}
         hiddenLabel={getHiddenAmountAriaLabel()}
         placeholder={restingAmount}
       >
@@ -88,7 +90,7 @@ export function MoneyAmount({
 
   return (
     <PrivacyValue
-      className={className}
+      className={amountClassName}
       hiddenLabel={getHiddenAmountAriaLabel()}
       placeholder={restingAmount}
     >

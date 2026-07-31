@@ -55,6 +55,12 @@ const creditCard: CreditCard = {
   reservedInstallmentAmount: 0,
   availableCredit: 4880,
   dueStatus: "upcoming",
+  annualityEnabled: false,
+  annualityAmount: null,
+  annualityAnniversaryMonth: null,
+  annualityAnniversaryDay: null,
+  annualityPaymentCount: null,
+  annualitySchedule: [],
 }
 
 const monthlyBill: RecurringBill = {

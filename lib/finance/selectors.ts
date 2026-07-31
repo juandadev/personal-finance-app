@@ -8,6 +8,7 @@ import {
   buildCashForecast,
   type CashForecastResult,
 } from "@/lib/finance/cash-forecast"
+import { resolveCreditCardAnnualityInstallments } from "@/lib/finance/credit-card-annuality"
 import {
   buildCreditCardObligations,
   type CreditCardObligation,
@@ -26,6 +27,7 @@ import type {
   CreditCard,
   CreditCardDueStatus,
   CreditCardPayment,
+  CreditCardAnnualityScheduleItem,
   CreditCardPendingBillLine,
   CreditCardStatement,
   RecurringBill,
@@ -36,6 +38,7 @@ import type {
   BudgetRecord,
   CategoryRecord,
   CounterpartyRecord,
+  CreditCardAnnualityOverrideRecord,
   CreditCardPaymentRecord,
   CreditCardRecord,
   CreditCardStatementRecord,
@@ -432,7 +435,7 @@ function selectPendingBillLines(
   counterparties: Map<string, CounterpartyRecord>,
   categories: Map<string, CategoryRecord>,
 ): CreditCardPendingBillLine[] {
-  return obligation.pendingBillLines.map((line) => {
+  const billLines = obligation.pendingBillLines.map((line) => {
     const counterparty = getRequired(
       counterparties,
       line.counterpartyId,
@@ -441,6 +444,7 @@ function selectPendingBillLines(
     const category = getRequired(categories, line.categoryId, "category")
 
     return {
+      kind: "bill" as const,
       billId: line.billId,
       name: counterparty.display_name,
       concept: line.label,
@@ -452,12 +456,32 @@ function selectPendingBillLines(
       category: category.name,
     }
   })
+  const annualityLines = obligation.pendingAnnualityLines.map((line) => ({
+    kind: "annuality" as const,
+    billId: `annuality:${line.anniversaryYear}:${line.installmentIndex}`,
+    name: line.label,
+    concept: line.label,
+    avatarUrl: "",
+    contactColor: "finance-grey" as const,
+    contactInitials: "A",
+    dueDate: line.dueDate,
+    amount: centsToDollars(line.amountCents),
+    category: "Bills" as TransactionCategory,
+    anniversaryYear: line.anniversaryYear,
+    installmentIndex: line.installmentIndex,
+  }))
+
+  return [...billLines, ...annualityLines]
 }
 
 function selectReservedInstallmentCentsByCard(
   recurringBills: RecurringBillRecord[],
   paymentsByBillId: Map<string, RecurringBillPaymentRecord[]>,
   obligations: CreditCardObligation[],
+  cards: CreditCardRecord[],
+  overrides: CreditCardAnnualityOverrideRecord[],
+  statements: CreditCardStatementRecord[],
+  transactions: TransactionRecord[],
   today: string,
 ): Map<string, number> {
   const reservedCentsByCard = new Map<string, number>()
@@ -465,6 +489,14 @@ function selectReservedInstallmentCentsByCard(
     obligations.flatMap((obligation) =>
       obligation.pendingBillLines.map(
         (line) => `${line.billId}:${line.dueDate}`,
+      ),
+    ),
+  )
+  const pendingAnnualityKeys = new Set(
+    obligations.flatMap((obligation) =>
+      obligation.pendingAnnualityLines.map(
+        (line) =>
+          `${obligation.cardId}:${line.anniversaryYear}:${line.installmentIndex}`,
       ),
     ),
   )
@@ -498,6 +530,34 @@ function selectReservedInstallmentCentsByCard(
     }
   }
 
+  for (const card of cards) {
+    const installments = resolveCreditCardAnnualityInstallments({
+      card,
+      overrides,
+      statements: statements.filter(
+        (statement) => statement.credit_card_id === card.id,
+      ),
+      transactions,
+      asOfDate: today,
+    })
+
+    for (const installment of installments) {
+      if (
+        installment.status !== "reserved" ||
+        pendingAnnualityKeys.has(
+          `${card.id}:${installment.anniversaryYear}:${installment.installmentIndex}`,
+        )
+      ) {
+        continue
+      }
+
+      reservedCentsByCard.set(
+        card.id,
+        (reservedCentsByCard.get(card.id) ?? 0) + installment.amountCents,
+      )
+    }
+  }
+
   return reservedCentsByCard
 }
 
@@ -514,7 +574,10 @@ function selectCreditCardStatements(
       categories,
     )
     const amount = centsToDollars(obligation.statementAmountCents)
-    const pendingBillsAmount = centsToDollars(obligation.pendingBillAmountCents)
+    const pendingBillsAmount = centsToDollars(
+      obligation.pendingBillAmountCents +
+        obligation.pendingAnnualityAmountCents,
+    )
 
     return {
       id:
@@ -630,6 +693,34 @@ function selectCreditCardPendingSummary(
   }
 }
 
+function selectAnnualitySchedule(
+  card: CreditCardRecord,
+  overrides: CreditCardAnnualityOverrideRecord[],
+  statements: CreditCardStatementRecord[],
+  transactions: TransactionRecord[],
+  today: string,
+): CreditCardAnnualityScheduleItem[] {
+  return resolveCreditCardAnnualityInstallments({
+    card,
+    overrides,
+    statements: statements.filter(
+      (statement) => statement.credit_card_id === card.id,
+    ),
+    transactions,
+    asOfDate: today,
+  }).map((installment) => ({
+    anniversaryYear: installment.anniversaryYear,
+    installmentIndex: installment.installmentIndex,
+    amount: centsToDollars(installment.amountCents),
+    periodStart: installment.periodStart,
+    periodEnd: installment.periodEnd,
+    paymentDueDate: installment.paymentDueDate,
+    isMaterialized: installment.isMaterialized,
+    isOverridden: installment.isOverridden,
+    status: installment.status,
+  }))
+}
+
 function selectCreditCards(
   cards: CreditCardRecord[],
   obligations: CreditCardObligation[],
@@ -637,6 +728,9 @@ function selectCreditCards(
   reservedInstallmentCentsByCard: Map<string, number>,
   counterparties: Map<string, CounterpartyRecord>,
   categories: Map<string, CategoryRecord>,
+  overrides: CreditCardAnnualityOverrideRecord[],
+  statements: CreditCardStatementRecord[],
+  transactions: TransactionRecord[],
   today: string,
 ): CreditCard[] {
   const selectedStatements = selectCreditCardStatements(
@@ -692,6 +786,21 @@ function selectCreditCards(
         pendingSummary.totalPendingAmount -
         reservedInstallmentAmount,
       dueStatus: pendingSummary.dueStatus,
+      annualityEnabled: card.annuality_enabled,
+      annualityAmount:
+        card.annuality_amount_cents == null
+          ? null
+          : centsToDollars(card.annuality_amount_cents),
+      annualityAnniversaryMonth: card.annuality_anniversary_month,
+      annualityAnniversaryDay: card.annuality_anniversary_day,
+      annualityPaymentCount: card.annuality_payment_count,
+      annualitySchedule: selectAnnualitySchedule(
+        card,
+        overrides,
+        statements,
+        transactions,
+        today,
+      ),
     }
   })
 }
@@ -857,6 +966,7 @@ export function selectFinanceViewModel(
     transactions: state.transactions,
     recurringBills: state.recurringBills,
     recurringBillPayments: state.recurringBillPayments,
+    creditCardAnnualityOverrides: state.creditCardAnnualityOverrides,
     asOfDate: today,
     throughDate: today,
   })
@@ -868,10 +978,17 @@ export function selectFinanceViewModel(
       state.recurringBills,
       paymentsByBillId,
       creditCardObligations,
+      state.creditCards,
+      state.creditCardAnnualityOverrides,
+      state.creditCardStatements,
+      state.transactions,
       today,
     ),
     counterparties,
     categories,
+    state.creditCardAnnualityOverrides,
+    state.creditCardStatements,
+    state.transactions,
     today,
   )
   const creditCardSummary = selectCreditCardSummary(creditCards, today)

@@ -89,7 +89,8 @@ tokens already wired in `app/globals.css`.
 - Metadata, labels, and table headers: `text-xs` or `text-sm`
 - Use `font-bold` for names, labels that anchor a block, and money values.
 - Use normal weight for secondary text. Avoid more than two weights in one view.
-- Use `tabular-nums` when columns of numbers need to align.
+- Money amounts use `tabular-nums` via `MoneyAmount` so figures align in
+  columns and lists.
 
 ### Spacing
 
@@ -547,7 +548,22 @@ Button labels should be action-specific: `Add Money`, `Create Budget`,
 ### Credit Cards
 
 - Card-level balances use the `Total Pending` label and include every unpaid
-  statement, including pending card-assigned bill amounts.
+  statement, including pending card-assigned bill amounts and pending annuality
+  installments.
+- Optional card-level **Annuality** (annual fee) is configured in Add/Edit Card:
+  enable toggle, full amount, anniversary month/day, and payment count (default
+  1). When count is greater than 1, the fee splits across consecutive statement
+  cycles starting with the cycle that contains the anniversary date.
+- Credit Card Details shows an Annuality section when enabled: current-year
+  schedule, editable installment amounts for non-posted payments when split,
+  Save amounts, and Reset to equal. Overrides apply only to that anniversary
+  year. Subtitle stacks amount/year above anniversary and payment-count details.
+  On small screens, installment rows stack label above amount, and Save / Reset
+  live in the shared ellipsis overflow menu; desktop keeps inline actions.
+- Pending annuality lines use the label `Annuality` on statements and in the pay
+  dialog; paying a statement materializes them as card purchases. Future unpaid
+  installments count toward Reserved Installments / available credit like finite
+  card bills.
 - Card-level status uses the most urgent unpaid statement: `Overdue`, then `Due
 Today`, then `Due Soon`, then `Upcoming`. `Overdue` uses destructive text.
 - When a card-level payment targets the oldest payable statement, the dialog
@@ -570,7 +586,7 @@ Today`, then `Due Soon`, then `Upcoming`. `Overdue` uses destructive text.
 
 - Render on-screen money with the shared `MoneyAmount` component. Keep raw
   formatting in `lib/format`; do not call format helpers directly in product UI
-  for displayed amounts.
+  for displayed amounts. `MoneyAmount` always applies `tabular-nums`.
 - Active editable inputs (`CurrencyInput`) stay outside `MoneyAmount` and remain
   visible while privacy mode is on.
 - When the absolute value is ≥ `$100,000`, `MoneyAmount` shows compact notation

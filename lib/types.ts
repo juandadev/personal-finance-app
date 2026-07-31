@@ -123,6 +123,7 @@ export interface CreditCardSummary {
 }
 
 export interface CreditCardPendingBillLine {
+  kind?: "bill" | "annuality"
   billId: string
   name: string
   concept: string
@@ -132,6 +133,20 @@ export interface CreditCardPendingBillLine {
   dueDate: string
   amount: number
   category: TransactionCategory
+  anniversaryYear?: number
+  installmentIndex?: number
+}
+
+export interface CreditCardAnnualityScheduleItem {
+  anniversaryYear: number
+  installmentIndex: number
+  amount: number
+  periodStart: string
+  periodEnd: string
+  paymentDueDate: string
+  isMaterialized: boolean
+  isOverridden: boolean
+  status: "materialized" | "pending" | "reserved" | "future"
 }
 
 export interface CreditCardStatement {
@@ -189,4 +204,10 @@ export interface CreditCard {
   reservedInstallmentAmount: number
   availableCredit: number
   dueStatus: CreditCardDueStatus
+  annualityEnabled: boolean
+  annualityAmount: number | null
+  annualityAnniversaryMonth: number | null
+  annualityAnniversaryDay: number | null
+  annualityPaymentCount: number | null
+  annualitySchedule: CreditCardAnnualityScheduleItem[]
 }

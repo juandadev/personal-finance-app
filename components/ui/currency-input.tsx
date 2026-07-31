@@ -125,7 +125,7 @@ function CurrencyInput({
         $
       </InputGroupAddon>
       <InputGroupInput
-        className={cn("h-full text-sm", className)}
+        className={cn("h-full text-sm tabular-nums", className)}
         ref={(node) => {
           inputRef.current = node
           setRef(ref, node)

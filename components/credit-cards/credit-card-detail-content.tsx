@@ -9,6 +9,7 @@ import {
   ItemActions,
   ModuleHeaderActions,
 } from "@/components/actions"
+import { CreditCardAnnualitySection } from "@/components/credit-cards/credit-card-annuality-section"
 import { CloseCreditCardStatementDialog } from "@/components/credit-cards/close-credit-card-statement-dialog"
 import { CreditCardBadge } from "@/components/credit-cards/credit-card-badge"
 import { PayCreditCardStatementDialog } from "@/components/credit-cards/pay-credit-card-statement-dialog"
@@ -254,6 +255,7 @@ export function CreditCardDetailContent({
         onOpenChange={setIsCloseStatementDialogOpen}
         hideTrigger
       />
+      <CreditCardAnnualitySection creditCard={creditCard} />
       <ScheduledChargesCard
         creditCard={creditCard}
         scheduledCharges={scheduledCharges}
@@ -476,7 +478,7 @@ function StatementsCard({ creditCard }: { creditCard: CreditCard }) {
                         amount={statement.pendingBillsAmount}
                         forceDecimals
                       />{" "}
-                      pending bills
+                      pending charges
                     </span>
                   ) : null}
                 </p>

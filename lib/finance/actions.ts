@@ -26,6 +26,8 @@ import {
   payCreditCardCycle,
   payCreditCardStatement,
   payRecurringBillOccurrence,
+  resetCreditCardAnnualityOverrides,
+  saveCreditCardAnnualityOverrides,
   skipRecurringBillOccurrence,
   movePotBalance,
   unassignTransactionFromBudget,
@@ -55,6 +57,7 @@ import type {
   CashForecastSettingsRecord,
   CategoryRecord,
   CounterpartyRecord,
+  CreditCardAnnualityOverrideRecord,
   CreditCardPaymentRecord,
   CreditCardRecord,
   CreditCardStatementRecord,
@@ -242,7 +245,56 @@ const counterpartyUpdateSchema = z.object({
 })
 
 const cardTextSchema = z.string().trim().min(1).max(40)
-const creditCardSchema = z.object({
+const creditCardAnnualityFieldsSchema = z.object({
+  annuality_enabled: z.boolean(),
+  annuality_amount_cents: z.number().int().positive().nullable(),
+  annuality_anniversary_month: z.number().int().min(1).max(12).nullable(),
+  annuality_anniversary_day: z.number().int().min(1).max(31).nullable(),
+  annuality_payment_count: z.number().int().min(1).max(12).nullable(),
+})
+
+function refineCreditCardAnnuality(
+  value: z.infer<typeof creditCardAnnualityFieldsSchema>,
+  context: z.RefinementCtx,
+) {
+  if (!value.annuality_enabled) {
+    return
+  }
+
+  if (value.annuality_amount_cents == null) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["annuality_amount_cents"],
+      message: "Enter the annual fee amount.",
+    })
+  }
+
+  if (value.annuality_anniversary_month == null) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["annuality_anniversary_month"],
+      message: "Choose an anniversary month.",
+    })
+  }
+
+  if (value.annuality_anniversary_day == null) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["annuality_anniversary_day"],
+      message: "Choose an anniversary day.",
+    })
+  }
+
+  if (value.annuality_payment_count == null) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["annuality_payment_count"],
+      message: "Choose how many payments to split the fee into.",
+    })
+  }
+}
+
+const creditCardObjectSchema = z.object({
   id: recordIdSchema,
   nickname: cardTextSchema,
   issuer: cardTextSchema,
@@ -259,8 +311,12 @@ const creditCardSchema = z.object({
   payment_due_day_of_month: z.number().int().min(1).max(31),
   theme_color: themeColorSchema,
   archived_at: z.string().nullable(),
+  ...creditCardAnnualityFieldsSchema.shape,
 })
-const creditCardUpdateSchema = creditCardSchema
+const creditCardSchema = creditCardObjectSchema.superRefine(
+  refineCreditCardAnnuality,
+)
+const creditCardUpdateSchema = creditCardObjectSchema
   .omit({
     id: true,
   })
@@ -278,7 +334,31 @@ const creditCardUpdateSchema = creditCardSchema
         })
       }
     }
+
+    if (value.annuality_enabled === true) {
+      refineCreditCardAnnuality(
+        {
+          annuality_enabled: true,
+          annuality_amount_cents: value.annuality_amount_cents ?? null,
+          annuality_anniversary_month:
+            value.annuality_anniversary_month ?? null,
+          annuality_anniversary_day: value.annuality_anniversary_day ?? null,
+          annuality_payment_count: value.annuality_payment_count ?? null,
+        },
+        context,
+      )
+    }
   })
+const annualityOverridesSchema = z.object({
+  creditCardId: recordIdSchema,
+  anniversaryYear: z.number().int().min(2000).max(2100),
+  overrides: z.array(
+    z.object({
+      installmentIndex: z.number().int().min(1).max(12),
+      amountCents: z.number().int().positive(),
+    }),
+  ),
+})
 const statementPaymentSchema = z.object({
   statementId: recordIdSchema,
   paidAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid date."),
@@ -672,6 +752,12 @@ export async function createCreditCardAction(
     const parsedCreditCard = creditCardSchema.parse({
       ...creditCard,
       archived_at: null,
+      annuality_enabled: creditCard.annuality_enabled ?? false,
+      annuality_amount_cents: creditCard.annuality_amount_cents ?? null,
+      annuality_anniversary_month:
+        creditCard.annuality_anniversary_month ?? null,
+      annuality_anniversary_day: creditCard.annuality_anniversary_day ?? null,
+      annuality_payment_count: creditCard.annuality_payment_count ?? null,
     })
     const data = await insertCreditCard(userId, {
       ...parsedCreditCard,
@@ -681,6 +767,60 @@ export async function createCreditCardAction(
     return {
       ok: true,
       message: "Credit card created.",
+      data,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function saveCreditCardAnnualityOverridesAction(
+  creditCardId: string,
+  anniversaryYear: number,
+  overrides: Array<{ installmentIndex: number; amountCents: number }>,
+): Promise<FinanceActionResult<CreditCardAnnualityOverrideRecord[]>> {
+  try {
+    const userId = await getUserId()
+    const parsed = annualityOverridesSchema.parse({
+      creditCardId,
+      anniversaryYear,
+      overrides,
+    })
+    const data = await saveCreditCardAnnualityOverrides(
+      userId,
+      parsed.creditCardId,
+      parsed.anniversaryYear,
+      parsed.overrides,
+    )
+
+    return {
+      ok: true,
+      message: "Annuality amounts saved.",
+      data,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function resetCreditCardAnnualityOverridesAction(
+  creditCardId: string,
+  anniversaryYear: number,
+): Promise<FinanceActionResult<CreditCardAnnualityOverrideRecord[]>> {
+  try {
+    const userId = await getUserId()
+    const parsed = annualityOverridesSchema
+      .pick({ creditCardId: true, anniversaryYear: true })
+      .parse({ creditCardId, anniversaryYear })
+    const data = await resetCreditCardAnnualityOverrides(
+      userId,
+      parsed.creditCardId,
+      parsed.anniversaryYear,
+    )
+
+    return {
+      ok: true,
+      message: "Annuality amounts reset to equal splits.",
       data,
     }
   } catch (error) {

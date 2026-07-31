@@ -53,6 +53,8 @@ import {
   updateTransactionAction,
   payCreditCardCycleAction,
   payCreditCardStatementAction,
+  resetCreditCardAnnualityOverridesAction,
+  saveCreditCardAnnualityOverridesAction,
   updateUiPreferencesAction,
 } from "@/lib/finance/actions"
 import { createInitialFinanceState } from "@/lib/finance/seed"
@@ -479,6 +481,13 @@ export function FinanceProvider({
                     result.data.payment_due_day_of_month,
                   theme_color: result.data.theme_color,
                   archived_at: result.data.archived_at,
+                  annuality_enabled: result.data.annuality_enabled,
+                  annuality_amount_cents: result.data.annuality_amount_cents,
+                  annuality_anniversary_month:
+                    result.data.annuality_anniversary_month,
+                  annuality_anniversary_day:
+                    result.data.annuality_anniversary_day,
+                  annuality_payment_count: result.data.annuality_payment_count,
                 },
               })
             }
@@ -555,6 +564,50 @@ export function FinanceProvider({
               dispatch({
                 type: "credit-card/statement-upsert",
                 statements: [result.data],
+              })
+            }
+
+            return result
+          }),
+        ),
+      saveCreditCardAnnualityOverrides: (
+        creditCardId: string,
+        anniversaryYear: number,
+        overrides: Array<{ installmentIndex: number; amountCents: number }>,
+      ) =>
+        runFinanceAction(() =>
+          saveCreditCardAnnualityOverridesAction(
+            creditCardId,
+            anniversaryYear,
+            overrides,
+          ).then((result) => {
+            if (result.ok) {
+              dispatch({
+                type: "credit-card/annuality-overrides-set",
+                creditCardId,
+                anniversaryYear,
+                overrides: result.data,
+              })
+            }
+
+            return result
+          }),
+        ),
+      resetCreditCardAnnualityOverrides: (
+        creditCardId: string,
+        anniversaryYear: number,
+      ) =>
+        runFinanceAction(() =>
+          resetCreditCardAnnualityOverridesAction(
+            creditCardId,
+            anniversaryYear,
+          ).then((result) => {
+            if (result.ok) {
+              dispatch({
+                type: "credit-card/annuality-overrides-set",
+                creditCardId,
+                anniversaryYear,
+                overrides: result.data,
               })
             }
 

@@ -22,6 +22,11 @@ const card: CreditCardRecord = {
   payment_due_day_of_month: 5,
   theme_color: "chart-1",
   archived_at: null,
+  annuality_enabled: false,
+  annuality_amount_cents: null,
+  annuality_anniversary_month: null,
+  annuality_anniversary_day: null,
+  annuality_payment_count: null,
 }
 
 const bill: RecurringBillRecord = {
@@ -157,5 +162,29 @@ describe("buildCreditCardObligations", () => {
     }).find((obligation) => obligation.statementId === statement.id)
 
     expect(persisted?.isPaid).toBe(true)
+  })
+
+  test("adds pending annuality installments to statement totals", () => {
+    const obligations = build({
+      cards: [
+        {
+          ...card,
+          annuality_enabled: true,
+          annuality_amount_cents: 30_000,
+          annuality_anniversary_month: 7,
+          annuality_anniversary_day: 10,
+          annuality_payment_count: 1,
+        },
+      ],
+      asOfDate: "2026-07-15",
+      throughDate: "2026-07-15",
+    })
+    const withAnnuality = obligations.find(
+      (obligation) => obligation.pendingAnnualityAmountCents > 0,
+    )
+
+    expect(withAnnuality?.pendingAnnualityLines).toHaveLength(1)
+    expect(withAnnuality?.pendingAnnualityAmountCents).toBe(30_000)
+    expect(withAnnuality?.amountCents).toBeGreaterThanOrEqual(30_000)
   })
 })

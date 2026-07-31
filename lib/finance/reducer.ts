@@ -8,6 +8,7 @@ import type {
   CashForecastSettingsRecord,
   CategoryRecord,
   CounterpartyRecord,
+  CreditCardAnnualityOverrideRecord,
   CreditCardPaymentRecord,
   CreditCardRecord,
   CreditCardStatementRecord,
@@ -118,6 +119,12 @@ export type FinanceAction =
       statement: CreditCardStatementRecord
       billTransactions?: TransactionRecord[]
       recurringBillPayments?: RecurringBillPaymentRecord[]
+    }
+  | {
+      type: "credit-card/annuality-overrides-set"
+      creditCardId: string
+      anniversaryYear: number
+      overrides: CreditCardAnnualityOverrideRecord[]
     }
   | {
       type: "cash-forecast/settings-save"
@@ -235,6 +242,15 @@ export interface FinanceActions {
   ) => Promise<FinanceMutationResult>
   closeCreditCardStatement: (
     statementId: string,
+  ) => Promise<FinanceMutationResult>
+  saveCreditCardAnnualityOverrides: (
+    creditCardId: string,
+    anniversaryYear: number,
+    overrides: Array<{ installmentIndex: number; amountCents: number }>,
+  ) => Promise<FinanceMutationResult>
+  resetCreditCardAnnualityOverrides: (
+    creditCardId: string,
+    anniversaryYear: number,
   ) => Promise<FinanceMutationResult>
   saveCashForecastSettings: (
     defaultMonthlyIncomeCents: number,
@@ -666,6 +682,28 @@ export function financeReducer(
               action.recurringBillPayments,
             )
           : state.recurringBillPayments,
+      }
+    case "credit-card/annuality-overrides-set":
+      return {
+        ...state,
+        creditCardAnnualityOverrides: [
+          ...state.creditCardAnnualityOverrides.filter(
+            (override) =>
+              !(
+                override.credit_card_id === action.creditCardId &&
+                override.anniversary_year === action.anniversaryYear
+              ),
+          ),
+          ...action.overrides,
+        ].sort((left, right) => {
+          const yearComparison = left.anniversary_year - right.anniversary_year
+
+          if (yearComparison !== 0) {
+            return yearComparison
+          }
+
+          return left.installment_index - right.installment_index
+        }),
       }
     case "cash-forecast/settings-save":
       return {

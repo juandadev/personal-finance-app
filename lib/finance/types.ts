@@ -221,6 +221,22 @@ export interface CreditCardRecord {
   payment_due_day_of_month: number
   theme_color: ThemeColor
   archived_at: string | null
+  annuality_enabled: boolean
+  annuality_amount_cents: number | null
+  annuality_anniversary_month: number | null
+  annuality_anniversary_day: number | null
+  annuality_payment_count: number | null
+}
+
+export interface CreditCardAnnualityOverrideRecord {
+  id: FinanceRecordId
+  user_id: FinanceUserId
+  credit_card_id: FinanceRecordId
+  anniversary_year: number
+  installment_index: number
+  amount_cents: number
+  created_at: string
+  updated_at: string
 }
 
 export interface CreditCardStatementRecord {
@@ -309,6 +325,7 @@ export interface FinanceState {
   creditCards: CreditCardRecord[]
   creditCardStatements: CreditCardStatementRecord[]
   creditCardPayments: CreditCardPaymentRecord[]
+  creditCardAnnualityOverrides: CreditCardAnnualityOverrideRecord[]
   cashForecastSettings: CashForecastSettingsRecord | null
   cashForecastAdjustments: CashForecastAdjustmentRecord[]
   cashForecastExclusions: CashForecastExclusionRecord[]

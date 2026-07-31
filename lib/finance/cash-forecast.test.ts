@@ -43,6 +43,7 @@ function makeState(overrides: Partial<FinanceState> = {}): FinanceState {
     creditCards: [],
     creditCardStatements: [],
     creditCardPayments: [],
+    creditCardAnnualityOverrides: [],
     cashForecastSettings: {
       user_id: "user-1",
       default_monthly_income_cents: 200_000,
@@ -109,6 +110,11 @@ function makeCard(overrides: Partial<CreditCardRecord> = {}): CreditCardRecord {
     payment_due_day_of_month: 5,
     theme_color: "chart-1",
     archived_at: null,
+    annuality_enabled: false,
+    annuality_amount_cents: null,
+    annuality_anniversary_month: null,
+    annuality_anniversary_day: null,
+    annuality_payment_count: null,
     ...overrides,
   }
 }
