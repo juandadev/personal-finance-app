@@ -7,10 +7,12 @@ import {
   MinusCircleIcon,
   WarningCircleIcon,
 } from "@phosphor-icons/react"
+import Link from "next/link"
 
 import { ItemActions } from "@/components/actions"
 import { ContactAvatar } from "@/components/contact-avatar"
 import { MoneyAmount } from "@/components/money-amount"
+import { PrivacyValue } from "@/components/privacy-value"
 import { ArchiveBillDialog } from "@/components/recurring-bills/archive-bill-dialog"
 import { EditBillDialog } from "@/components/recurring-bills/bill-dialog"
 import { PayBillDialog } from "@/components/recurring-bills/pay-bill-dialog"
@@ -23,7 +25,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { useFinance } from "@/hooks/use-finance"
 import { formatBillScheduleShortDate, formatDisplayDate } from "@/lib/format"
+import { themeColorClasses } from "@/lib/theme-colors"
 import type { BillStatus, RecurringBill } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -191,6 +195,47 @@ function MobileDueDateIndicator({ bill }: { bill: RecurringBill }) {
   )
 }
 
+function BillCreditCardIcon({ creditCardId }: { creditCardId: string }) {
+  const { creditCards } = useFinance()
+  const card = creditCards.find((creditCard) => creditCard.id === creditCardId)
+
+  const link = (
+    <Link
+      href={`/credit-cards/${creditCardId}`}
+      className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex shrink-0 items-center gap-0.5 rounded-sm focus-visible:ring-2 focus-visible:outline-none"
+      aria-label="View credit card details"
+    >
+      <CreditCardIcon weight="fill" className="size-3.5" aria-hidden />
+      {card ? (
+        <span
+          aria-hidden
+          className={cn(
+            "size-1.5 rounded-full",
+            themeColorClasses[card.color].bg,
+          )}
+        />
+      ) : null}
+    </Link>
+  )
+
+  if (!card) {
+    return link
+  }
+
+  return (
+    <TooltipProvider skipDelayDuration={0}>
+      <Tooltip>
+        <TooltipTrigger asChild>{link}</TooltipTrigger>
+        <TooltipContent side="top">
+          <PrivacyValue hiddenLabel="Card details hidden. Turn off privacy mode to show it.">
+            {card.nickname} •••• {card.lastFour}
+          </PrivacyValue>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  )
+}
+
 function BillIdentity({
   bill,
   showCreditCardIcon = true,
@@ -218,11 +263,7 @@ function BillIdentity({
             {bill.concept}
           </span>
           {showCreditCardIcon && bill.creditCardId ? (
-            <CreditCardIcon
-              weight="fill"
-              className="text-muted-foreground size-3.5 shrink-0"
-              aria-label="Charges to a card"
-            />
+            <BillCreditCardIcon creditCardId={bill.creditCardId} />
           ) : null}
         </div>
         <span className="text-muted-foreground block truncate text-xs font-semibold">

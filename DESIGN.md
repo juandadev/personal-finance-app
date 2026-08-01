@@ -518,7 +518,11 @@ Button labels should be action-specific: `Add Money`, `Create Budget`,
   `Due Soon` and `Due Today` (warning icon, `warning` text), `Overdue`
   (warning icon, `destructive` text).
 - Bill title rows show the contact avatar, concept, contact name, and a card
-  icon when the bill charges to a credit card.
+  icon when the bill charges to a credit card. The card icon links to that
+  card's detail page and shows a small theme-color dot beside it for quick
+  visual reference. Hovering it shows a tooltip with the card nickname and
+  last four digits (`Travel Card •••• 4242`). Wrap that tooltip text in
+  `PrivacyValue` so privacy mode masks the card details.
 - The due-date column shows the schedule label (`Monthly`, `Yearly`, or
   `Payment N of M` for finite bills) with a short anchor date (`1st`,
   `Aug 15th`, etc.) plus the occurrence status label and icon. Hovering the
