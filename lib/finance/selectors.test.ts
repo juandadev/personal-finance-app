@@ -111,7 +111,7 @@ function makePayment(
   return {
     id: `payment-${overrides.due_date}`,
     user_id: "user-1",
-    recurring_bill_id: "bill-1",
+    recurring_bill_id: overrides.recurring_bill_id ?? "bill-1",
     due_date: overrides.due_date,
     amount_cents: overrides.amount_cents ?? 10000,
     status: overrides.status ?? "paid",
@@ -946,5 +946,113 @@ describe("selectFinanceViewModel month summaries", () => {
       count: 1,
       color: "warning",
     })
+  })
+})
+
+describe("selectFinanceViewModel manualBillsDueReminder", () => {
+  const reminderToday = "2026-07-15"
+
+  function makeManualBill(
+    overrides: Partial<FinanceState["recurringBills"][number]> & {
+      id: string
+      first_due_date: string
+      concept: string
+    },
+  ): FinanceState["recurringBills"][number] {
+    return {
+      user_id: "user-1",
+      counterparty_id: "merchant-1",
+      amount_cents: 1000,
+      currency: "MXN",
+      frequency: "monthly",
+      total_payments: null,
+      credit_card_id: null,
+      category_id: "category-1",
+      archived_at: null,
+      ...overrides,
+    }
+  }
+
+  test("includes only active urgent manual bills sorted by urgency", () => {
+    const viewModel = selectFinanceViewModel(
+      makeState({
+        recurringBills: [
+          makeManualBill({
+            id: "due-soon",
+            concept: "Due soon bill",
+            first_due_date: "2026-07-20",
+            amount_cents: 3000,
+          }),
+          makeManualBill({
+            id: "overdue",
+            concept: "Overdue bill",
+            first_due_date: "2026-07-01",
+            amount_cents: 1000,
+          }),
+          makeManualBill({
+            id: "due-today",
+            concept: "Due today bill",
+            first_due_date: "2026-07-15",
+            amount_cents: 2000,
+          }),
+          makeManualBill({
+            id: "upcoming",
+            concept: "Upcoming bill",
+            first_due_date: "2026-08-01",
+            amount_cents: 4000,
+          }),
+          makeManualBill({
+            id: "card-overdue",
+            concept: "Card overdue bill",
+            first_due_date: "2026-07-01",
+            credit_card_id: "card-1",
+            amount_cents: 5000,
+          }),
+          makeManualBill({
+            id: "archived-overdue",
+            concept: "Archived overdue bill",
+            first_due_date: "2026-07-01",
+            archived_at: "2026-07-10T00:00:00.000Z",
+            amount_cents: 6000,
+          }),
+        ],
+      }),
+      reminderToday,
+    )
+
+    expect(viewModel.manualBillsDueReminder.map((bill) => bill.id)).toEqual([
+      "overdue",
+      "due-today",
+      "due-soon",
+    ])
+    expect(viewModel.manualBillsDueReminder.map((bill) => bill.status)).toEqual(
+      ["overdue", "due-today", "due-soon"],
+    )
+  })
+
+  test("excludes paid manual bills", () => {
+    const viewModel = selectFinanceViewModel(
+      makeState({
+        recurringBills: [
+          makeManualBill({
+            id: "paid-manual",
+            concept: "Paid bill",
+            first_due_date: "2026-07-01",
+            amount_cents: 7000,
+            total_payments: 1,
+          }),
+        ],
+        recurringBillPayments: [
+          makePayment({
+            due_date: "2026-07-01",
+            recurring_bill_id: "paid-manual",
+            amount_cents: 7000,
+          }),
+        ],
+      }),
+      reminderToday,
+    )
+
+    expect(viewModel.manualBillsDueReminder).toEqual([])
   })
 })

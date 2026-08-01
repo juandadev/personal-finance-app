@@ -3,6 +3,7 @@ import { PageHeading } from "@/components/overview/page-heading"
 import { PotsCard } from "@/components/overview/pots/pots-card"
 import { BudgetsCard } from "@/components/overview/budgets/budgets-card"
 import { CreditCardsCard } from "@/components/overview/credit-cards/credit-cards-card"
+import { DueForPaymentCard } from "@/components/overview/due-for-payment/due-for-payment-card"
 import { TransactionsCard } from "@/components/overview/transactions/transactions-card"
 import { RecurringBillsCard } from "@/components/overview/recurring-bills/recurring-bills-card"
 
@@ -17,6 +18,7 @@ export default function OverviewPage() {
         <div className="flex flex-col gap-6 overflow-y-auto rounded-xl lg:@[829px]/main:pr-2">
           <PotsCard />
           <TransactionsCard />
+          <DueForPaymentCard />
         </div>
         <div className="flex min-h-0 flex-col gap-4 overflow-y-auto rounded-xl lg:@[829px]/main:pr-2">
           <BudgetsCard />

@@ -342,6 +342,7 @@ export interface FinanceViewModel {
   transactionCategories: TransactionCategory[]
   recurringBills: RecurringBill[]
   recurringBillsSummary: RecurringBillSummary[]
+  manualBillsDueReminder: RecurringBill[]
   totalBillsAmount: number
   creditCards: CreditCard[]
   creditCardSummary: CreditCardSummary[]

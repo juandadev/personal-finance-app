@@ -548,6 +548,13 @@ Button labels should be action-specific: `Add Money`, `Create Budget`,
   shown anywhere include pending bill amounts.
 - Archived bills stay listed under an `Archived` group with muted styling, no
   pay/skip actions, and no new occurrences.
+- Overview left column includes a **Due for payment** card under Transactions.
+  It lists active manual bills (no credit card) whose current status is
+  `Overdue`, `Due Today`, or `Due Soon`. Show at most 4 rows; empty state copy
+  is “You’re all caught up” with a short line that no manual bills need payment
+  soon. Rows and `View All` deep-link to Recurring Bills filtered by
+  `source=bank_account` and those three statuses. This card is a reminder only
+  (no pay/skip). The right-column Recurring Bills summary buckets stay as-is.
 
 ### Credit Cards
 

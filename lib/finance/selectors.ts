@@ -22,6 +22,7 @@ import {
   type RecurringBillOccurrenceState,
 } from "@/lib/finance/recurring-bill-schedule"
 import { formatDisplayDate } from "@/lib/format"
+import { sortRecurringBills } from "@/lib/finance/url-filters/recurring-bill-filters"
 import type {
   Budget,
   CreditCard,
@@ -353,6 +354,17 @@ function selectRecurringBills(
 }
 
 const URGENT_BILL_STATUSES = new Set(["due-soon", "due-today", "overdue"])
+
+function selectManualBillsDueReminder(bills: RecurringBill[]): RecurringBill[] {
+  const filtered = bills.filter(
+    (bill) =>
+      !bill.archivedAt &&
+      !bill.creditCardId &&
+      URGENT_BILL_STATUSES.has(bill.status),
+  )
+
+  return sortRecurringBills(filtered, "latest")
+}
 
 function getNextYearMonth(yearMonth: string): string {
   const year = Number(yearMonth.slice(0, 4))
@@ -1004,6 +1016,7 @@ export function selectFinanceViewModel(
     transactionCategories: selectTransactionCategories(state.categories),
     recurringBills,
     recurringBillsSummary: selectRecurringBillsSummary(recurringBills, today),
+    manualBillsDueReminder: selectManualBillsDueReminder(recurringBills),
     totalBillsAmount,
     creditCards,
     creditCardSummary,
