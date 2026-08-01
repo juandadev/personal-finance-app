@@ -3,7 +3,7 @@
 import * as React from "react"
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog"
 import type { VariantProps } from "class-variance-authority"
-import { X } from "lucide-react"
+import { XIcon } from "@phosphor-icons/react"
 
 import { cn } from "@/lib/utils"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -76,23 +76,20 @@ function AlertDialogCloseButton({
   ...props
 }: React.ComponentProps<typeof Button>) {
   return (
-    <AlertDialogCancel
-      asChild
-      className="border-none bg-transparent p-0 shadow-none hover:bg-transparent"
-    >
+    <AlertDialogPrimitive.Cancel asChild>
       <Button
         type="button"
         variant="ghost"
         size="icon-lg"
         className={cn(
-          "text-muted-foreground hover:text-foreground absolute top-8 right-7 border border-current",
+          "text-muted-foreground hover:text-foreground self-end border border-current md:absolute md:top-8 md:right-7",
           className,
         )}
         {...props}
       >
-        {children ?? <X className="size-4" aria-hidden />}
+        {children ?? <XIcon className="size-4" weight="bold" aria-hidden />}
       </Button>
-    </AlertDialogCancel>
+    </AlertDialogPrimitive.Cancel>
   )
 }
 

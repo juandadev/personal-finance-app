@@ -1,9 +1,11 @@
 "use client"
 
 import * as React from "react"
-import CaretDownIcon from "@/components/icons/CaretDownIcon"
-import CaretLeftIcon from "@/components/icons/CaretLeftIcon"
-import CaretRightIcon from "@/components/icons/CaretRightIcon"
+import {
+  CaretDownIcon,
+  CaretLeftIcon,
+  CaretRightIcon,
+} from "@phosphor-icons/react"
 import { DayButton, DayPicker, getDefaultClassNames } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
@@ -28,7 +30,7 @@ function Calendar({
     <DayPicker
       showOutsideDays={showOutsideDays}
       className={cn(
-        "bg-background group/calendar p-3 [--cell-size:--spacing(8)] [[data-slot=card-content]_&]:bg-transparent [[data-slot=popover-content]_&]:bg-transparent",
+        "bg-background group/calendar p-3 [--cell-size:--spacing(8)] in-data-[slot=card-content]:bg-transparent in-data-[slot=popover-content]:bg-transparent",
         String.raw`rtl:**:[.rdp-button\_next>svg]:rotate-180`,
         String.raw`rtl:**:[.rdp-button\_previous>svg]:rotate-180`,
         className,
@@ -116,10 +118,7 @@ function Calendar({
           "text-muted-foreground aria-selected:text-muted-foreground",
           defaultClassNames.outside,
         ),
-        disabled: cn(
-          "text-muted-foreground opacity-50",
-          defaultClassNames.disabled,
-        ),
+        disabled: cn("opacity-50", defaultClassNames.disabled),
         hidden: cn("invisible", defaultClassNames.hidden),
         ...classNames,
       }}
@@ -137,18 +136,30 @@ function Calendar({
         Chevron: ({ className, orientation, ...props }) => {
           if (orientation === "left") {
             return (
-              <CaretLeftIcon className={cn("size-2", className)} {...props} />
+              <CaretLeftIcon
+                weight="fill"
+                className={cn("size-2", className)}
+                {...props}
+              />
             )
           }
 
           if (orientation === "right") {
             return (
-              <CaretRightIcon className={cn("size-2", className)} {...props} />
+              <CaretRightIcon
+                weight="fill"
+                className={cn("size-2", className)}
+                {...props}
+              />
             )
           }
 
           return (
-            <CaretDownIcon className={cn("size-2", className)} {...props} />
+            <CaretDownIcon
+              weight="fill"
+              className={cn("size-2", className)}
+              {...props}
+            />
           )
         },
         DayButton: CalendarDayButton,

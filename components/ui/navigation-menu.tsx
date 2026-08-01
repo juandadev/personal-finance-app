@@ -1,6 +1,6 @@
 import * as React from "react"
 import * as NavigationMenuPrimitive from "@radix-ui/react-navigation-menu"
-import CaretDownIcon from "@/components/icons/CaretDownIcon"
+import { CaretDownIcon } from "@phosphor-icons/react"
 import { cva } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
@@ -75,7 +75,8 @@ function NavigationMenuTrigger({
     >
       {children}{" "}
       <CaretDownIcon
-        className="relative top-[1px] ml-1 size-2 transition duration-300 group-data-[state=open]:rotate-180"
+        weight="fill"
+        className="relative top-px ml-1 size-2 transition duration-300 group-data-[state=open]:rotate-180"
         aria-hidden="true"
       />
     </NavigationMenuPrimitive.Trigger>

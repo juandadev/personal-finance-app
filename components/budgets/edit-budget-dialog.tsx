@@ -1,17 +1,19 @@
 "use client"
 
-import { useMemo, useState, type FormEvent } from "react"
+import { useMemo } from "react"
+import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogCloseButton,
   DialogContent,
   DialogDescription,
+  DialogFinanceForm,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
 import { CurrencyInput } from "@/components/ui/currency-input"
-import { Label } from "@/components/ui/label"
+import { FormField, FormStatusMessage } from "@/components/ui/form"
 import {
   Select,
   SelectContent,
@@ -21,10 +23,56 @@ import {
 } from "@/components/ui/select"
 import { ThemeSelect } from "@/components/theme-select"
 import { useFinance } from "@/hooks/use-finance"
-import { formatDollarInput, parseDollarAmount } from "@/lib/finance/form-utils"
-import type { ThemeColor } from "@/lib/theme-colors"
+import { formatDollarInput } from "@/lib/finance/form-utils"
+import {
+  currencyCentsSchema,
+  requiredSelectSchema,
+  themeColorSchema,
+} from "@/lib/forms/validation"
+import { useStandardForm } from "@/lib/forms/use-standard-form"
 import type { Budget } from "@/lib/types"
 import { cn } from "@/lib/utils"
+
+const MAXIMUM_MONEY_CENTS = 2_147_483_647
+
+const voucherCoverageCentsSchema = z.string().transform((value, context) => {
+  const normalizedValue = value.trim().replaceAll(",", "")
+
+  if (normalizedValue === "") {
+    return 0
+  }
+
+  const amount = Number(normalizedValue)
+  const amountCents = Math.round(amount * 100)
+
+  if (
+    !Number.isFinite(amount) ||
+    amount < 0 ||
+    amountCents > MAXIMUM_MONEY_CENTS
+  ) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Enter voucher coverage of $0 or more.",
+    })
+    return z.NEVER
+  }
+
+  return amountCents
+})
+
+const editBudgetFormSchema = z
+  .object({
+    categoryId: requiredSelectSchema("Choose a budget category."),
+    maximumSpend: currencyCentsSchema("Enter a maximum spend greater than $0."),
+    monthlyVoucherCoverage: voucherCoverageCentsSchema,
+    themeColor: themeColorSchema,
+  })
+  .refine((value) => value.monthlyVoucherCoverage <= value.maximumSpend, {
+    message: "Voucher coverage cannot exceed the budget limit.",
+    path: ["monthlyVoucherCoverage"],
+  })
+
+type EditBudgetFormValues = z.input<typeof editBudgetFormSchema>
 
 interface EditBudgetDialogProps {
   budget: Budget
@@ -38,27 +86,28 @@ export function EditBudgetDialog({
   onOpenChange,
 }: EditBudgetDialogProps) {
   const { state, actions } = useFinance()
-  const currentBudget = state.budgets.find((budgetRecord) => {
-    const category = state.categories.find(
-      (option) => option.id === budgetRecord.categoryId,
-    )
-
-    return category?.name === budget.category
-  })
-  const currentCategoryId = currentBudget?.categoryId ?? ""
-  const [categoryId, setCategoryId] = useState(currentCategoryId)
-  const [maximumSpend, setMaximumSpend] = useState(
-    formatDollarInput(budget.maximum),
+  const currentBudget = state.budgets.find(
+    (budgetRecord) => budgetRecord.id === budget.id,
   )
-  const [themeColor, setThemeColor] = useState<ThemeColor>(budget.color)
-  const [amountError, setAmountError] = useState("")
+  const currentCategoryId = currentBudget?.category_id ?? ""
+  const coverageCents = currentBudget?.monthly_voucher_coverage_cents ?? 0
+  const defaultValues = useMemo(
+    () =>
+      ({
+        categoryId: currentCategoryId,
+        maximumSpend: formatDollarInput(budget.maximum),
+        monthlyVoucherCoverage: formatDollarInput(coverageCents / 100),
+        themeColor: budget.color,
+      }) satisfies EditBudgetFormValues,
+    [budget.color, budget.maximum, coverageCents, currentCategoryId],
+  )
 
   const budgetedCategoryIds = useMemo(
     () =>
       new Set(
         state.budgets
           .filter((budgetRecord) => budgetRecord.id !== currentBudget?.id)
-          .map((budgetRecord) => budgetRecord.categoryId),
+          .map((budgetRecord) => budgetRecord.category_id),
       ),
     [currentBudget?.id, state.budgets],
   )
@@ -67,58 +116,63 @@ export function EditBudgetDialog({
       new Set(
         state.budgets
           .filter((budgetRecord) => budgetRecord.id !== currentBudget?.id)
-          .map((budgetRecord) => budgetRecord.themeColor.toLowerCase()),
+          .map((budgetRecord) => budgetRecord.theme_color.toLowerCase()),
       ),
     [currentBudget?.id, state.budgets],
   )
 
-  const resetForm = () => {
-    setCategoryId(currentCategoryId)
-    setMaximumSpend(formatDollarInput(budget.maximum))
-    setThemeColor(budget.color)
-    setAmountError("")
-  }
+  const standardForm = useStandardForm({
+    defaultValues,
+    schema: editBudgetFormSchema,
+    onSubmit: async ({ applyActionResult, value }) => {
+      if (!currentBudget) {
+        applyActionResult({
+          ok: false,
+          message: "This budget is no longer available.",
+        })
+        return
+      }
+
+      const category = state.categories.find(
+        (option) => option.id === value.categoryId,
+      )
+
+      if (!category) {
+        applyActionResult({
+          ok: false,
+          message: "Choose a budget category.",
+          fieldErrors: { categoryId: ["Choose a budget category."] },
+        })
+        return
+      }
+
+      const result = await actions.updateBudget(currentBudget.id, {
+        category_id: category.id,
+        limit_cents: value.maximumSpend,
+        monthly_voucher_coverage_cents: value.monthlyVoucherCoverage,
+        theme_color: value.themeColor,
+      })
+
+      if (!applyActionResult(result)) {
+        return
+      }
+
+      onOpenChange(false)
+    },
+  })
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {
-      resetForm()
+      standardForm.reset(defaultValues)
     }
 
     onOpenChange(nextOpen)
   }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-
-    if (!currentBudget) {
-      return
-    }
-
-    const limitCents = parseDollarAmount(maximumSpend)
-
-    if (limitCents === null) {
-      setAmountError("Enter a maximum spend greater than $0.")
-      return
-    }
-
-    const category = state.categories.find((option) => option.id === categoryId)
-
-    if (!category) {
-      return
-    }
-
-    actions.updateBudget(currentBudget.id, {
-      categoryId: category.id,
-      limitCents,
-      themeColor,
-    })
-    onOpenChange(false)
-  }
-
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent variant="finance" showCloseButton={false}>
-        <DialogHeader className="pr-12 text-left">
+        <DialogHeader className="text-left">
           <DialogTitle variant="finance">Edit Budget</DialogTitle>
           <DialogDescription variant="finance">
             As your budgets change, feel free to update your spending limits.
@@ -127,92 +181,147 @@ export function EditBudgetDialog({
 
         <DialogCloseButton aria-label="Close edit budget dialog" />
 
-        <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
-          <div className="space-y-2">
-            <Label
-              htmlFor="edit-budget-category"
-              className="text-muted-foreground text-xs font-bold"
-            >
-              Budget Category
-            </Label>
-            <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger id="edit-budget-category" variant="form">
-                <SelectValue placeholder="Select a category" />
-              </SelectTrigger>
-              <SelectContent className="max-h-107.5" matchTriggerWidth>
-                {state.categories.map((category) => {
-                  const isAlreadyBudgeted = budgetedCategoryIds.has(category.id)
-
-                  return (
-                    <SelectItem
-                      key={category.id}
-                      value={category.id}
-                      disabled={isAlreadyBudgeted}
-                      variant="form"
-                    >
-                      <span className="flex w-full min-w-0 items-center justify-between gap-3">
-                        <span
-                          className={cn(
-                            "min-w-0",
-                            isAlreadyBudgeted && "opacity-35",
-                          )}
-                        >
-                          {category.name}
-                        </span>
-                        {isAlreadyBudgeted && (
-                          <span className="text-muted-foreground shrink-0 text-xs">
-                            Already used
-                          </span>
-                        )}
-                      </span>
-                    </SelectItem>
-                  )
-                })}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label
-              htmlFor="edit-maximum-spend"
-              className="text-muted-foreground text-xs font-bold"
-            >
-              Maximum Spend
-            </Label>
-            <CurrencyInput
-              id="edit-maximum-spend"
-              inputMode="decimal"
-              value={maximumSpend}
-              onChange={(event) => {
-                setMaximumSpend(event.target.value)
-                setAmountError("")
-              }}
-              aria-invalid={amountError ? "true" : "false"}
-              aria-describedby={
-                amountError ? "edit-maximum-spend-error" : undefined
-              }
-            />
-            {amountError && (
-              <p
-                id="edit-maximum-spend-error"
-                className="text-destructive text-xs"
+        <DialogFinanceForm
+          onSubmit={standardForm.handleSubmit}
+          actions={
+            <>
+              {standardForm.status?.message ? (
+                <FormStatusMessage variant={standardForm.status.variant}>
+                  {standardForm.status.message}
+                </FormStatusMessage>
+              ) : null}
+              <standardForm.form.Subscribe
+                selector={(state) => state.isSubmitting}
               >
-                {amountError}
-              </p>
+                {(isSubmitting) => (
+                  <Button
+                    type="submit"
+                    size="finance-submit"
+                    disabled={!currentBudget || isSubmitting}
+                  >
+                    {isSubmitting ? "Saving..." : "Save Changes"}
+                  </Button>
+                )}
+              </standardForm.form.Subscribe>
+            </>
+          }
+        >
+          <standardForm.form.Field name="categoryId">
+            {(field) => (
+              <FormField
+                id="edit-budget-category"
+                label="Budget Category"
+                error={standardForm.fieldErrors.categoryId}
+              >
+                {(fieldProps) => (
+                  <Select
+                    value={field.state.value}
+                    onValueChange={(value) =>
+                      standardForm.setValue("categoryId", value)
+                    }
+                  >
+                    <SelectTrigger {...fieldProps} variant="form">
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-107.5" matchTriggerWidth>
+                      {state.categories.map((category) => {
+                        const isAlreadyBudgeted = budgetedCategoryIds.has(
+                          category.id,
+                        )
+
+                        return (
+                          <SelectItem
+                            key={category.id}
+                            value={category.id}
+                            disabled={isAlreadyBudgeted}
+                            variant="form"
+                          >
+                            <span className="flex w-full min-w-0 items-center justify-between gap-3">
+                              <span
+                                className={cn(
+                                  "min-w-0",
+                                  isAlreadyBudgeted && "opacity-35",
+                                )}
+                              >
+                                {category.name}
+                              </span>
+                              {isAlreadyBudgeted && (
+                                <span className="text-muted-foreground shrink-0 text-xs">
+                                  Already used
+                                </span>
+                              )}
+                            </span>
+                          </SelectItem>
+                        )
+                      })}
+                    </SelectContent>
+                  </Select>
+                )}
+              </FormField>
             )}
-          </div>
+          </standardForm.form.Field>
 
-          <ThemeSelect
-            id="edit-budget-theme"
-            value={themeColor}
-            onValueChange={setThemeColor}
-            usedThemeColors={usedThemeColors}
-          />
+          <standardForm.form.Field name="maximumSpend">
+            {(field) => (
+              <FormField
+                id="edit-maximum-spend"
+                label="Maximum Spend"
+                error={standardForm.fieldErrors.maximumSpend}
+              >
+                {(fieldProps) => (
+                  <CurrencyInput
+                    {...fieldProps}
+                    inputMode="decimal"
+                    value={field.state.value}
+                    onChange={(event) =>
+                      standardForm.setValue("maximumSpend", event.target.value)
+                    }
+                    onBlur={field.handleBlur}
+                  />
+                )}
+              </FormField>
+            )}
+          </standardForm.form.Field>
 
-          <Button type="submit" size="finance-submit" disabled={!currentBudget}>
-            Save Changes
-          </Button>
-        </form>
+          <standardForm.form.Field name="monthlyVoucherCoverage">
+            {(field) => (
+              <FormField
+                id="edit-monthly-voucher-coverage"
+                label="Monthly Voucher Coverage"
+                error={standardForm.fieldErrors.monthlyVoucherCoverage}
+                helperText="Only the remainder after this amount is treated as expected cash in Forecast when this budget is included."
+              >
+                {(fieldProps) => (
+                  <CurrencyInput
+                    {...fieldProps}
+                    inputMode="decimal"
+                    value={field.state.value}
+                    onChange={(event) =>
+                      standardForm.setValue(
+                        "monthlyVoucherCoverage",
+                        event.target.value,
+                      )
+                    }
+                    onBlur={field.handleBlur}
+                  />
+                )}
+              </FormField>
+            )}
+          </standardForm.form.Field>
+
+          <standardForm.form.Field name="themeColor">
+            {(field) => (
+              <ThemeSelect
+                id="edit-budget-theme"
+                value={field.state.value}
+                onValueChange={(value) =>
+                  standardForm.setValue("themeColor", value)
+                }
+                usedThemeColors={usedThemeColors}
+              />
+            )}
+          </standardForm.form.Field>
+        </DialogFinanceForm>
       </DialogContent>
     </Dialog>
   )

@@ -1,23 +1,19 @@
 "use client"
 
 import { useState } from "react"
+import { ItemActions } from "@/components/actions"
+import { MoneyAmount } from "@/components/money-amount"
+import { Button } from "@/components/ui/button"
 import { Card, CardAction, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import type { Pot } from "@/lib/types"
-import { formatCurrency } from "@/lib/format"
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
+import { formatPotDueDateRemaining } from "@/lib/finance/pot-due-date"
 import { themeColorClasses } from "@/lib/theme-colors"
+import type { Pot } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { DeletePotDialog } from "./delete-pot-dialog"
 import { EditPotDialog } from "./edit-pot-dialog"
 import { PotProgressBar } from "./pot-progress-bar"
 import { PotTransferDialog } from "./pot-transfer-dialog"
-import { Button } from "@/components/ui/button"
-import EllipsisIcon from "@/components/icons/EllipsisIcon"
 
 interface PotCardProps {
   pot: Pot
@@ -29,6 +25,8 @@ export function PotCard({ pot }: PotCardProps) {
   const [isAddMoneyOpen, setIsAddMoneyOpen] = useState(false)
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false)
   const percentage = (pot.amount / pot.target) * 100
+  const dueDateLabel = formatPotDueDateRemaining(pot.dueDate)
+  const dueDateDuration = dueDateLabel?.replace("Due in ", "")
 
   return (
     <Card asChild padding="compact">
@@ -45,35 +43,24 @@ export function PotCard({ pot }: PotCardProps) {
             <h3>{pot.name}</h3>
           </CardTitle>
           <CardAction>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon-lg"
-                  aria-label={`More options for ${pot.name}`}
-                >
-                  <EllipsisIcon className="size-4" aria-hidden />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" sideOffset={8}>
-                <DropdownMenuItem onSelect={() => setIsEditOpen(true)}>
-                  Edit Pot
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  variant="destructive"
-                  onSelect={() => setIsDeleteOpen(true)}
-                >
-                  Delete Pot
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <ItemActions ariaLabel={`More options for ${pot.name}`}>
+              <DropdownMenuItem onSelect={() => setIsEditOpen(true)}>
+                Edit Pot
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                variant="destructive"
+                onSelect={() => setIsDeleteOpen(true)}
+              >
+                Delete Pot
+              </DropdownMenuItem>
+            </ItemActions>
           </CardAction>
         </CardHeader>
 
         <div className="mt-6 flex items-center justify-between">
           <span className="text-muted-foreground text-sm">Total Saved</span>
           <span className="text-foreground text-3xl font-bold">
-            {formatCurrency(pot.amount, { forceDecimals: true })}
+            <MoneyAmount amount={pot.amount} forceDecimals />
           </span>
         </div>
 
@@ -83,8 +70,19 @@ export function PotCard({ pot }: PotCardProps) {
 
         <div className="text-muted-foreground mt-3 flex items-center justify-between text-xs">
           <span>{percentage.toFixed(percentage < 10 ? 2 : 1)}%</span>
-          <span>Target of {formatCurrency(pot.target)}</span>
+          <span>
+            Target of <MoneyAmount amount={pot.target} />
+          </span>
         </div>
+
+        {dueDateLabel ? (
+          <p className="text-muted-foreground mt-2 text-xs">
+            Due in{" "}
+            <strong className="text-foreground font-bold">
+              {dueDateDuration}
+            </strong>
+          </p>
+        ) : null}
 
         <div className="mt-6 grid grid-cols-2 gap-3">
           <Button

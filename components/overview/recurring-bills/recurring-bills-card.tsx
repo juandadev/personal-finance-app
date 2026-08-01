@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import CaretRightIcon from "@/components/icons/CaretRightIcon"
+import { CaretRightIcon } from "@phosphor-icons/react"
 import {
   Card,
   CardAction,
@@ -16,7 +16,7 @@ export function RecurringBillsCard() {
   const { recurringBillsSummary } = useFinance()
 
   return (
-    <Card asChild padding="overview" className="flex-1">
+    <Card asChild padding="overview">
       <section>
         <CardHeader>
           <CardTitle>
@@ -25,7 +25,7 @@ export function RecurringBillsCard() {
           <CardAction>
             <Link href="/recurring-bills" className={cardActionLinkClasses}>
               See Details
-              <CaretRightIcon className="size-2" aria-hidden />
+              <CaretRightIcon weight="fill" className="size-3" aria-hidden />
             </Link>
           </CardAction>
         </CardHeader>

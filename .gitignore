@@ -8,6 +8,7 @@ __v0_jsx-dev-runtime.ts
 
 # Environment variables
 .env*.local
+.neonctl/
 
 # Common ignores
 node_modules
@@ -15,3 +16,4 @@ node_modules
 .DS_Store
 .playwright-mcp/
 *.tsbuildinfo
+.superpowers/

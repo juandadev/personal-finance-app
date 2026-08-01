@@ -29,6 +29,11 @@ export const themeColorClasses = {
     border: "border-destructive",
     text: "text-destructive",
   },
+  warning: {
+    bg: "bg-warning",
+    border: "border-warning",
+    text: "text-warning",
+  },
   "finance-purple": {
     bg: "bg-finance-purple",
     border: "border-finance-purple",

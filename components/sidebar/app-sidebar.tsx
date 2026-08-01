@@ -1,4 +1,3 @@
-import { navItems } from "@/lib/data"
 import {
   Sidebar,
   SidebarCollapseButton,
@@ -10,14 +9,21 @@ import {
   SidebarMenu,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { SignOutButton } from "@/components/auth/sign-out-button"
+import type { NavItem as NavItemType } from "@/lib/types"
 import { Logo } from "./logo"
 import { NavItem } from "./nav-item"
 
 interface AppSidebarProps {
   activeKey: string
+  navItems: NavItemType[]
 }
 
-export function AppSidebar({ activeKey }: AppSidebarProps) {
+function isActiveNavItem(activeKey: string, href: string) {
+  return href === "/" ? activeKey === href : activeKey.startsWith(href)
+}
+
+export function AppSidebar({ activeKey, navItems }: AppSidebarProps) {
   return (
     <div className="hidden lg:block">
       <Sidebar collapsible="icon">
@@ -30,12 +36,11 @@ export function AppSidebar({ activeKey }: AppSidebarProps) {
             <SidebarGroupContent>
               <nav aria-label="Main navigation">
                 <SidebarMenu>
-                  {/* TODO: Improve toggle animation for spans */}
                   {navItems.map((item) => (
                     <NavItem
                       key={item.key}
                       item={item}
-                      active={activeKey === item.href}
+                      active={isActiveNavItem(activeKey, item.href)}
                     />
                   ))}
                 </SidebarMenu>
@@ -45,7 +50,7 @@ export function AppSidebar({ activeKey }: AppSidebarProps) {
         </SidebarContent>
 
         <SidebarFooter>
-          <SidebarCollapseButton />
+          <SidebarFooterActions />
         </SidebarFooter>
       </Sidebar>
     </div>
@@ -56,4 +61,13 @@ function SidebarLogo() {
   const { state } = useSidebar()
 
   return <Logo collapsed={state === "collapsed"} />
+}
+
+function SidebarFooterActions() {
+  return (
+    <>
+      <SignOutButton />
+      <SidebarCollapseButton />
+    </>
+  )
 }

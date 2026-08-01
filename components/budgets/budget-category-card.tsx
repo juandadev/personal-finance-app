@@ -2,7 +2,8 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import CaretRightIcon from "@/components/icons/CaretRightIcon"
+import { ItemActions } from "@/components/actions"
+import { CaretRightIcon } from "@phosphor-icons/react"
 import {
   Card,
   CardAction,
@@ -10,13 +11,14 @@ import {
   CardTitle,
   cardActionLinkClasses,
 } from "@/components/ui/card"
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
+import { MoneyAmount } from "@/components/money-amount"
+import { budgetOverLimitClassName, formatBudgetPercentage } from "@/lib/format"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { formatCurrency } from "@/lib/format"
+  getBudgetOverage,
+  getBudgetRemaining,
+  isBudgetOverLimit,
+} from "@/lib/finance/budget-balance"
 import { themeColorClasses } from "@/lib/theme-colors"
 import type { Budget, Transaction } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -24,8 +26,6 @@ import { BudgetProgressBar } from "./budget-progress-bar"
 import { DeleteBudgetDialog } from "./delete-budget-dialog"
 import { EditBudgetDialog } from "./edit-budget-dialog"
 import { LatestSpendingItem } from "./latest-spending-item"
-import { Button } from "@/components/ui/button"
-import EllipsisIcon from "@/components/icons/EllipsisIcon"
 
 interface BudgetCategoryCardProps {
   budget: Budget
@@ -38,7 +38,9 @@ export function BudgetCategoryCard({
 }: BudgetCategoryCardProps) {
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
-  const remaining = Math.max(budget.maximum - budget.spent, 0)
+  const isOver = isBudgetOverLimit(budget.maximum, budget.spent)
+  const remaining = getBudgetRemaining(budget.maximum, budget.spent)
+  const overage = getBudgetOverage(budget.maximum, budget.spent)
   const latestTransactions = transactions.slice(0, 3)
 
   return (
@@ -55,33 +57,22 @@ export function BudgetCategoryCard({
           <h2>{budget.category}</h2>
         </CardTitle>
         <CardAction>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon-lg"
-                aria-label={`More options for ${budget.category}`}
-              >
-                <EllipsisIcon className="size-4" aria-hidden />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" sideOffset={8}>
-              <DropdownMenuItem onSelect={() => setIsEditOpen(true)}>
-                Edit Budget
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                variant="destructive"
-                onSelect={() => setIsDeleteOpen(true)}
-              >
-                Delete Budget
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <ItemActions ariaLabel={`More options for ${budget.category}`}>
+            <DropdownMenuItem onSelect={() => setIsEditOpen(true)}>
+              Edit Budget
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              variant="destructive"
+              onSelect={() => setIsDeleteOpen(true)}
+            >
+              Delete Budget
+            </DropdownMenuItem>
+          </ItemActions>
         </CardAction>
       </CardHeader>
 
       <p className="text-muted-foreground mt-4 text-sm">
-        Maximum of {formatCurrency(budget.maximum, { forceDecimals: true })}
+        Maximum of <MoneyAmount amount={budget.maximum} forceDecimals />
       </p>
 
       <div className="mt-4">
@@ -90,6 +81,15 @@ export function BudgetCategoryCard({
           maximum={budget.maximum}
           color={budget.color}
         />
+      </div>
+
+      <div className="text-muted-foreground mt-3 flex items-center justify-between text-xs">
+        <span>
+          <strong className={budgetOverLimitClassName(isOver)}>
+            {formatBudgetPercentage(budget.spent, budget.maximum)}
+          </strong>{" "}
+          spent
+        </span>
       </div>
 
       <div className="mt-4 flex">
@@ -104,7 +104,7 @@ export function BudgetCategoryCard({
           <div>
             <p className="text-muted-foreground text-xs">Spent</p>
             <p className="text-foreground mt-1 text-sm font-bold">
-              {formatCurrency(budget.spent, { forceDecimals: true })}
+              <MoneyAmount amount={budget.spent} forceDecimals />
             </p>
           </div>
         </div>
@@ -114,9 +114,19 @@ export function BudgetCategoryCard({
             className="bg-background h-full w-1 rounded-full"
           />
           <div>
-            <p className="text-muted-foreground text-xs">Free</p>
-            <p className="text-foreground mt-1 text-sm font-bold">
-              {formatCurrency(remaining, { forceDecimals: true })}
+            <p className="text-muted-foreground text-xs">
+              {isOver ? "Exceeded" : "Free"}
+            </p>
+            <p
+              className={cn(
+                "mt-1 text-sm font-bold",
+                isOver ? "text-destructive" : "text-foreground",
+              )}
+            >
+              <MoneyAmount
+                amount={isOver ? overage : remaining}
+                forceDecimals
+              />
             </p>
           </div>
         </div>
@@ -129,21 +139,34 @@ export function BudgetCategoryCard({
           </CardTitle>
           <CardAction>
             <Link
-              href={`/transactions?category=${encodeURIComponent(budget.category)}`}
+              href={`/transactions?budget=${encodeURIComponent(budget.id)}`}
               className={cardActionLinkClasses}
             >
               See All
-              <CaretRightIcon className="size-2" aria-hidden />
+              <CaretRightIcon weight="fill" className="size-2" aria-hidden />
             </Link>
           </CardAction>
         </CardHeader>
         <ul className="divide-muted-foreground/10 mt-2 divide-y">
-          {latestTransactions.map((transaction) => (
-            <LatestSpendingItem
-              key={transaction.id}
-              transaction={transaction}
-            />
-          ))}
+          {latestTransactions.length > 0 ? (
+            latestTransactions.map((transaction) => (
+              <LatestSpendingItem
+                key={transaction.id}
+                transaction={transaction}
+              />
+            ))
+          ) : (
+            <li className="py-3 first:pt-0 last:pb-0">
+              <div className="border-border/80 bg-card/70 rounded-lg border border-dashed p-4">
+                <p className="text-foreground text-sm font-bold">
+                  No spending yet
+                </p>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  Assigned transactions will appear here.
+                </p>
+              </div>
+            </li>
+          )}
         </ul>
       </div>
       <EditBudgetDialog

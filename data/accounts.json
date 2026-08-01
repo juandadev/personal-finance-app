@@ -1,9 +1,0 @@
-[
-  {
-    "id": "acct-main",
-    "name": "Main Account",
-    "type": "checking",
-    "currency": "USD",
-    "currentBalanceCents": 483600
-  }
-]

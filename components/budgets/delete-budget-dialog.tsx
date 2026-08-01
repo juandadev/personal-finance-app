@@ -1,5 +1,8 @@
 "use client"
 
+import { useState } from "react"
+
+import { AuthStatusMessage } from "@/components/auth/auth-page-shell"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,27 +27,31 @@ export function DeleteBudgetDialog({
   open,
   onOpenChange,
 }: DeleteBudgetDialogProps) {
-  const { state, actions } = useFinance()
-  const currentBudget = state.budgets.find((budgetRecord) => {
-    const category = state.categories.find(
-      (option) => option.id === budgetRecord.categoryId,
-    )
+  const { actions } = useFinance()
+  const [statusMessage, setStatusMessage] = useState("")
+  const [isDeleting, setIsDeleting] = useState(false)
 
-    return category?.name === budget.category
-  })
+  const handleConfirmDelete = async () => {
+    setIsDeleting(true)
+    setStatusMessage("")
 
-  const handleConfirmDelete = () => {
-    if (!currentBudget) {
+    const result = await actions.deleteBudget(budget.id)
+
+    setIsDeleting(false)
+
+    if (!result.ok) {
+      setStatusMessage(result.message)
       return
     }
 
-    actions.deleteBudget(currentBudget.id)
+    onOpenChange(false)
   }
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent variant="finance">
-        <AlertDialogHeader className="pr-12 text-left">
+        <AlertDialogHeader className="text-left">
+          <AlertDialogCloseButton aria-label="Close delete budget dialog" />
           <AlertDialogTitle variant="finance">
             Delete &lsquo;{budget.category}&rsquo;?
           </AlertDialogTitle>
@@ -54,17 +61,23 @@ export function DeleteBudgetDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        <AlertDialogCloseButton aria-label="Close delete budget dialog" />
-
         <div className="mt-5 flex flex-col gap-5">
           <AlertDialogAction
             variant="destructive"
             size="finance-submit"
-            disabled={!currentBudget}
-            onClick={handleConfirmDelete}
+            disabled={isDeleting}
+            onClick={(event) => {
+              event.preventDefault()
+              void handleConfirmDelete()
+            }}
           >
-            Delete Budget
+            {isDeleting ? "Deleting..." : "Delete Budget"}
           </AlertDialogAction>
+          {statusMessage ? (
+            <AuthStatusMessage variant="error">
+              {statusMessage}
+            </AuthStatusMessage>
+          ) : null}
           <AlertDialogCancel
             variant="muted-link"
             size="text-link"

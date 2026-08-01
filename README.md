@@ -15,9 +15,7 @@ A polished static solution to the [Personal finance app challenge on Frontend Me
 
 ## Overview
 
-This project is built as a Frontend Mentor submission for the static comparison screenshot, while also serving as the foundation for a future full-stack personal finance app. It uses seeded finance data in JSON files and manages app changes on the client with React state, so users can explore realistic add, edit, delete, deposit, and withdrawal flows without needing a backend.
-
-Changes are intentionally not persisted yet. You can interact with the controls, add budgets and pots, delete items, and move money around, but refreshing the page restores the original seed data. This keeps the challenge submission self-contained while the production-ready full-stack version is still in progress.
+This project began as a Frontend Mentor submission and now serves as a full-stack personal finance app with authenticated Neon Postgres persistence. Each signed-in user starts with an empty finance workspace and owns their data through PostgreSQL Row Level Security.
 
 ### Users Can
 
@@ -67,6 +65,19 @@ Install [Bun](https://bun.sh/docs/installation) if you do not already have it av
 bun install
 ```
 
+Copy the environment template and fill it with values from Neon:
+
+```bash
+cp .env.example .env.local
+```
+
+Required values:
+
+- `DATABASE_URL`: pooled Neon Postgres connection string for the app runtime.
+- `DATABASE_DIRECT_URL`: direct Neon Postgres connection string for migrations.
+- `NEON_AUTH_BASE_URL`: Neon Auth branch URL.
+- `NEON_AUTH_COOKIE_SECRET`: at least 32 characters, for example from `openssl rand -base64 32`.
+
 ### Development
 
 ```bash
@@ -82,11 +93,22 @@ bun run build
 bun run start
 ```
 
+### Database Setup
+
+Apply the raw SQL schema:
+
+```bash
+bun run db:migrate
+```
+
+The schema uses normalized finance tables, UUID record IDs, integer cents, foreign keys, and PostgreSQL Row Level Security. Runtime queries are parameterized raw SQL through `pg`; no ORM is used.
+
 ## Available Scripts
 
 ```bash
 bun run dev          # Start the local development server
 bun run build        # Create a production build
+bun run db:migrate   # Apply raw SQL migrations
 bun run start        # Start the production server
 bun run lint         # Run ESLint
 bun run lint:fix     # Fix lint issues where possible
@@ -97,7 +119,7 @@ bun run format:check # Check formatting
 ## Project Structure
 
 ```txt
-app/                  App Router routes, layouts, and global styles
+app/                  App Router routes, layouts, API handlers, and global styles
 components/           Feature components and reusable UI primitives
 components/overview/  Dashboard summary cards and charts
 components/budgets/   Budget management screens and dialogs
@@ -106,17 +128,18 @@ components/transactions/
                       Transaction table, filters, search, and pagination
 components/recurring-bills/
                       Recurring bill summaries, filters, and table
-data/                 Seeded challenge data
-lib/                  Finance state, selectors, formatting, theme helpers
+db/migrations/        Raw SQL schema migrations
+lib/                  Auth, database, finance state, selectors, formatting, theme helpers
+scripts/db/           Database migration runner
 ```
 
 ## Implementation Notes
 
-The app uses a local `FinanceProvider` backed by `useReducer` to keep the challenge self-contained. Seed data from `data/` is transformed into view models through selectors in `lib/finance`, which keeps display components focused on rendering and user interaction.
+The app uses Neon Auth for account access and a server-loaded `FinanceProvider` backed by `useReducer` for the client interaction model. Finance rows are loaded through raw SQL and transformed into view models through selectors in `lib/finance`, which keeps display components focused on rendering and user interaction.
 
 Design tokens live in `app/globals.css`, while reusable primitives live in `components/ui`. This keeps the visual language consistent across charts, forms, navigation, dialogs, and data-heavy screens.
 
-The current release is intentionally frontend-only. The next step is to connect the app to persistent data and turn it into a genuinely useful personal finance tool. That work will take more time, but the static version gives the challenge a finished submission while preserving a clean base for the full-stack version.
+Database migrations live in SQL files and application queries use parameterized `pg` calls. User-owned rows are protected with Row Level Security and scoped by the authenticated Neon user id.
 
 ## What I Learned
 

@@ -1,0 +1,2 @@
+ALTER TABLE cash_forecast_adjustments
+  DROP CONSTRAINT IF EXISTS cash_forecast_adjustments_kind_recurrence_check;

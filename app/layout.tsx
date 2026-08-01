@@ -1,6 +1,8 @@
 import type { Metadata } from "next"
 import { Public_Sans } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
+import { NuqsAdapter } from "nuqs/adapters/next/app"
+import { Toaster } from "@/components/ui/sonner"
 import "./globals.css"
 
 const publicSans = Public_Sans({
@@ -24,7 +26,8 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${publicSans.variable} bg-background`}>
       <body className="font-sans antialiased">
-        {children}
+        <NuqsAdapter>{children}</NuqsAdapter>
+        <Toaster />
         {process.env.NODE_ENV === "production" && <Analytics />}
       </body>
     </html>

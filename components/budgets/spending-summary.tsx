@@ -7,6 +7,7 @@ import { SpendingSummaryItem } from "./spending-summary-item"
 
 export function SpendingSummary() {
   const { budgets, budgetSpent, budgetLimit } = useFinance()
+  const hasBudgets = budgets.length > 0
 
   return (
     <Card asChild>
@@ -23,9 +24,22 @@ export function SpendingSummary() {
             Spending Summary
           </h2>
           <ul className="divide-muted-foreground/10 mt-6 divide-y md:mt-4">
-            {budgets.map((budget) => (
-              <SpendingSummaryItem key={budget.category} budget={budget} />
-            ))}
+            {hasBudgets ? (
+              budgets.map((budget) => (
+                <SpendingSummaryItem key={budget.id} budget={budget} />
+              ))
+            ) : (
+              <li className="py-4">
+                <div className="border-border/80 bg-background/70 rounded-lg border border-dashed p-4">
+                  <p className="text-foreground text-sm font-bold">
+                    No budgets created
+                  </p>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    Your spending summary will fill in after you add a budget.
+                  </p>
+                </div>
+              </li>
+            )}
           </ul>
         </div>
       </section>

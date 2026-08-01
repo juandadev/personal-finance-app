@@ -1,7 +1,9 @@
 import * as React from "react"
-import CaretLeftIcon from "@/components/icons/CaretLeftIcon"
-import CaretRightIcon from "@/components/icons/CaretRightIcon"
-import { MoreHorizontalIcon } from "lucide-react"
+import {
+  CaretLeftIcon,
+  CaretRightIcon,
+  DotsThreeIcon,
+} from "@phosphor-icons/react"
 
 import { cn } from "@/lib/utils"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -82,7 +84,7 @@ function PaginationPrevious({
       className={className}
       {...props}
     >
-      <CaretLeftIcon aria-hidden />
+      <CaretLeftIcon weight="fill" aria-hidden />
       <span className="sr-only sm:not-sr-only">Prev</span>
     </PaginationLink>
   )
@@ -100,7 +102,7 @@ function PaginationNext({
       {...props}
     >
       <span className="sr-only sm:not-sr-only">Next</span>
-      <CaretRightIcon aria-hidden />
+      <CaretRightIcon weight="fill" aria-hidden />
     </PaginationLink>
   )
 }
@@ -119,7 +121,7 @@ function PaginationEllipsis({
       )}
       {...props}
     >
-      <MoreHorizontalIcon className="size-4" />
+      <DotsThreeIcon weight="bold" className="size-4" />
       <span className="sr-only">More pages</span>
     </span>
   )

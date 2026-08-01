@@ -1,4 +1,5 @@
 import type { ThemeColor } from "@/lib/theme-colors"
+export { getCurrentPeriod } from "@/lib/finance/period"
 
 export const themeOptions = [
   { label: "Green", value: "chart-1" },
@@ -17,10 +18,6 @@ export const themeOptions = [
   { label: "Yellow", value: "finance-yellow" },
   { label: "Orange", value: "finance-orange" },
 ] as const satisfies readonly { label: string; value: ThemeColor }[]
-
-export function getCurrentPeriod() {
-  return new Date().toISOString().slice(0, 7)
-}
 
 export function parseDollarAmount(value: string) {
   const normalizedValue = value.trim().replaceAll(",", "")

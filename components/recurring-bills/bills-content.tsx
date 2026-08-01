@@ -1,16 +1,29 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import { ArrowUpDown } from "lucide-react"
+import { useMemo } from "react"
+import { CalendarDotsIcon, SortAscendingIcon } from "@phosphor-icons/react"
+import { useQueryStates } from "nuqs"
+import { EmptyDataCard } from "@/components/empty-data-card"
+import { ResetUrlFiltersButton } from "@/components/reset-url-filters-button"
 import { Card } from "@/components/ui/card"
+import {
+  filterRecurringBills,
+  getFilteredPagination,
+  hasActiveRecurringBillQuery,
+  normalizeRecurringBillFilters,
+  recurringBillQueryParsers,
+} from "@/lib/finance/url-filters"
 import type { RecurringBill, SortOption } from "@/lib/types"
-import { SearchInput } from "../transactions/search-input"
 import { FilterDropdown } from "../transactions/filter-dropdown"
+import { Pagination } from "../transactions/pagination"
+import { SearchInput } from "../transactions/search-input"
 import { BillsTable } from "./bills-table"
 
 interface BillsContentProps {
   bills: RecurringBill[]
 }
+
+const ITEMS_PER_PAGE = 10
 
 const sortOptions: { value: SortOption; label: string }[] = [
   { value: "latest", label: "Latest" },
@@ -22,63 +35,102 @@ const sortOptions: { value: SortOption; label: string }[] = [
 ]
 
 export function BillsContent({ bills }: BillsContentProps) {
-  const [search, setSearch] = useState("")
-  const [sortBy, setSortBy] = useState<SortOption>("latest")
+  const [query, setQuery] = useQueryStates(recurringBillQueryParsers)
+  const filters = useMemo(() => normalizeRecurringBillFilters(query), [query])
+  const hasActiveQuery = hasActiveRecurringBillQuery(query)
+  const filteredAndSortedBills = useMemo(
+    () => filterRecurringBills(bills, filters),
+    [bills, filters],
+  )
+  const pagination = getFilteredPagination(
+    filteredAndSortedBills.length,
+    filters.page,
+    ITEMS_PER_PAGE,
+  )
+  const paginatedBills = filteredAndSortedBills.slice(
+    pagination.startIndex,
+    pagination.endIndex,
+  )
+  const activeBills = paginatedBills.filter((bill) => !bill.archivedAt)
+  const archivedBills = paginatedBills.filter((bill) =>
+    Boolean(bill.archivedAt),
+  )
+  const hasBills = bills.length > 0
+  const hasVisibleBills = filteredAndSortedBills.length > 0
 
-  const filteredAndSortedBills = useMemo(() => {
-    let result = [...bills]
+  const handleSearchChange = (value: string) => {
+    void setQuery({ q: value || null, page: 1 })
+  }
 
-    if (search) {
-      const searchLower = search.toLowerCase()
-      result = result.filter((bill) =>
-        bill.name.toLowerCase().includes(searchLower),
-      )
-    }
+  const handleSortChange = (value: SortOption) => {
+    void setQuery({ sort: value, page: 1 })
+  }
 
-    switch (sortBy) {
-      case "latest":
-        result.sort((a, b) => a.dueDay - b.dueDay)
-        break
-      case "oldest":
-        result.sort((a, b) => b.dueDay - a.dueDay)
-        break
-      case "a-z":
-        result.sort((a, b) => a.name.localeCompare(b.name))
-        break
-      case "z-a":
-        result.sort((a, b) => b.name.localeCompare(a.name))
-        break
-      case "highest":
-        result.sort((a, b) => b.amount - a.amount)
-        break
-      case "lowest":
-        result.sort((a, b) => a.amount - b.amount)
-        break
-    }
+  const handlePageChange = (page: number) => {
+    void setQuery({ page })
+  }
 
-    return result
-  }, [bills, search, sortBy])
+  const handleReset = () => {
+    void setQuery(null)
+  }
 
   return (
-    <Card>
-      <div className="mb-6 flex items-end gap-3 md:gap-4">
+    <Card className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className="mb-6 flex shrink-0 items-end gap-3 md:gap-4">
         <SearchInput
-          value={search}
-          onChange={setSearch}
+          value={filters.q}
+          onChange={handleSearchChange}
           label="Search Bills"
           placeholder="Search bills"
           className="flex-1 md:flex-initial"
         />
         <FilterDropdown
           label="Sort by"
-          value={sortBy}
+          value={filters.sort}
           options={sortOptions}
-          onChange={setSortBy}
-          icon={<ArrowUpDown className="size-5" aria-hidden />}
+          onChange={handleSortChange}
+          icon={
+            <SortAscendingIcon weight="fill" className="size-5" aria-hidden />
+          }
         />
+        {hasActiveQuery ? (
+          <ResetUrlFiltersButton onReset={handleReset} />
+        ) : null}
       </div>
 
-      <BillsTable bills={filteredAndSortedBills} />
+      {hasVisibleBills ? (
+        <>
+          <div className="min-h-0 flex-1 space-y-8 overflow-y-auto pr-3">
+            {activeBills.length > 0 ? <BillsTable bills={activeBills} /> : null}
+            {archivedBills.length > 0 ? (
+              <div>
+                <h3 className="text-muted-foreground text-sm font-bold">
+                  Archived
+                </h3>
+                <BillsTable bills={archivedBills} />
+              </div>
+            ) : null}
+          </div>
+          <Pagination
+            currentPage={pagination.safePage}
+            totalPages={pagination.totalPages}
+            onPageChange={handlePageChange}
+          />
+        </>
+      ) : (
+        <EmptyDataCard
+          className="min-h-90"
+          icon={
+            <CalendarDotsIcon weight="fill" className="size-5" aria-hidden />
+          }
+          title={hasBills ? "No Matching Bills" : "No Recurring Bills Yet"}
+          description={
+            hasBills
+              ? "Try a different search term to find another scheduled bill."
+              : "Add a recurring bill to track subscriptions, financing, and other scheduled payments with due dates and payment status."
+          }
+        />
+      )}
     </Card>
   )
 }

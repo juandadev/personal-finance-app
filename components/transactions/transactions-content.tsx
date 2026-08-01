@@ -1,15 +1,28 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
+import {
+  FunnelIcon,
+  ReceiptIcon,
+  SortAscendingIcon,
+} from "@phosphor-icons/react"
+import { useQueryStates } from "nuqs"
+import { EmptyDataCard } from "@/components/empty-data-card"
+import { ResetUrlFiltersButton } from "@/components/reset-url-filters-button"
 import { Card } from "@/components/ui/card"
 import { useFinance } from "@/hooks/use-finance"
-import type { SortOption, TransactionCategory } from "@/lib/types"
+import {
+  filterTransactions,
+  getFilteredPagination,
+  hasActiveTransactionQuery,
+  normalizeTransactionFilters,
+  transactionQueryParsers,
+} from "@/lib/finance/url-filters"
+import type { SortOption } from "@/lib/types"
 import { SearchInput } from "./search-input"
 import { FilterDropdown } from "./filter-dropdown"
 import { TransactionsTable } from "./transactions-table"
 import { Pagination } from "./pagination"
-import FilterMobileIcon from "@/components/icons/FilterMobileIcon"
-import SortMobileIcon from "@/components/icons/SortMobileIcon"
 
 const ITEMS_PER_PAGE = 10
 
@@ -23,114 +36,117 @@ const sortOptions: { value: SortOption; label: string }[] = [
 ]
 
 export function TransactionsContent() {
-  const { transactions, transactionCategories } = useFinance()
-  const [search, setSearch] = useState("")
-  const [sortBy, setSortBy] = useState<SortOption>("latest")
-  const [category, setCategory] = useState<TransactionCategory | "all">("all")
-  const [currentPage, setCurrentPage] = useState(1)
+  const { state, transactions } = useFinance()
+  const [query, setQuery] = useQueryStates(transactionQueryParsers)
+  const filters = useMemo(() => normalizeTransactionFilters(query), [query])
+  const hasActiveQuery = hasActiveTransactionQuery(query)
+  const selectedCategory =
+    filters.category.length === 1 ? filters.category[0] : "all"
   const categoryOptions: {
-    value: TransactionCategory | "all"
+    value: string
     label: string
   }[] = [
     { value: "all", label: "All Transactions" },
-    ...transactionCategories.map((cat) => ({ value: cat, label: cat })),
+    ...state.categories.map((category) => ({
+      value: category.id,
+      label: category.name,
+    })),
   ]
 
-  const filteredAndSorted = useMemo(() => {
-    let result = [...transactions]
-
-    if (search) {
-      const searchLower = search.toLowerCase()
-      result = result.filter((t) => t.name.toLowerCase().includes(searchLower))
-    }
-
-    if (category !== "all") {
-      result = result.filter((t) => t.category === category)
-    }
-
-    switch (sortBy) {
-      case "latest":
-        result.sort(
-          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-        )
-        break
-      case "oldest":
-        result.sort(
-          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
-        )
-        break
-      case "a-z":
-        result.sort((a, b) => a.name.localeCompare(b.name))
-        break
-      case "z-a":
-        result.sort((a, b) => b.name.localeCompare(a.name))
-        break
-      case "highest":
-        result.sort((a, b) => b.amount - a.amount)
-        break
-      case "lowest":
-        result.sort((a, b) => a.amount - b.amount)
-        break
-    }
-
-    return result
-  }, [transactions, search, sortBy, category])
-
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredAndSorted.length / ITEMS_PER_PAGE),
+  const filteredAndSorted = useMemo(
+    () => filterTransactions(transactions, filters),
+    [filters, transactions],
+  )
+  const pagination = getFilteredPagination(
+    filteredAndSorted.length,
+    filters.page,
+    ITEMS_PER_PAGE,
   )
   const paginatedTransactions = filteredAndSorted.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE,
+    pagination.startIndex,
+    pagination.endIndex,
   )
+  const hasTransactions = transactions.length > 0
+  const hasVisibleTransactions = filteredAndSorted.length > 0
 
   const handleSearchChange = (value: string) => {
-    setSearch(value)
-    setCurrentPage(1)
+    void setQuery({ q: value || null, page: 1 })
   }
 
   const handleSortChange = (value: SortOption) => {
-    setSortBy(value)
-    setCurrentPage(1)
+    void setQuery({ sort: value, page: 1 })
   }
 
-  const handleCategoryChange = (value: TransactionCategory | "all") => {
-    setCategory(value)
-    setCurrentPage(1)
+  const handleCategoryChange = (value: string) => {
+    void setQuery({
+      category: value === "all" ? null : [value],
+      page: 1,
+    })
+  }
+
+  const handlePageChange = (page: number) => {
+    void setQuery({ page })
+  }
+
+  const handleReset = () => {
+    void setQuery(null)
   }
 
   return (
-    <Card className="@container/transactions flex flex-col gap-6">
-      <div className="flex items-center gap-6 self-stretch @[806px]/transactions:justify-between">
+    <Card className="@container/transactions flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className="mb-6 flex shrink-0 items-center gap-6 self-stretch @[806px]/transactions:justify-between">
         <SearchInput
-          value={search}
+          value={filters.q}
           onChange={handleSearchChange}
           className="w-full @[806px]/transactions:max-w-80"
         />
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4">
           <FilterDropdown
             label="Sort by"
-            value={sortBy}
+            value={filters.sort}
             options={sortOptions}
             onChange={handleSortChange}
-            icon={<SortMobileIcon className="size-4" aria-hidden />}
+            icon={
+              <SortAscendingIcon weight="fill" className="size-5" aria-hidden />
+            }
           />
           <FilterDropdown
             label="Category"
-            value={category}
+            value={selectedCategory}
             options={categoryOptions}
             onChange={handleCategoryChange}
-            icon={<FilterMobileIcon className="size-4" aria-hidden />}
+            icon={<FunnelIcon weight="fill" className="size-5" aria-hidden />}
           />
+          {hasActiveQuery ? (
+            <ResetUrlFiltersButton onReset={handleReset} />
+          ) : null}
         </div>
       </div>
-      <TransactionsTable transactions={paginatedTransactions} />
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-      />
+      {hasVisibleTransactions ? (
+        <>
+          <div className="min-h-0 flex-1 overflow-y-auto pr-3">
+            <TransactionsTable transactions={paginatedTransactions} />
+          </div>
+          <Pagination
+            currentPage={pagination.safePage}
+            totalPages={pagination.totalPages}
+            onPageChange={handlePageChange}
+          />
+        </>
+      ) : (
+        <EmptyDataCard
+          className="min-h-90"
+          icon={<ReceiptIcon weight="fill" className="size-5" aria-hidden />}
+          title={
+            hasTransactions ? "No Matching Transactions" : "No Transactions Yet"
+          }
+          description={
+            hasTransactions
+              ? "Try a different search term or category to find more activity."
+              : "There is no transaction data available to show yet. New activity will appear here once it has been added."
+          }
+        />
+      )}
     </Card>
   )
 }

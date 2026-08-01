@@ -24,6 +24,7 @@
   --color-muted-foreground: #696868;
   --color-accent: #277c78;
   --color-accent-foreground: #ffffff;
+  --color-warning: #be6c49;
   --color-destructive: #c94736;
   --color-destructive-foreground: #ffffff;
   --color-border: #ebe9e6;
@@ -87,6 +88,7 @@
   --color-muted-foreground: #b3b1b8;
   --color-accent: #277c78;
   --color-accent-foreground: #ffffff;
+  --color-warning: #f2cdac;
   --color-destructive: #c94736;
   --color-destructive-foreground: #ffffff;
   --color-border: #2a2930;
@@ -111,12 +113,12 @@
   }
 
   ::-webkit-scrollbar {
-    @apply w-1.5;
+    @apply size-1.5;
   }
   ::-webkit-scrollbar-track {
     @apply bg-muted;
   }
   ::-webkit-scrollbar-thumb {
-    @apply bg-accent hover:bg-accent/80 rounded-full;
+    @apply bg-accent/50 hover:bg-accent/30 rounded-full;
   }
 }

@@ -1,25 +1,49 @@
 "use client"
 
-import { useMemo, useState, type FormEvent } from "react"
+import { useMemo } from "react"
+import { z } from "zod"
+
+import { ThemeSelect } from "@/components/theme-select"
 import { Button } from "@/components/ui/button"
+import { CurrencyInput } from "@/components/ui/currency-input"
 import {
   Dialog,
   DialogCloseButton,
   DialogContent,
   DialogDescription,
+  DialogFinanceForm,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { CurrencyInput } from "@/components/ui/currency-input"
+import { FormField, FormStatusMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { ThemeSelect } from "@/components/theme-select"
 import { useFinance } from "@/hooks/use-finance"
-import { formatDollarInput, parseDollarAmount } from "@/lib/finance/form-utils"
-import type { ThemeColor } from "@/lib/theme-colors"
+import { formatDollarInput } from "@/lib/finance/form-utils"
+import { isFutureISODate } from "@/lib/finance/pot-due-date"
+import {
+  currencyCentsSchema,
+  requiredStringSchema,
+  themeColorSchema,
+} from "@/lib/forms/validation"
+import { useStandardForm } from "@/lib/forms/use-standard-form"
 import type { Pot } from "@/lib/types"
+import { PotDueDatePicker } from "./pot-due-date-picker"
 
 const maxPotNameLength = 30
+
+const dueDateSchema = z
+  .string()
+  .nullable()
+  .refine((value) => !value || isFutureISODate(value), {
+    message: "Choose a future due date.",
+  })
+
+type EditPotFormValues = {
+  dueDate: string | null
+  name: string
+  target: string
+  themeColor: Pot["color"]
+}
 
 interface EditPotDialogProps {
   pot: Pot
@@ -30,11 +54,6 @@ interface EditPotDialogProps {
 export function EditPotDialog({ pot, open, onOpenChange }: EditPotDialogProps) {
   const { state, actions } = useFinance()
   const currentPot = state.pots.find((potRecord) => potRecord.id === pot.id)
-  const [name, setName] = useState(pot.name)
-  const [target, setTarget] = useState(formatDollarInput(pot.target))
-  const [themeColor, setThemeColor] = useState<ThemeColor>(pot.color)
-  const [nameError, setNameError] = useState("")
-  const [targetError, setTargetError] = useState("")
 
   const existingPotNames = useMemo(
     () =>
@@ -50,68 +69,76 @@ export function EditPotDialog({ pot, open, onOpenChange }: EditPotDialogProps) {
       new Set(
         state.pots
           .filter((potRecord) => potRecord.id !== currentPot?.id)
-          .map((potRecord) => potRecord.themeColor.toLowerCase()),
+          .map((potRecord) => potRecord.theme_color.toLowerCase()),
       ),
     [currentPot?.id, state.pots],
   )
-  const charactersLeft = maxPotNameLength - name.length
+  const editPotFormSchema = useMemo(
+    () =>
+      z.object({
+        name: requiredStringSchema(
+          "Enter a pot name.",
+          maxPotNameLength,
+        ).refine(
+          (value) => !existingPotNames.has(value.toLowerCase()),
+          "A pot with this name already exists.",
+        ),
+        target: currencyCentsSchema("Enter a target greater than $0."),
+        dueDate: dueDateSchema,
+        themeColor: themeColorSchema,
+      }),
+    [existingPotNames],
+  )
+  const defaultValues = useMemo(
+    () =>
+      ({
+        name: pot.name,
+        target: formatDollarInput(pot.target),
+        dueDate: pot.dueDate ?? null,
+        themeColor: pot.color,
+      }) satisfies EditPotFormValues,
+    [pot.color, pot.dueDate, pot.name, pot.target],
+  )
 
-  const resetForm = () => {
-    setName(pot.name)
-    setTarget(formatDollarInput(pot.target))
-    setThemeColor(pot.color)
-    setNameError("")
-    setTargetError("")
-  }
+  const standardForm = useStandardForm({
+    defaultValues,
+    schema: editPotFormSchema,
+    onSubmit: async ({ applyActionResult, value }) => {
+      if (!currentPot) {
+        applyActionResult({
+          ok: false,
+          message: "This pot is no longer available.",
+        })
+        return
+      }
+
+      const result = await actions.updatePot(currentPot.id, {
+        name: value.name,
+        target_cents: value.target,
+        theme_color: value.themeColor,
+        due_date: value.dueDate,
+      })
+
+      if (!applyActionResult(result)) {
+        return
+      }
+
+      onOpenChange(false)
+    },
+  })
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {
-      resetForm()
+      standardForm.reset(defaultValues)
     }
 
     onOpenChange(nextOpen)
   }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-
-    if (!currentPot) {
-      return
-    }
-
-    const trimmedName = name.trim()
-    const targetCents = parseDollarAmount(target)
-    let hasError = false
-
-    if (!trimmedName) {
-      setNameError("Enter a pot name.")
-      hasError = true
-    } else if (existingPotNames.has(trimmedName.toLowerCase())) {
-      setNameError("A pot with this name already exists.")
-      hasError = true
-    }
-
-    if (targetCents === null) {
-      setTargetError("Enter a target greater than $0.")
-      hasError = true
-    }
-
-    if (hasError || targetCents === null) {
-      return
-    }
-
-    actions.updatePot(currentPot.id, {
-      name: trimmedName,
-      targetCents,
-      themeColor,
-    })
-    onOpenChange(false)
-  }
-
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent variant="finance" showCloseButton={false}>
-        <DialogHeader className="pr-12 text-left">
+        <DialogHeader className="text-left">
           <DialogTitle variant="finance">Edit Pot</DialogTitle>
           <DialogDescription variant="finance">
             If your saving targets change, feel free to update your pots.
@@ -120,88 +147,112 @@ export function EditPotDialog({ pot, open, onOpenChange }: EditPotDialogProps) {
 
         <DialogCloseButton aria-label="Close edit pot dialog" />
 
-        <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
-          <div className="space-y-2">
-            <Label
-              htmlFor="edit-pot-name"
-              className="text-muted-foreground text-xs font-bold"
-            >
-              Pot Name
-            </Label>
-            <Input
-              id="edit-pot-name"
-              value={name}
-              onChange={(event) => {
-                setName(event.target.value)
-                setNameError("")
-              }}
-              maxLength={maxPotNameLength}
-              aria-invalid={nameError ? "true" : "false"}
-              aria-describedby={
-                nameError ? "edit-pot-name-error" : "edit-pot-name-characters"
-              }
-            />
-            <div className="flex justify-end">
-              {nameError ? (
-                <p
-                  id="edit-pot-name-error"
-                  className="text-destructive text-xs"
-                >
-                  {nameError}
-                </p>
-              ) : (
-                <p
-                  id="edit-pot-name-characters"
-                  className="text-muted-foreground text-xs"
-                  aria-live="polite"
-                >
-                  {charactersLeft} characters left
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label
-              htmlFor="edit-pot-target"
-              className="text-muted-foreground text-xs font-bold"
-            >
-              Target
-            </Label>
-            <CurrencyInput
-              id="edit-pot-target"
-              inputMode="decimal"
-              value={target}
-              onChange={(event) => {
-                setTarget(event.target.value)
-                setTargetError("")
-              }}
-              aria-invalid={targetError ? "true" : "false"}
-              aria-describedby={
-                targetError ? "edit-pot-target-error" : undefined
-              }
-            />
-            {targetError && (
-              <p
-                id="edit-pot-target-error"
-                className="text-destructive text-xs"
+        <DialogFinanceForm
+          onSubmit={standardForm.handleSubmit}
+          actions={
+            <>
+              {standardForm.status?.message ? (
+                <FormStatusMessage variant={standardForm.status.variant}>
+                  {standardForm.status.message}
+                </FormStatusMessage>
+              ) : null}
+              <standardForm.form.Subscribe
+                selector={(state) => state.isSubmitting}
               >
-                {targetError}
-              </p>
+                {(isSubmitting) => (
+                  <Button
+                    type="submit"
+                    size="finance-submit"
+                    disabled={!currentPot || isSubmitting}
+                  >
+                    {isSubmitting ? "Saving..." : "Save Changes"}
+                  </Button>
+                )}
+              </standardForm.form.Subscribe>
+            </>
+          }
+        >
+          <standardForm.form.Field name="name">
+            {(field) => (
+              <FormField
+                id="edit-pot-name"
+                label="Pot Name"
+                error={standardForm.fieldErrors.name}
+                helperAlign="right"
+                helperText={`${maxPotNameLength - field.state.value.length} characters left`}
+              >
+                {(fieldProps) => (
+                  <Input
+                    {...fieldProps}
+                    value={field.state.value}
+                    onChange={(event) =>
+                      standardForm.setValue("name", event.target.value)
+                    }
+                    onBlur={field.handleBlur}
+                    maxLength={maxPotNameLength}
+                  />
+                )}
+              </FormField>
             )}
-          </div>
+          </standardForm.form.Field>
 
-          <ThemeSelect
-            id="edit-pot-theme"
-            value={themeColor}
-            onValueChange={setThemeColor}
-            usedThemeColors={usedThemeColors}
-          />
+          <standardForm.form.Field name="target">
+            {(field) => (
+              <FormField
+                id="edit-pot-target"
+                label="Target"
+                error={standardForm.fieldErrors.target}
+              >
+                {(fieldProps) => (
+                  <CurrencyInput
+                    {...fieldProps}
+                    inputMode="decimal"
+                    value={field.state.value}
+                    onChange={(event) =>
+                      standardForm.setValue("target", event.target.value)
+                    }
+                    onBlur={field.handleBlur}
+                  />
+                )}
+              </FormField>
+            )}
+          </standardForm.form.Field>
 
-          <Button type="submit" size="finance-submit" disabled={!currentPot}>
-            Save Changes
-          </Button>
-        </form>
+          <standardForm.form.Field name="dueDate">
+            {(field) => (
+              <FormField
+                id="edit-pot-due-date"
+                label="Due Date"
+                error={standardForm.fieldErrors.dueDate}
+              >
+                {(fieldProps) => (
+                  <PotDueDatePicker
+                    id={fieldProps.id}
+                    value={field.state.value}
+                    onChange={(nextDate) =>
+                      standardForm.setValue("dueDate", nextDate)
+                    }
+                    hasError={fieldProps["aria-invalid"] === "true"}
+                    describedBy={fieldProps["aria-describedby"]}
+                  />
+                )}
+              </FormField>
+            )}
+          </standardForm.form.Field>
+
+          <standardForm.form.Field name="themeColor">
+            {(field) => (
+              <ThemeSelect
+                id="edit-pot-theme"
+                value={field.state.value}
+                onValueChange={(value) =>
+                  standardForm.setValue("themeColor", value)
+                }
+                usedThemeColors={usedThemeColors}
+              />
+            )}
+          </standardForm.form.Field>
+        </DialogFinanceForm>
       </DialogContent>
     </Dialog>
   )

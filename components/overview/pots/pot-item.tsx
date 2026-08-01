@@ -1,4 +1,4 @@
-import { formatCurrency } from "@/lib/format"
+import { MoneyAmount } from "@/components/money-amount"
 import { themeColorClasses } from "@/lib/theme-colors"
 import type { Pot } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -20,7 +20,7 @@ export function PotItem({ pot }: PotItemProps) {
       <div className="min-w-0 flex-1">
         <p className="text-muted-foreground truncate text-sm">{pot.name}</p>
         <p className="text-foreground mt-1 text-sm font-bold">
-          {formatCurrency(pot.amount)}
+          <MoneyAmount amount={pot.amount} />
         </p>
       </div>
     </li>

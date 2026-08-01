@@ -1,17 +1,17 @@
+import { MoneyAmount } from "@/components/money-amount"
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
-import { formatCurrency } from "@/lib/format"
-import type { RecurringBill } from "@/lib/types"
+import type { RecurringBillSummary } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 interface BillsSummaryCardProps {
-  bills: RecurringBill[]
+  summary: RecurringBillSummary[]
 }
 
 interface SummaryRowProps {
   label: string
   count: number
   amount: number
-  variant?: "default" | "danger"
+  variant?: "default" | "warning"
 }
 
 function SummaryRow({
@@ -25,7 +25,7 @@ function SummaryRow({
       <span
         className={cn(
           "text-sm",
-          variant === "danger" ? "text-destructive" : "text-muted-foreground",
+          variant === "warning" ? "text-warning" : "text-muted-foreground",
         )}
       >
         {label}
@@ -33,26 +33,16 @@ function SummaryRow({
       <span
         className={cn(
           "text-sm font-bold",
-          variant === "danger" ? "text-destructive" : "text-foreground",
+          variant === "warning" ? "text-warning" : "text-foreground",
         )}
       >
-        {count} ({formatCurrency(amount, { forceDecimals: true })})
+        {count} (<MoneyAmount amount={amount} forceDecimals />)
       </span>
     </div>
   )
 }
 
-export function BillsSummaryCard({ bills }: BillsSummaryCardProps) {
-  const paidBills = bills.filter((b) => b.status === "paid")
-  const upcomingBills = bills.filter(
-    (b) => b.status === "upcoming" || b.status === "due-soon",
-  )
-  const dueSoonBills = bills.filter((b) => b.status === "due-soon")
-
-  const paidAmount = paidBills.reduce((sum, b) => sum + b.amount, 0)
-  const upcomingAmount = upcomingBills.reduce((sum, b) => sum + b.amount, 0)
-  const dueSoonAmount = dueSoonBills.reduce((sum, b) => sum + b.amount, 0)
-
+export function BillsSummaryCard({ summary }: BillsSummaryCardProps) {
   return (
     <Card className="h-fit" padding="fixed">
       <CardHeader>
@@ -61,22 +51,15 @@ export function BillsSummaryCard({ bills }: BillsSummaryCardProps) {
         </CardTitle>
       </CardHeader>
       <div className="mt-2">
-        <SummaryRow
-          label="Paid Bills"
-          count={paidBills.length}
-          amount={paidAmount}
-        />
-        <SummaryRow
-          label="Total Upcoming"
-          count={upcomingBills.length}
-          amount={upcomingAmount}
-        />
-        <SummaryRow
-          label="Due Soon"
-          count={dueSoonBills.length}
-          amount={dueSoonAmount}
-          variant="danger"
-        />
+        {summary.map((row) => (
+          <SummaryRow
+            key={row.label}
+            label={row.label}
+            count={row.count}
+            amount={row.amount}
+            variant={row.label === "Due Soon" ? "warning" : "default"}
+          />
+        ))}
       </div>
     </Card>
   )

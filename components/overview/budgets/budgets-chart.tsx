@@ -2,7 +2,7 @@
 
 import type { ComponentProps } from "react"
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts"
-import { formatCurrency } from "@/lib/format"
+import { MoneyAmount } from "@/components/money-amount"
 import { getThemeColorCssVariable } from "@/lib/theme-colors"
 import type { Budget } from "@/lib/types"
 import { useReducedMotion } from "motion/react"
@@ -20,11 +20,20 @@ interface BudgetsChartProps {
 
 export function BudgetsChart({ budgets, spent, limit }: BudgetsChartProps) {
   const shouldReduceMotion = useReducedMotion()
-  const data = budgets.map((b) => ({
-    name: b.category,
-    value: b.maximum,
-    color: getThemeColorCssVariable(b.color),
-  }))
+  const hasBudgets = budgets.length > 0
+  const data = hasBudgets
+    ? budgets.map((b) => ({
+        name: b.category,
+        value: b.maximum,
+        color: getThemeColorCssVariable(b.color),
+      }))
+    : [
+        {
+          name: "Empty",
+          value: 1,
+          color: "var(--color-muted)",
+        },
+      ]
 
   return (
     <div className="relative mx-auto aspect-square w-full max-w-61.75">
@@ -56,11 +65,17 @@ export function BudgetsChart({ budgets, spent, limit }: BudgetsChartProps) {
       </ResponsiveContainer>
 
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-        <p className="text-foreground text-3xl font-bold tracking-tight">
-          {formatCurrency(spent)}
+        <p className="text-foreground bg-card rounded-md px-1 text-3xl font-bold tracking-tight">
+          <MoneyAmount amount={spent} />
         </p>
         <p className="text-muted-foreground mt-1 text-xs">
-          of {formatCurrency(limit)} limit
+          {hasBudgets ? (
+            <>
+              of <MoneyAmount amount={limit} /> limit
+            </>
+          ) : (
+            "No budgets yet"
+          )}
         </p>
       </div>
     </div>

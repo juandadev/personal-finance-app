@@ -2,8 +2,7 @@
 
 import * as React from "react"
 import * as MenubarPrimitive from "@radix-ui/react-menubar"
-import CaretRightIcon from "@/components/icons/CaretRightIcon"
-import { CheckIcon, CircleIcon } from "lucide-react"
+import { CaretRightIcon, CheckIcon, CircleIcon } from "@phosphor-icons/react"
 
 import { cn } from "@/lib/utils"
 
@@ -130,7 +129,7 @@ function MenubarCheckboxItem({
     >
       <span className="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
         <MenubarPrimitive.ItemIndicator>
-          <CheckIcon className="size-4" />
+          <CheckIcon weight="fill" className="size-4" />
         </MenubarPrimitive.ItemIndicator>
       </span>
       {children}
@@ -154,7 +153,7 @@ function MenubarRadioItem({
     >
       <span className="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
         <MenubarPrimitive.ItemIndicator>
-          <CircleIcon className="size-2 fill-current" />
+          <CircleIcon weight="fill" className="size-2 fill-current" />
         </MenubarPrimitive.ItemIndicator>
       </span>
       {children}
@@ -236,7 +235,7 @@ function MenubarSubTrigger({
       {...props}
     >
       {children}
-      <CaretRightIcon className="ml-auto size-2" />
+      <CaretRightIcon weight="fill" className="ml-auto size-2" />
     </MenubarPrimitive.SubTrigger>
   )
 }
