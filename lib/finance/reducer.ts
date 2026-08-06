@@ -8,6 +8,7 @@ import type {
   CashForecastSettingsRecord,
   CategoryRecord,
   CounterpartyRecord,
+  CreatableRecurringBillRecord,
   CreditCardAnnualityOverrideRecord,
   CreditCardPaymentRecord,
   CreditCardRecord,
@@ -19,7 +20,6 @@ import type {
   NewCounterpartyRecord,
   NewCreditCardRecord,
   NewPotRecord,
-  NewRecurringBillRecord,
   NewTransactionRecord,
   PotMovementRequest,
   PotRecord,
@@ -27,6 +27,7 @@ import type {
   RecurringBillPaymentSource,
   RecurringBillRecord,
   TransactionRecord,
+  UpdatableRecurringBillRecord,
 } from "./types"
 import { compareTransactionRecordsByDateThenCreatedAt } from "./transaction-sort"
 
@@ -39,6 +40,7 @@ interface TransactionMutationPayload {
 }
 
 export type FinanceAction =
+  | { type: "state/replace"; state: FinanceState }
   | { type: "transaction/add"; transaction: TransactionRecord }
   | { type: "transaction/save"; payload: TransactionMutationPayload }
   | {
@@ -203,15 +205,19 @@ export interface FinanceActions {
   deletePot: (id: string) => Promise<FinanceMutationResult>
   movePot: (movement: PotMovementRequest) => Promise<FinanceMutationResult>
   addRecurringBill: (
-    bill: Omit<NewRecurringBillRecord, "archived_at">,
+    bill: CreatableRecurringBillRecord,
   ) => Promise<FinanceMutationResult>
   updateRecurringBill: (
     id: string,
-    updates: Partial<
-      Omit<RecurringBillRecord, "id" | "user_id" | "archived_at">
-    >,
+    updates: Partial<UpdatableRecurringBillRecord>,
   ) => Promise<FinanceMutationResult>
+  pauseRecurringBill: (id: string) => Promise<FinanceMutationResult>
   archiveRecurringBill: (id: string) => Promise<FinanceMutationResult>
+  undoScheduledRecurringBillEnd: (id: string) => Promise<FinanceMutationResult>
+  resumeRecurringBill: (
+    id: string,
+    firstDueDate: string,
+  ) => Promise<FinanceMutationResult>
   deleteRecurringBill: (id: string) => Promise<FinanceMutationResult>
   payRecurringBillOccurrence: (
     billId: string,
@@ -297,8 +303,8 @@ export async function runFinanceAction<
 ): Promise<T | Extract<FinanceMutationResult, { ok: false }>> {
   try {
     return await action()
-  } catch (error) {
-    console.error("Finance action request failed:", error)
+  } catch {
+    console.error("Finance action request failed.")
 
     return {
       ok: false,
@@ -398,6 +404,8 @@ export function financeReducer(
   action: FinanceAction,
 ): FinanceState {
   switch (action.type) {
+    case "state/replace":
+      return action.state
     case "transaction/add":
       return {
         ...state,

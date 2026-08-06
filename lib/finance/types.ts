@@ -191,6 +191,9 @@ export interface RecurringBillRecord {
   credit_card_id: FinanceRecordId | null
   category_id: FinanceRecordId
   archived_at: string | null
+  paused_at: string | null
+  scheduled_end_date: string | null
+  scheduled_end_mode: "pause" | "archive" | null
 }
 
 export type RecurringBillPaymentSource =
@@ -304,6 +307,19 @@ export type NewTransactionRecord = Omit<
 >
 export type NewCreditCardRecord = Omit<CreditCardRecord, "user_id">
 export type NewRecurringBillRecord = Omit<RecurringBillRecord, "user_id">
+
+export type RecurringBillLifecycleField =
+  "archived_at" | "paused_at" | "scheduled_end_date" | "scheduled_end_mode"
+
+export type CreatableRecurringBillRecord = Omit<
+  NewRecurringBillRecord,
+  RecurringBillLifecycleField
+>
+
+export type UpdatableRecurringBillRecord = Omit<
+  RecurringBillRecord,
+  "id" | "user_id" | RecurringBillLifecycleField
+>
 export type NewCashForecastAdjustmentRecord = Omit<
   CashForecastAdjustmentRecord,
   "user_id" | "created_at" | "updated_at"

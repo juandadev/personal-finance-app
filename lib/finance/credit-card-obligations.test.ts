@@ -42,6 +42,9 @@ const bill: RecurringBillRecord = {
   credit_card_id: card.id,
   category_id: "category-1",
   archived_at: null,
+  paused_at: null,
+  scheduled_end_date: null,
+  scheduled_end_mode: null,
 }
 
 const statement: CreditCardStatementRecord = {
@@ -162,6 +165,24 @@ describe("buildCreditCardObligations", () => {
     }).find((obligation) => obligation.statementId === statement.id)
 
     expect(persisted?.isPaid).toBe(true)
+  })
+
+  test("keeps the current pending charge when a card bill is ending", () => {
+    const obligation = build({
+      recurringBills: [
+        {
+          ...bill,
+          first_due_date: "2026-07-28",
+          scheduled_end_date: "2026-08-28",
+          scheduled_end_mode: "archive",
+        },
+      ],
+      asOfDate: "2026-08-05",
+      throughDate: "2026-09-30",
+    }).find((candidate) => candidate.periodStart === "2026-07-21")
+
+    expect(obligation?.pendingBillAmountCents).toBe(10_000)
+    expect(obligation?.pendingBillLines).toHaveLength(1)
   })
 
   test("adds pending annuality installments to statement totals", () => {

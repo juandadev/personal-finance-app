@@ -6,6 +6,7 @@ import {
   AuthCard,
   authInlineLinkClasses,
   AuthPageShell,
+  AuthStatusMessage,
 } from "@/components/auth/auth-page-shell"
 import { LoginForm } from "@/components/auth/login-form"
 import { auth } from "@/lib/auth/server"
@@ -17,22 +18,45 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic"
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ verification?: string | string[] }>
+}) {
+  const { verification } = await searchParams
   const { data: session } = await auth.getSession()
 
-  if (session?.user) {
+  if (session?.user?.emailVerified) {
     redirect("/")
   }
 
   return (
     <AuthPageShell>
       <AuthCard title="Login" titleId="login-heading">
+        {verification === "required" || verification === "complete" ? (
+          <div className="mb-4">
+            <AuthStatusMessage
+              variant={verification === "complete" ? "success" : "info"}
+            >
+              {verification === "complete"
+                ? "Your email is verified. You can now sign in."
+                : "Verify your email before accessing your finance data."}
+            </AuthStatusMessage>
+          </div>
+        ) : null}
+
         <LoginForm />
 
         <p className="text-muted-foreground mt-8 text-center text-sm leading-normal">
           Need to create an account?{" "}
           <Link href="/sign-up" className={authInlineLinkClasses}>
             Sign Up
+          </Link>
+        </p>
+        <p className="text-muted-foreground mt-4 text-center text-sm leading-normal">
+          Need a new verification code?{" "}
+          <Link href="/verify-email" className={authInlineLinkClasses}>
+            Verify Email
           </Link>
         </p>
       </AuthCard>

@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic"
 export default async function SignUpPage() {
   const { data: session } = await auth.getSession()
 
-  if (session?.user) {
+  if (session?.user?.emailVerified) {
     redirect("/")
   }
 

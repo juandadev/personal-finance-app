@@ -9,6 +9,7 @@ import {
   getCreditCardStatementCycle,
   type CreditCardStatementCycle,
 } from "@/lib/finance/credit-card-cycle"
+import { localDateToEndOfDayInstant } from "@/lib/finance/local-date"
 
 export const DUE_SOON_WINDOW_DAYS = 7
 
@@ -31,6 +32,7 @@ export interface RecurringBillOccurrenceOptions {
   includeAllFuture?: boolean
   throughDate?: string
   archiveCutoffTimezone?: string
+  inactiveCutoffTimezone?: string
 }
 
 type ScheduleFields = Pick<
@@ -39,6 +41,8 @@ type ScheduleFields = Pick<
   | "first_due_date"
   | "total_payments"
   | "archived_at"
+  | "paused_at"
+  | "scheduled_end_date"
   | "amount_cents"
 >
 
@@ -65,16 +69,22 @@ function toIsoDate(year: number, month: number, day: number) {
   ].join("-")
 }
 
-function getArchiveCutoffDate(
-  archivedAt: string | null,
+function getInactiveAt(
+  bill: Pick<ScheduleFields, "archived_at" | "paused_at">,
+) {
+  return bill.archived_at ?? bill.paused_at
+}
+
+export function getInactiveCutoffDate(
+  inactiveAt: string | null,
   timezone?: string,
 ): string | null {
-  if (!archivedAt) {
+  if (!inactiveAt) {
     return null
   }
 
   if (!timezone) {
-    return archivedAt.slice(0, 10)
+    return inactiveAt.slice(0, 10)
   }
 
   const parts = new Intl.DateTimeFormat("en-US", {
@@ -82,7 +92,7 @@ function getArchiveCutoffDate(
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  }).formatToParts(new Date(archivedAt))
+  }).formatToParts(new Date(inactiveAt))
   const values = new Map(parts.map((part) => [part.type, part.value]))
   const year = values.get("year")
   const month = values.get("month")
@@ -90,11 +100,30 @@ function getArchiveCutoffDate(
 
   if (!year || !month || !day) {
     throw new Error(
-      `Could not resolve the archive date for timezone "${timezone}".`,
+      `Could not resolve the inactive cutoff date for timezone "${timezone}".`,
     )
   }
 
   return `${year}-${month}-${day}`
+}
+
+/** @deprecated Use getInactiveCutoffDate */
+export function getArchiveCutoffDate(
+  archivedAt: string | null,
+  timezone?: string,
+): string | null {
+  return getInactiveCutoffDate(archivedAt, timezone)
+}
+
+export function inactiveTimestampForCutoffDate(
+  cutoffDate: string,
+  timezone?: string,
+): string {
+  if (!timezone) {
+    return `${cutoffDate}T23:59:59.999Z`
+  }
+
+  return localDateToEndOfDayInstant(cutoffDate, timezone)
 }
 
 export function todayIsoDate() {
@@ -159,6 +188,68 @@ export function getRecurringBillDueStatus(
   return daysUntilDue <= DUE_SOON_WINDOW_DAYS ? "due-soon" : "upcoming"
 }
 
+export function getDefaultResumeStartDate(
+  firstDueDate: string,
+  frequency: RecurringBillRecord["frequency"],
+  today = todayIsoDate(),
+): string {
+  if (frequency === "one_time") {
+    return firstDueDate >= today ? firstDueDate : today
+  }
+
+  for (let index = 0; index < MAX_GENERATED_OCCURRENCES; index += 1) {
+    const candidate = getOccurrenceDueDate(firstDueDate, frequency, index)
+
+    if (candidate >= today) {
+      return candidate
+    }
+  }
+
+  return today
+}
+
+/**
+ * Next occurrence due date strictly after `today`. Used when scheduling a card
+ * bill's end-of-period Cancel or Pause.
+ */
+export function getNextDueDateAfter(
+  bill: Pick<ScheduleFields, "frequency" | "first_due_date" | "total_payments">,
+  today = todayIsoDate(),
+): string | null {
+  for (let index = 0; index < MAX_GENERATED_OCCURRENCES; index += 1) {
+    if (bill.frequency === "one_time" && index > 0) {
+      break
+    }
+
+    if (bill.total_payments !== null && index >= bill.total_payments) {
+      break
+    }
+
+    const dueDate = getOccurrenceDueDate(
+      bill.first_due_date,
+      bill.frequency,
+      index,
+    )
+
+    if (dueDate > today) {
+      return dueDate
+    }
+  }
+
+  return null
+}
+
+function getScheduleStopDate(
+  bill: ScheduleFields,
+  timezone?: string,
+): string | null {
+  if (bill.scheduled_end_date) {
+    return bill.scheduled_end_date
+  }
+
+  return getInactiveCutoffDate(getInactiveAt(bill), timezone)
+}
+
 /**
  * Resolves a bill's occurrences as of `today`: every occurrence due on or
  * before today plus enough future occurrences to always include the next
@@ -174,10 +265,9 @@ export function resolveRecurringBillOccurrences(
   const paymentsByDueDate = new Map(
     payments.map((payment) => [payment.due_date, payment]),
   )
-  const archivedCutoff = getArchiveCutoffDate(
-    bill.archived_at,
-    options.archiveCutoffTimezone,
-  )
+  const inactiveCutoffTimezone =
+    options.inactiveCutoffTimezone ?? options.archiveCutoffTimezone
+  const stopDate = getScheduleStopDate(bill, inactiveCutoffTimezone)
   const occurrences: RecurringBillOccurrenceState[] = []
 
   for (let index = 0; index < MAX_GENERATED_OCCURRENCES; index += 1) {
@@ -201,7 +291,7 @@ export function resolveRecurringBillOccurrences(
 
     const payment = paymentsByDueDate.get(dueDate)
 
-    if (archivedCutoff !== null && dueDate > archivedCutoff && !payment) {
+    if (stopDate !== null && dueDate >= stopDate && !payment) {
       break
     }
 

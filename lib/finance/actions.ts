@@ -1,10 +1,10 @@
 "use server"
 
+import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
-import { auth } from "@/lib/auth/server"
+import { requireUserId as getUserId } from "@/lib/auth/session"
 import {
-  archiveRecurringBill,
   assignTransactionToBudget,
   closeZeroBalanceCreditCardStatement,
   deleteCashForecastAdjustment,
@@ -27,8 +27,11 @@ import {
   payCreditCardStatement,
   payRecurringBillOccurrence,
   resetCreditCardAnnualityOverrides,
+  resumeRecurringBill,
   saveCreditCardAnnualityOverrides,
+  setRecurringBillInactive,
   skipRecurringBillOccurrence,
+  undoScheduledRecurringBillEnd,
   movePotBalance,
   unassignTransactionFromBudget,
   updateBudget,
@@ -43,6 +46,7 @@ import {
   updateUiPreferences,
   upsertCashForecastExclusion,
   upsertCashForecastSettings,
+  type SetRecurringBillInactiveResult,
 } from "@/lib/finance/queries"
 import { uiPreferencesSchema } from "@/lib/finance/ui-preferences"
 import { isFutureISODate } from "@/lib/finance/pot-due-date"
@@ -61,13 +65,14 @@ import type {
   CreditCardPaymentRecord,
   CreditCardRecord,
   CreditCardStatementRecord,
+  CreatableRecurringBillRecord,
+  UpdatableRecurringBillRecord,
   NewBudgetRecord,
   NewCashForecastAdjustmentRecord,
   NewCategoryRecord,
   NewCounterpartyRecord,
   NewCreditCardRecord,
   NewPotRecord,
-  NewRecurringBillRecord,
   NewTransactionRecord,
   PotMovementRequest,
   PotRecord,
@@ -77,6 +82,10 @@ import type {
   TransactionRecord,
 } from "@/lib/finance/types"
 import { themeColorClasses } from "@/lib/theme-colors"
+
+function revalidateFinanceViews() {
+  revalidatePath("/", "layout")
+}
 
 type FinanceActionResult<T = undefined> =
   | {
@@ -519,16 +528,6 @@ type TransactionMutationData = {
   budgetAssignment: BudgetTransactionAssignmentRecord | null
 }
 
-async function getUserId() {
-  const { data: session } = await auth.getSession()
-
-  if (!session?.user?.id) {
-    throw new Error("You must be logged in to update finance data.")
-  }
-
-  return session.user.id
-}
-
 interface PostgresError extends Error {
   code: string
   constraint?: string
@@ -962,7 +961,7 @@ export async function closeCreditCardStatementAction(
 }
 
 export async function createRecurringBillAction(
-  bill: Omit<NewRecurringBillRecord, "archived_at">,
+  bill: CreatableRecurringBillRecord,
 ): Promise<FinanceActionResult<RecurringBillRecord>> {
   try {
     const userId = await getUserId()
@@ -970,6 +969,9 @@ export async function createRecurringBillAction(
     const data = await insertRecurringBill(userId, {
       ...parsedBill,
       archived_at: null,
+      paused_at: null,
+      scheduled_end_date: null,
+      scheduled_end_mode: null,
     })
 
     return {
@@ -984,7 +986,7 @@ export async function createRecurringBillAction(
 
 export async function updateRecurringBillAction(
   id: string,
-  updates: Partial<Omit<RecurringBillRecord, "id" | "user_id" | "archived_at">>,
+  updates: Partial<UpdatableRecurringBillRecord>,
 ): Promise<FinanceActionResult<RecurringBillRecord>> {
   try {
     const userId = await getUserId()
@@ -1002,17 +1004,73 @@ export async function updateRecurringBillAction(
   }
 }
 
+export async function setRecurringBillInactiveAction(
+  id: string,
+  mode: "pause" | "archive",
+): Promise<FinanceActionResult<SetRecurringBillInactiveResult>> {
+  try {
+    const userId = await getUserId()
+    const parsedId = idSchema.parse(id)
+    const data = await setRecurringBillInactive(userId, parsedId, {
+      mode,
+    })
+
+    return {
+      ok: true,
+      message:
+        mode === "pause"
+          ? "Recurring bill paused."
+          : "Recurring bill archived.",
+      data,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function pauseRecurringBillAction(
+  id: string,
+): Promise<FinanceActionResult<SetRecurringBillInactiveResult>> {
+  return setRecurringBillInactiveAction(id, "pause")
+}
+
 export async function archiveRecurringBillAction(
+  id: string,
+): Promise<FinanceActionResult<SetRecurringBillInactiveResult>> {
+  return setRecurringBillInactiveAction(id, "archive")
+}
+
+export async function undoScheduledRecurringBillEndAction(
   id: string,
 ): Promise<FinanceActionResult<RecurringBillRecord>> {
   try {
     const userId = await getUserId()
     const parsedId = idSchema.parse(id)
-    const data = await archiveRecurringBill(userId, parsedId)
+    const data = await undoScheduledRecurringBillEnd(userId, parsedId)
 
     return {
       ok: true,
-      message: "Recurring bill archived.",
+      message: "Scheduled end cleared.",
+      data,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function resumeRecurringBillAction(
+  id: string,
+  firstDueDate: string,
+): Promise<FinanceActionResult<RecurringBillRecord>> {
+  try {
+    const userId = await getUserId()
+    const parsedId = idSchema.parse(id)
+    const parsedFirstDueDate = isoDateSchema.parse(firstDueDate)
+    const data = await resumeRecurringBill(userId, parsedId, parsedFirstDueDate)
+
+    return {
+      ok: true,
+      message: "Recurring bill resumed.",
       data,
     }
   } catch (error) {
@@ -1120,6 +1178,7 @@ export async function createTransactionAction(
       parsedTransaction,
       parsedBudgetId,
     )
+    revalidateFinanceViews()
 
     return {
       ok: true,
@@ -1147,6 +1206,7 @@ export async function updateTransactionAction(
       parsedUpdates,
       parsedBudgetId,
     )
+    revalidateFinanceViews()
 
     return {
       ok: true,
@@ -1170,6 +1230,7 @@ export async function deleteTransactionAction(id: string): Promise<
     const userId = await getUserId()
     const parsedId = idSchema.parse(id)
     const data = await deleteTransaction(userId, parsedId)
+    revalidateFinanceViews()
 
     return {
       ok: true,

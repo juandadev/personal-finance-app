@@ -3,6 +3,7 @@ import "server-only"
 import type { PoolClient } from "pg"
 
 import { getDatabasePool } from "@/lib/db/client"
+import { assertSafeRuntimeRole } from "@/lib/db/runtime-role"
 
 export async function withFinanceTransaction<T>(
   userId: string,
@@ -11,6 +12,7 @@ export async function withFinanceTransaction<T>(
   const client = await getDatabasePool().connect()
 
   try {
+    await assertSafeRuntimeRole(client)
     await client.query("BEGIN")
     await client.query("SELECT set_config('app.current_user_id', $1, true)", [
       userId,

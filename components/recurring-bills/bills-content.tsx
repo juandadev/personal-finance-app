@@ -51,7 +51,12 @@ export function BillsContent({ bills }: BillsContentProps) {
     pagination.startIndex,
     pagination.endIndex,
   )
-  const activeBills = paginatedBills.filter((bill) => !bill.archivedAt)
+  const activeBills = paginatedBills.filter(
+    (bill) => !bill.archivedAt && !bill.pausedAt,
+  )
+  const pausedBills = paginatedBills.filter(
+    (bill) => Boolean(bill.pausedAt) && !bill.archivedAt,
+  )
   const archivedBills = paginatedBills.filter((bill) =>
     Boolean(bill.archivedAt),
   )
@@ -102,6 +107,14 @@ export function BillsContent({ bills }: BillsContentProps) {
         <>
           <div className="min-h-0 flex-1 space-y-8 overflow-y-auto pr-3">
             {activeBills.length > 0 ? <BillsTable bills={activeBills} /> : null}
+            {pausedBills.length > 0 ? (
+              <div>
+                <h3 className="text-muted-foreground text-sm font-bold">
+                  Paused
+                </h3>
+                <BillsTable bills={pausedBills} />
+              </div>
+            ) : null}
             {archivedBills.length > 0 ? (
               <div>
                 <h3 className="text-muted-foreground text-sm font-bold">

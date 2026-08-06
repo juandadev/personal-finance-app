@@ -31,6 +31,9 @@ function makeState(
             credit_card_id: "card-1",
             category_id: "category-1",
             archived_at: null,
+            paused_at: null,
+            scheduled_end_date: null,
+            scheduled_end_mode: null,
             ...billOverrides,
           },
         ]
@@ -187,6 +190,7 @@ describe("selectFinanceViewModel summary stats", () => {
             user_id: "user-1",
             name: "Main",
             type: "checking",
+            currency: "USD",
             is_primary: true,
             current_balance_cents: 125_000,
           },
@@ -969,6 +973,9 @@ describe("selectFinanceViewModel manualBillsDueReminder", () => {
       credit_card_id: null,
       category_id: "category-1",
       archived_at: null,
+      paused_at: null,
+      scheduled_end_date: null,
+      scheduled_end_mode: null,
       ...overrides,
     }
   }

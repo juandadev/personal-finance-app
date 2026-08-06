@@ -1,5 +1,7 @@
 "use client"
 
+import { useEffect, useRef } from "react"
+
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,6 +22,24 @@ export function SearchInput({
   placeholder = "Search transaction",
   className,
 }: SearchInputProps) {
+  const timeoutRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current !== null) {
+        window.clearTimeout(timeoutRef.current)
+      }
+    }
+  }, [])
+
+  function handleChange(nextValue: string) {
+    if (timeoutRef.current !== null) {
+      window.clearTimeout(timeoutRef.current)
+    }
+
+    timeoutRef.current = window.setTimeout(() => onChange(nextValue), 300)
+  }
+
   return (
     <div className={cn("space-y-2", className)}>
       <Label
@@ -34,8 +54,8 @@ export function SearchInput({
           name="search-txn"
           aria-label={label}
           type="text"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
+          defaultValue={value}
+          onChange={(event) => handleChange(event.target.value)}
           placeholder={placeholder}
         />
         <MagnifyingGlassIcon weight="light" aria-hidden />

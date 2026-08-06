@@ -7,6 +7,9 @@ __v0_jsx-dev-runtime.ts
 .vercel/
 
 # Environment variables
+.env
+.env.*
+!.env.example
 .env*.local
 .neonctl/
 
@@ -17,3 +20,5 @@ node_modules
 .playwright-mcp/
 *.tsbuildinfo
 .superpowers/
+.vercel
+.env*

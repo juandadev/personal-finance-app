@@ -15,8 +15,8 @@ export default function GlobalError({
   reset: () => void
 }) {
   useEffect(() => {
-    console.error("Unhandled root error:", error)
-  }, [error])
+    console.error("Unhandled root error.", { digest: error.digest })
+  }, [error.digest])
 
   return (
     <html lang="en" className="bg-background">

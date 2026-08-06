@@ -43,6 +43,7 @@ mock.module("@/components/forecast/forecast-item-dialog", () => ({
   EditForecastItemDialog: () => null,
 }))
 mock.module("@/components/actions", () => ({
+  HeaderMenuItem: ({ children }: { children: ReactNode }) => <>{children}</>,
   ItemActions: ({
     ariaLabel,
     children,
@@ -58,6 +59,9 @@ mock.module("@/components/actions", () => ({
       </button>
       {children}
     </div>
+  ),
+  ModuleHeaderActions: ({ children }: { children?: ReactNode }) => (
+    <>{children}</>
   ),
 }))
 mock.module("@/components/ui/dropdown-menu", () => ({

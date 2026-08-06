@@ -137,7 +137,12 @@ mock.module("./bills-table", () => ({
   BillsTable: ({ bills }: { bills: RecurringBill[] }) => (
     <ul>
       {bills.map((bill) => (
-        <li key={bill.id}>{bill.name}</li>
+        <li key={bill.id}>
+          {bill.name}
+          {bill.scheduledEndDate && bill.scheduledEndMode === "archive"
+            ? ` · Cancels on ${bill.scheduledEndDate}`
+            : null}
+        </li>
       ))}
     </ul>
   ),
@@ -238,6 +243,27 @@ describe("BillsContent URL state", () => {
 
     expect(screen.getAllByRole("listitem")).toHaveLength(1)
     expect(screen.getByRole("button", { name: "Page 2 of 2" })).toBeTruthy()
+  })
+
+  test("shows ending labels in the active list", () => {
+    render(
+      <BillsContent
+        bills={[
+          {
+            ...bills[0],
+            id: "ending-bill",
+            creditCardId: "card-1",
+            scheduledEndDate: "2026-08-28",
+            scheduledEndMode: "archive",
+          },
+        ]}
+      />,
+      {
+        wrapper: withNuqsTestingAdapter(),
+      },
+    )
+
+    expect(screen.getByText(/Cancels on 2026-08-28/)).toBeTruthy()
   })
 
   test("hides reset at defaults", () => {

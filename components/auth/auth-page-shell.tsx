@@ -49,8 +49,13 @@ export function AuthPageShell({ children }: AuthPageShellProps) {
         </div>
       </aside>
 
-      <main className="flex min-h-[calc(100svh-5.5rem)] items-center justify-center px-5 py-8 md:min-h-[calc(100svh-4.375rem)] md:px-10 lg:min-h-[calc(100svh-2.5rem)] lg:px-0 lg:py-0">
+      <main className="flex min-h-[calc(100svh-5.5rem)] flex-col items-center justify-center px-5 py-8 md:min-h-[calc(100svh-4.375rem)] md:px-10 lg:min-h-[calc(100svh-2.5rem)] lg:px-0 lg:py-0">
         {children}
+        <footer className="text-muted-foreground mt-6 text-center text-sm">
+          <Link href="/privacidad" className={authInlineLinkClasses}>
+            Privacy Notice
+          </Link>
+        </footer>
       </main>
     </div>
   )

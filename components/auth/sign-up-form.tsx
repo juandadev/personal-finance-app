@@ -8,13 +8,18 @@ import {
   AuthPasswordField,
   AuthSubmitButton,
 } from "@/components/auth/auth-page-shell"
+import { GoogleSignInButton } from "@/components/auth/google-sign-in-button"
 import { FormStatusMessage } from "@/components/ui/form"
+import {
+  PASSWORD_MIN_LENGTH,
+  PASSWORD_MIN_LENGTH_MESSAGE,
+} from "@/lib/auth/password-policy"
 import { useStandardForm } from "@/lib/forms/use-standard-form"
 
 const signUpFormSchema = z.object({
   name: z.string().trim().min(1, "Enter your name."),
   email: z.string().trim().email("Enter a valid email address."),
-  password: z.string().min(8, "Create a password with at least 8 characters."),
+  password: z.string().min(PASSWORD_MIN_LENGTH, PASSWORD_MIN_LENGTH_MESSAGE),
 })
 
 type SignUpFormValues = z.input<typeof signUpFormSchema>
@@ -51,6 +56,8 @@ export function SignUpForm() {
       aria-label="Sign-up form"
       onSubmit={standardForm.handleSubmit}
     >
+      <GoogleSignInButton />
+
       <standardForm.form.Field name="name">
         {(field) => (
           <AuthField
@@ -92,7 +99,7 @@ export function SignUpForm() {
             name="password"
             label="Create Password"
             autoComplete="new-password"
-            helperText="Passwords must be at least 8 characters"
+            helperText={`Passwords must be at least ${PASSWORD_MIN_LENGTH} characters`}
             value={field.state.value}
             onChange={(event) =>
               standardForm.setValue("password", event.target.value)

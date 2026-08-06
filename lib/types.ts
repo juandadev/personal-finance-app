@@ -106,6 +106,9 @@ export interface RecurringBill {
   categoryId: string
   category: TransactionCategory
   archivedAt?: string
+  pausedAt?: string
+  scheduledEndDate?: string
+  scheduledEndMode?: "pause" | "archive"
   occurrences: RecurringBillOccurrence[]
   currentOccurrence?: RecurringBillOccurrence
   status: BillStatus

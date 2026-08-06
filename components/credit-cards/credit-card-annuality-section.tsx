@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
 import { HeaderMenuItem, ItemActions } from "@/components/actions"
 import { MoneyAmount } from "@/components/money-amount"
@@ -25,17 +25,6 @@ export function CreditCardAnnualitySection({
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
 
-  useEffect(() => {
-    const next: Record<number, string> = {}
-
-    for (const item of schedule) {
-      next[item.installmentIndex] = formatDollarInput(item.amount)
-    }
-
-    setDraftAmounts(next)
-    setStatusMessage(null)
-  }, [schedule])
-
   if (!creditCard.annualityEnabled || creditCard.annualityAmount == null) {
     return null
   }
@@ -47,7 +36,9 @@ export function CreditCardAnnualitySection({
       return sum + Math.round(item.amount * 100)
     }
 
-    const parsed = parseDollarAmount(draftAmounts[item.installmentIndex] ?? "")
+    const parsed = parseDollarAmount(
+      draftAmounts[item.installmentIndex] ?? formatDollarInput(item.amount),
+    )
 
     return sum + (parsed ?? 0)
   }, 0)
@@ -78,6 +69,8 @@ export function CreditCardAnnualitySection({
 
     if (!result.ok) {
       setStatusMessage(result.message)
+    } else {
+      setDraftAmounts({})
     }
   }
 
@@ -90,7 +83,7 @@ export function CreditCardAnnualitySection({
       .filter((item) => !item.isMaterialized)
       .map((item) => {
         const amountCents = parseDollarAmount(
-          draftAmounts[item.installmentIndex] ?? "",
+          draftAmounts[item.installmentIndex] ?? formatDollarInput(item.amount),
         )
 
         return {
@@ -111,6 +104,8 @@ export function CreditCardAnnualitySection({
 
     if (!result.ok) {
       setStatusMessage(result.message)
+    } else {
+      setDraftAmounts({})
     }
   }
 
@@ -211,7 +206,10 @@ export function CreditCardAnnualitySection({
                 <div className="w-full sm:w-35 sm:shrink-0">
                   <CurrencyInput
                     aria-label={`Annuality payment ${item.installmentIndex} amount`}
-                    value={draftAmounts[item.installmentIndex] ?? ""}
+                    value={
+                      draftAmounts[item.installmentIndex] ??
+                      formatDollarInput(item.amount)
+                    }
                     onChange={(event) =>
                       setDraftAmounts((current) => ({
                         ...current,

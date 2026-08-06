@@ -5,11 +5,16 @@ import { z } from "zod"
 
 import { auth } from "@/lib/auth/server"
 import type { AuthFormState } from "@/lib/auth/form-state"
+import {
+  PASSWORD_MIN_LENGTH,
+  PASSWORD_MIN_LENGTH_MESSAGE,
+} from "@/lib/auth/password-policy"
+import { logServerError } from "@/lib/observability/server-logger"
 
 const signUpSchema = z.object({
   name: z.string().trim().min(1, "Enter your name."),
   email: z.string().trim().email("Enter a valid email address."),
-  password: z.string().min(8, "Create a password with at least 8 characters."),
+  password: z.string().min(PASSWORD_MIN_LENGTH, PASSWORD_MIN_LENGTH_MESSAGE),
 })
 
 export async function signUpWithEmail(
@@ -34,7 +39,7 @@ export async function signUpWithEmail(
   try {
     result = await auth.signUp.email(parsed.data)
   } catch (error) {
-    console.error("Sign-up request failed:", error)
+    logServerError("email_sign_up_request_failed", error)
 
     return {
       message:
@@ -45,10 +50,9 @@ export async function signUpWithEmail(
   if (result.error) {
     return {
       message:
-        result.error.message ||
-        "We could not create your account. Try again in a moment.",
+        "We could not create this account. Confirm your invitation and verification details, then try again.",
     }
   }
 
-  redirect("/")
+  redirect("/verify-email?sent=1")
 }

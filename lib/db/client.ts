@@ -3,6 +3,8 @@ import "server-only"
 import { attachDatabasePool } from "@vercel/functions"
 import { Pool } from "pg"
 
+import { getDatabaseUrl } from "@/lib/env/server"
+
 let pool: Pool | null = null
 
 export function getDatabasePool() {
@@ -10,14 +12,8 @@ export function getDatabasePool() {
     return pool
   }
 
-  const connectionString = process.env.DATABASE_URL
-
-  if (!connectionString) {
-    throw new Error("DATABASE_URL is required for finance database access.")
-  }
-
   pool = new Pool({
-    connectionString,
+    connectionString: getDatabaseUrl(),
     max: 5,
   })
 

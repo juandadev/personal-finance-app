@@ -12,6 +12,8 @@ import {
 import { getCreditCardStatementCycle } from "@/lib/finance/credit-card-cycle"
 import {
   getBillOccurrenceStatementCycle,
+  getNextDueDateAfter,
+  inactiveTimestampForCutoffDate,
   resolveRecurringBillOccurrences,
   type RecurringBillOccurrenceState,
 } from "@/lib/finance/recurring-bill-schedule"
@@ -19,6 +21,16 @@ import {
   assertDateNotAfterLocalToday,
   getLocalIsoDate,
 } from "@/lib/finance/local-date"
+import {
+  buildTransactionQueryParts,
+  getTransactionPageBounds,
+  transactionPageFromSql,
+  transactionPageSelectSql,
+  TRANSACTION_PAGE_SIZE,
+  type TransactionFilterOption,
+  type TransactionPageRow,
+} from "@/lib/finance/transaction-page-query"
+import type { TransactionFilters } from "@/lib/finance/url-filters/normalize"
 import type {
   AccountRecord,
   AccountSummaryRecord,
@@ -52,6 +64,8 @@ import type {
 } from "@/lib/finance/types"
 import { getCurrentPeriod } from "@/lib/finance/period"
 import { parseUiPreferences } from "@/lib/finance/ui-preferences"
+import { formatDisplayDate } from "@/lib/format"
+import type { Transaction } from "@/lib/types"
 import type { ThemeColor } from "@/lib/theme-colors"
 
 type ProfileRow = Omit<UserPreferencesRecord, "hideAmounts"> & {
@@ -173,6 +187,9 @@ const recurringBillColumns = [
   "credit_card_id",
   "category_id",
   "archived_at::text AS archived_at",
+  "paused_at::text AS paused_at",
+  "scheduled_end_date::text AS scheduled_end_date",
+  "scheduled_end_mode",
 ]
 const recurringBillPaymentColumns = [
   "user_id",
@@ -261,6 +278,16 @@ const cashForecastExclusionColumns = [
   "period",
   "created_at::text AS created_at",
 ]
+
+/**
+ * The shell receives one budget/current period of ordinary transaction rows.
+ * Rows attached to unpaid card statements and annuality rows from the active
+ * year window are included because app-wide card and forecast calculations
+ * need them. Complete transaction history is only queried by page-scoped data
+ * access.
+ */
+export const SHELL_TRANSACTION_WINDOW_PERIODS = 1
+export const SHELL_ANNUALITY_LOOKBACK_YEARS = 1
 
 async function ensureUserProfile(
   client: PoolClient,
@@ -400,7 +427,7 @@ async function assertOneTimeScheduledCharge(
   await getCreditCard(client, userId, bill.credit_card_id)
 }
 
-export async function loadFinanceState(
+export async function loadFinanceShellState(
   userId: string,
   displayName: string | null,
 ): Promise<FinanceState> {
@@ -409,6 +436,8 @@ export async function loadFinanceState(
     await ensureDefaultCategories(client, userId)
     await ensureOwnerContact(client, userId)
     const currentPeriod = getCurrentPeriod()
+    const shellPeriodStart = `${currentPeriod}-01`
+    const shellAnnualityStart = `${Number(currentPeriod.slice(0, 4)) - SHELL_ANNUALITY_LOOKBACK_YEARS}-01-01`
 
     const profile = await client.query<ProfileRow>(
       `SELECT ${profileColumns.join(", ")} FROM profiles WHERE user_id = $1`,
@@ -427,8 +456,8 @@ export async function loadFinanceState(
       [userId],
     )
     const accountSummaries = await client.query<AccountSummaryRecord>(
-      `SELECT ${accountSummaryColumns.join(", ")} FROM account_summaries WHERE user_id = $1 ORDER BY period DESC, id`,
-      [userId],
+      `SELECT ${accountSummaryColumns.join(", ")} FROM account_summaries WHERE user_id = $1 AND period = $2 ORDER BY id`,
+      [userId, currentPeriod],
     )
     const categories = await client.query<CategoryRecord>(
       `SELECT ${categoryColumns.join(", ")} FROM categories WHERE user_id = $1 ORDER BY name, id`,
@@ -439,8 +468,28 @@ export async function loadFinanceState(
       [userId],
     )
     const transactions = await client.query<TransactionRecord>(
-      `SELECT ${transactionSelectColumns.join(", ")} FROM transactions WHERE user_id = $1 ORDER BY posted_at DESC, created_at DESC, id`,
-      [userId],
+      `
+        SELECT ${transactionSelectColumns.map((column) => `t.${column}`).join(", ")}
+        FROM transactions t
+        WHERE t.user_id = $1
+          AND (
+            t.posted_at >= $2::date
+            OR (
+              t.payment_method = 'credit_card'
+              AND t.concept = $3
+              AND t.posted_at >= $4::date
+            )
+            OR EXISTS (
+              SELECT 1
+              FROM credit_card_statements statement
+              WHERE statement.user_id = t.user_id
+                AND statement.id = t.credit_card_statement_id
+                AND statement.lifecycle_status <> 'paid'
+            )
+          )
+        ORDER BY t.posted_at DESC, t.created_at DESC, t.id
+      `,
+      [userId, shellPeriodStart, ANNUALITY_CONCEPT, shellAnnualityStart],
     )
     const budgets = await client.query<BudgetRecord>(
       `SELECT ${budgetColumns.join(", ")} FROM budgets WHERE user_id = $1 AND period = $2 ORDER BY id`,
@@ -508,6 +557,16 @@ export async function loadFinanceState(
         `SELECT ${cashForecastExclusionColumns.join(", ")} FROM cash_forecast_exclusions WHERE user_id = $1 ORDER BY period, source_type, source_key, id`,
         [userId],
       )
+    const localToday = await getUserLocalToday(client, userId)
+    const timezone = await getUserProfileTimezone(client, userId)
+    const materializedRecurringBills =
+      await materializeScheduledRecurringBillEnds(
+        client,
+        userId,
+        recurringBills.rows,
+        localToday,
+        timezone,
+      )
 
     return {
       preferences,
@@ -520,7 +579,7 @@ export async function loadFinanceState(
       budgetSummaries: budgetSummaries.rows,
       budgetTransactionAssignments: budgetTransactionAssignments.rows,
       pots: pots.rows,
-      recurringBills: recurringBills.rows,
+      recurringBills: materializedRecurringBills,
       recurringBillPayments: recurringBillPayments.rows,
       creditCards: creditCards.rows,
       creditCardStatements: creditCardStatements.rows,
@@ -530,6 +589,151 @@ export async function loadFinanceState(
       cashForecastAdjustments: cashForecastAdjustments.rows,
       cashForecastExclusions: cashForecastExclusions.rows,
     }
+  })
+}
+
+function getTransactionInitials(name: string) {
+  return (
+    name
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join("") || "?"
+  )
+}
+
+function getTransactionPaymentMethodLabel(row: TransactionPageRow) {
+  switch (row.payment_method) {
+    case "bank_account":
+      return "Bank Account"
+    case "credit_card":
+      return row.credit_card_nickname && row.credit_card_last_four
+        ? `${row.credit_card_nickname} •••• ${row.credit_card_last_four}`
+        : "Credit Card"
+    case "credit_card_payment":
+      return row.credit_card_nickname
+        ? `${row.credit_card_nickname} Payment`
+        : "Card Payment"
+    case "voucher":
+      return "Voucher"
+  }
+}
+
+function toTransactionView(row: TransactionPageRow): Transaction {
+  return {
+    id: row.id,
+    name: row.counterparty_name,
+    avatarUrl: row.counterparty_avatar_url ?? "",
+    contactColor: row.counterparty_theme_color,
+    contactInitials: getTransactionInitials(row.counterparty_name),
+    amount: row.amount_cents / 100,
+    accountId: row.account_id,
+    counterpartyId: row.counterparty_id,
+    categoryId: row.category_id,
+    concept: row.concept,
+    date: formatDisplayDate(row.posted_at),
+    postedAt: row.posted_at,
+    createdAt: row.created_at,
+    isVoucherExpense: row.is_voucher_expense,
+    paymentMethod: row.payment_method,
+    creditCardId: row.credit_card_id ?? undefined,
+    creditCardStatementId: row.credit_card_statement_id ?? undefined,
+    paymentMethodLabel: getTransactionPaymentMethodLabel(row),
+    category: row.category_name,
+    description: row.description ?? undefined,
+    budgetId: row.budget_id ?? undefined,
+    budgetCategory: row.budget_category_name ?? undefined,
+  }
+}
+
+export type TransactionPageData = {
+  transactions: Transaction[]
+  totalCount: number
+  totalTransactionCount: number
+  pagination: ReturnType<typeof getTransactionPageBounds>
+  categoryOptions: TransactionFilterOption[]
+}
+
+export async function loadTransactionPage(
+  userId: string,
+  filters: TransactionFilters,
+): Promise<TransactionPageData> {
+  return withFinanceTransaction(userId, async (client) => {
+    const query = buildTransactionQueryParts(userId, filters)
+    const countResult = await client.query<{ count: string }>(
+      `
+        SELECT count(*) AS count
+        ${transactionPageFromSql}
+        ${query.whereSql}
+      `,
+      query.values,
+    )
+    const totalCount = Number(countResult.rows[0]?.count ?? 0)
+    const pagination = getTransactionPageBounds(
+      totalCount,
+      filters.page,
+      TRANSACTION_PAGE_SIZE,
+    )
+    const limitParameter = `$${query.values.length + 1}`
+    const offsetParameter = `$${query.values.length + 2}`
+
+    const pageResult = await client.query<TransactionPageRow>(
+      `
+          ${transactionPageSelectSql}
+          ${transactionPageFromSql}
+          ${query.whereSql}
+          ${query.orderBySql}
+          LIMIT ${limitParameter}
+          OFFSET ${offsetParameter}
+        `,
+      [...query.values, pagination.pageSize, pagination.offset],
+    )
+    const totalResult = await client.query<{ count: string }>(
+      "SELECT count(*) AS count FROM transactions WHERE user_id = $1",
+      [userId],
+    )
+    const categoriesResult = await client.query<{ id: string; name: string }>(
+      "SELECT id, name FROM categories WHERE user_id = $1 ORDER BY name, id",
+      [userId],
+    )
+
+    return {
+      transactions: pageResult.rows.map(toTransactionView),
+      totalCount,
+      totalTransactionCount: Number(totalResult.rows[0]?.count ?? 0),
+      pagination,
+      categoryOptions: categoriesResult.rows.map((category) => ({
+        value: category.id,
+        label: category.name,
+      })),
+    }
+  })
+}
+
+export async function loadLatestTransactions(
+  userId: string,
+  limit: number,
+): Promise<Transaction[]> {
+  const safeLimit = Math.max(0, Math.min(10, Math.floor(limit)))
+
+  if (safeLimit === 0) {
+    return []
+  }
+
+  return withFinanceTransaction(userId, async (client) => {
+    const result = await client.query<TransactionPageRow>(
+      `
+        ${transactionPageSelectSql}
+        ${transactionPageFromSql}
+        WHERE t.user_id = $1
+        ORDER BY t.posted_at DESC, t.created_at DESC, t.id
+        LIMIT $2
+      `,
+      [userId, safeLimit],
+    )
+
+    return result.rows.map(toTransactionView)
   })
 }
 
@@ -562,15 +766,19 @@ async function applyTransactionEffects(
   const balanceDelta = transaction.amount_cents * direction
   const period = toPeriod(transaction.posted_at)
 
-  const [account, accountSummary] = await Promise.all([
-    applyAccountBalanceEffect(
-      client,
-      userId,
-      transaction.account_id,
-      balanceDelta,
-    ),
-    applyAccountSummaryEffect(client, userId, transaction, period, direction),
-  ])
+  const account = await applyAccountBalanceEffect(
+    client,
+    userId,
+    transaction.account_id,
+    balanceDelta,
+  )
+  const accountSummary = await applyAccountSummaryEffect(
+    client,
+    userId,
+    transaction,
+    period,
+    direction,
+  )
 
   return {
     account,
@@ -1843,23 +2051,21 @@ async function getPendingAnnualityForStatement(
   statement: Pick<CreditCardStatementRecord, "period_start">,
   today: string,
 ) {
-  const [overridesResult, statementsResult, transactionsResult] =
-    await Promise.all([
-      client.query<CreditCardAnnualityOverrideRecord>(
-        `
+  const overridesResult = await client.query<CreditCardAnnualityOverrideRecord>(
+    `
           SELECT ${creditCardAnnualityOverrideColumns.join(", ")}
           FROM credit_card_annuality_overrides
           WHERE user_id = $1 AND credit_card_id = $2
         `,
-        [userId, card.id],
-      ),
-      client.query<
-        Pick<
-          CreditCardStatementRecord,
-          "period_start" | "period_end" | "lifecycle_status"
-        >
-      >(
-        `
+    [userId, card.id],
+  )
+  const statementsResult = await client.query<
+    Pick<
+      CreditCardStatementRecord,
+      "period_start" | "period_end" | "lifecycle_status"
+    >
+  >(
+    `
           SELECT
             period_start::text AS period_start,
             period_end::text AS period_end,
@@ -1867,10 +2073,10 @@ async function getPendingAnnualityForStatement(
           FROM credit_card_statements
           WHERE user_id = $1 AND credit_card_id = $2
         `,
-        [userId, card.id],
-      ),
-      client.query<TransactionRecord>(
-        `
+    [userId, card.id],
+  )
+  const transactionsResult = await client.query<TransactionRecord>(
+    `
           SELECT ${transactionSelectColumns.join(", ")}
           FROM transactions
           WHERE user_id = $1
@@ -1878,9 +2084,8 @@ async function getPendingAnnualityForStatement(
             AND payment_method = 'credit_card'
             AND concept = $3
         `,
-        [userId, card.id, ANNUALITY_CONCEPT],
-      ),
-    ])
+    [userId, card.id, ANNUALITY_CONCEPT],
+  )
 
   return getPendingAnnualityInstallmentsForPeriod({
     card,
@@ -2322,9 +2527,10 @@ export async function insertRecurringBill(
           total_payments,
           credit_card_id,
           category_id,
-          archived_at
+          archived_at,
+          paused_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
         RETURNING ${recurringBillColumns.join(", ")}
       `,
       [
@@ -2340,6 +2546,7 @@ export async function insertRecurringBill(
         bill.credit_card_id,
         bill.category_id,
         bill.archived_at,
+        bill.paused_at,
       ],
     )
 
@@ -2466,21 +2673,215 @@ export async function updateRecurringBill(
 }
 
 export async function archiveRecurringBill(userId: string, id: string) {
+  const result = await setRecurringBillInactive(userId, id, { mode: "archive" })
+
+  return result.bill
+}
+
+export type RecurringBillInactiveMode = "pause" | "archive"
+
+export interface SetRecurringBillInactiveInput {
+  mode: RecurringBillInactiveMode
+}
+
+export interface SetRecurringBillInactiveResult {
+  bill: RecurringBillRecord
+}
+
+async function materializeScheduledRecurringBillIfDue(
+  client: PoolClient,
+  userId: string,
+  bill: RecurringBillRecord,
+  localToday: string,
+  timezone: string,
+): Promise<RecurringBillRecord> {
+  if (!bill.scheduled_end_date || !bill.scheduled_end_mode) {
+    return bill
+  }
+
+  if (localToday < bill.scheduled_end_date) {
+    return bill
+  }
+
+  const inactiveAt = inactiveTimestampForCutoffDate(
+    bill.scheduled_end_date,
+    timezone,
+  )
+  const result = await client.query<RecurringBillRecord>(
+    `
+      UPDATE recurring_bills
+      SET
+        paused_at = CASE
+          WHEN $3::text = 'pause' THEN $4::timestamptz
+          ELSE NULL
+        END,
+        archived_at = CASE
+          WHEN $3::text = 'archive' THEN $4::timestamptz
+          ELSE archived_at
+        END,
+        scheduled_end_date = NULL,
+        scheduled_end_mode = NULL
+      WHERE user_id = $1 AND id = $2
+      RETURNING ${recurringBillColumns.join(", ")}
+    `,
+    [userId, bill.id, bill.scheduled_end_mode, inactiveAt],
+  )
+
+  return result.rows[0]
+}
+
+async function materializeScheduledRecurringBillEnds(
+  client: PoolClient,
+  userId: string,
+  bills: RecurringBillRecord[],
+  localToday: string,
+  timezone: string,
+): Promise<RecurringBillRecord[]> {
+  const materialized: RecurringBillRecord[] = []
+
+  for (const bill of bills) {
+    materialized.push(
+      await materializeScheduledRecurringBillIfDue(
+        client,
+        userId,
+        bill,
+        localToday,
+        timezone,
+      ),
+    )
+  }
+
+  return materialized
+}
+
+export async function setRecurringBillInactive(
+  userId: string,
+  id: string,
+  input: SetRecurringBillInactiveInput,
+): Promise<SetRecurringBillInactiveResult> {
+  return withFinanceTransaction(userId, async (client) => {
+    let existing = await getRecurringBillForUpdate(client, userId, id)
+    const localToday = await getUserLocalToday(client, userId)
+    const timezone = await getUserProfileTimezone(client, userId)
+
+    existing = await materializeScheduledRecurringBillIfDue(
+      client,
+      userId,
+      existing,
+      localToday,
+      timezone,
+    )
+
+    if (input.mode === "pause") {
+      if (existing.archived_at) {
+        throw new Error("This bill is archived and cannot be paused.")
+      }
+
+      if (existing.paused_at) {
+        throw new Error("This bill is already paused.")
+      }
+    } else if (existing.archived_at) {
+      throw new Error("This bill is already archived.")
+    }
+
+    const nextDueAfterToday =
+      existing.credit_card_id !== null
+        ? getNextDueDateAfter(existing, localToday)
+        : null
+
+    if (existing.credit_card_id && nextDueAfterToday) {
+      const result = await client.query<RecurringBillRecord>(
+        `
+          UPDATE recurring_bills
+          SET
+            scheduled_end_date = $3,
+            scheduled_end_mode = $4
+          WHERE user_id = $1 AND id = $2
+          RETURNING ${recurringBillColumns.join(", ")}
+        `,
+        [userId, id, nextDueAfterToday, input.mode],
+      )
+
+      return { bill: result.rows[0] }
+    }
+
+    const inactiveAt = new Date().toISOString()
+    const result = await client.query<RecurringBillRecord>(
+      `
+        UPDATE recurring_bills
+        SET
+          paused_at = CASE WHEN $3::text = 'pause' THEN $4::timestamptz ELSE NULL END,
+          archived_at = CASE WHEN $3::text = 'archive' THEN $4::timestamptz ELSE archived_at END,
+          scheduled_end_date = NULL,
+          scheduled_end_mode = NULL
+        WHERE user_id = $1 AND id = $2
+        RETURNING ${recurringBillColumns.join(", ")}
+      `,
+      [userId, id, input.mode, inactiveAt],
+    )
+
+    return { bill: result.rows[0] }
+  })
+}
+
+export async function undoScheduledRecurringBillEnd(
+  userId: string,
+  id: string,
+) {
   return withFinanceTransaction(userId, async (client) => {
     const existing = await getRecurringBillForUpdate(client, userId, id)
 
-    if (existing.archived_at) {
-      throw new Error("This bill is already archived.")
+    if (!existing.scheduled_end_date || !existing.scheduled_end_mode) {
+      throw new Error("This bill does not have a scheduled end.")
+    }
+
+    if (existing.paused_at || existing.archived_at) {
+      throw new Error("This bill is no longer active. Refresh and try again.")
     }
 
     const result = await client.query<RecurringBillRecord>(
       `
         UPDATE recurring_bills
-        SET archived_at = now()
+        SET scheduled_end_date = NULL, scheduled_end_mode = NULL
         WHERE user_id = $1 AND id = $2
         RETURNING ${recurringBillColumns.join(", ")}
       `,
       [userId, id],
+    )
+
+    return result.rows[0]
+  })
+}
+
+export async function resumeRecurringBill(
+  userId: string,
+  id: string,
+  firstDueDate: string,
+) {
+  return withFinanceTransaction(userId, async (client) => {
+    const existing = await getRecurringBillForUpdate(client, userId, id)
+    const localToday = await getUserLocalToday(client, userId)
+
+    if (existing.archived_at) {
+      throw new Error("This bill is archived and cannot be resumed.")
+    }
+
+    if (!existing.paused_at) {
+      throw new Error("This bill is not paused.")
+    }
+
+    if (firstDueDate < localToday) {
+      throw new Error("Choose a start date on or after today.")
+    }
+
+    const result = await client.query<RecurringBillRecord>(
+      `
+        UPDATE recurring_bills
+        SET paused_at = NULL, first_due_date = $3
+        WHERE user_id = $1 AND id = $2
+        RETURNING ${recurringBillColumns.join(", ")}
+      `,
+      [userId, id, firstDueDate],
     )
 
     return result.rows[0]
@@ -3014,10 +3415,8 @@ export async function movePotBalance(
       )
     }
 
-    const [primaryAccountResult, ownerContactResult, categoryResult] =
-      await Promise.all([
-        client.query<AccountRecord>(
-          `
+    const primaryAccountResult = await client.query<AccountRecord>(
+      `
             SELECT ${accountColumns.join(", ")}
             FROM accounts
             WHERE user_id = $1
@@ -3026,40 +3425,39 @@ export async function movePotBalance(
             LIMIT 1
             FOR UPDATE
           `,
-          [userId],
-        ),
-        client.query<CounterpartyRecord>(
-          `
+      [userId],
+    )
+    const ownerContactResult = await client.query<CounterpartyRecord>(
+      `
             SELECT ${counterpartyColumns.join(", ")}
             FROM counterparties
             WHERE user_id = $1
               AND is_account_owner
             LIMIT 1
           `,
-          [userId],
-        ),
-        movement.source.categoryId
-          ? client.query<CategoryRecord>(
-              `
+      [userId],
+    )
+    const categoryResult = movement.source.categoryId
+      ? await client.query<CategoryRecord>(
+          `
                 SELECT ${categoryColumns.join(", ")}
                 FROM categories
                 WHERE user_id = $1
                   AND id = $2
                 LIMIT 1
               `,
-              [userId, movement.source.categoryId],
-            )
-          : client.query<CategoryRecord>(
-              `
+          [userId, movement.source.categoryId],
+        )
+      : await client.query<CategoryRecord>(
+          `
                 SELECT ${categoryColumns.join(", ")}
                 FROM categories
                 WHERE user_id = $1
                   AND lower(name) = 'general'
                 LIMIT 1
               `,
-              [userId],
-            ),
-      ])
+          [userId],
+        )
     const primaryAccount = primaryAccountResult.rows[0]
     const ownerContact = ownerContactResult.rows[0]
     const category = categoryResult.rows[0]

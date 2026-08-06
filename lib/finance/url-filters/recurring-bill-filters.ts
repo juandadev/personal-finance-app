@@ -100,8 +100,10 @@ export function filterRecurringBills(
     const matchesLifecycle =
       filters.lifecycle === "all" ||
       (filters.lifecycle === "active"
-        ? !bill.archivedAt
-        : Boolean(bill.archivedAt))
+        ? !bill.archivedAt && !bill.pausedAt
+        : filters.lifecycle === "paused"
+          ? Boolean(bill.pausedAt) && !bill.archivedAt
+          : Boolean(bill.archivedAt))
 
     return (
       matchesSearch &&

@@ -1,10 +1,14 @@
 import { describe, expect, test } from "bun:test"
 
 import type { RecurringBillPaymentRecord } from "@/lib/finance/types"
+import type { RecurringBillRecord } from "@/lib/finance/types"
 import {
   getBillOccurrenceStatementCycle,
+  getDefaultResumeStartDate,
+  getNextDueDateAfter,
   getOccurrenceDueDate,
   getRecurringBillDueStatus,
+  inactiveTimestampForCutoffDate,
   resolveRecurringBillOccurrences,
   selectCurrentOccurrence,
 } from "@/lib/finance/recurring-bill-schedule"
@@ -13,7 +17,8 @@ const TODAY = "2026-07-08"
 
 function makeBill(
   overrides: Partial<
-    Parameters<typeof resolveRecurringBillOccurrences>[0]
+    Parameters<typeof resolveRecurringBillOccurrences>[0] &
+      Pick<RecurringBillRecord, "credit_card_id">
   > = {},
 ) {
   return {
@@ -21,7 +26,11 @@ function makeBill(
     first_due_date: "2026-05-15",
     total_payments: null,
     archived_at: null,
+    paused_at: null,
+    scheduled_end_date: null,
+    scheduled_end_mode: null,
     amount_cents: 5000,
+    credit_card_id: null,
     ...overrides,
   }
 }
@@ -129,6 +138,50 @@ describe("resolveRecurringBillOccurrences", () => {
     expect(occurrences.at(-1)?.dueDate).toBe("2026-06-15")
   })
 
+  test("stops generating past the pause cutoff but keeps settled history", () => {
+    const payments = [makePayment({ due_date: "2026-05-15" })]
+    const occurrences = resolveRecurringBillOccurrences(
+      makeBill({ paused_at: "2026-06-20T12:00:00.000Z" }),
+      payments,
+      TODAY,
+    )
+
+    expect(occurrences.map((occurrence) => occurrence.dueDate)).toEqual([
+      "2026-05-15",
+      "2026-06-15",
+    ])
+  })
+
+  test("excludes unsettled occurrences on or after the pause cutoff", () => {
+    const occurrences = resolveRecurringBillOccurrences(
+      makeBill({
+        first_due_date: "2026-08-10",
+        paused_at: inactiveTimestampForCutoffDate("2026-08-10"),
+      }),
+      [],
+      "2026-08-04",
+      { includeAllFuture: true, throughDate: "2026-09-30" },
+    )
+
+    expect(occurrences.map((occurrence) => occurrence.dueDate)).toEqual([])
+  })
+
+  test("keeps the current period when a card bill is ending on the next due date", () => {
+    const occurrences = resolveRecurringBillOccurrences(
+      makeBill({
+        first_due_date: "2026-07-28",
+        scheduled_end_date: "2026-08-28",
+      }),
+      [],
+      "2026-08-05",
+      { includeAllFuture: true, throughDate: "2026-09-30" },
+    )
+
+    expect(occurrences.map((occurrence) => occurrence.dueDate)).toEqual([
+      "2026-07-28",
+    ])
+  })
+
   test("stops generating past the archive cutoff but keeps settled history", () => {
     const payments = [makePayment({ due_date: "2026-05-15" })]
     const occurrences = resolveRecurringBillOccurrences(
@@ -167,9 +220,9 @@ describe("resolveRecurringBillOccurrences", () => {
       },
     )
 
-    expect(defaultOccurrences.map((occurrence) => occurrence.dueDate)).toEqual([
-      "2026-08-01",
-    ])
+    expect(defaultOccurrences.map((occurrence) => occurrence.dueDate)).toEqual(
+      [],
+    )
     expect(zonedOccurrences).toEqual([])
   })
 
@@ -290,6 +343,44 @@ describe("selectCurrentOccurrence", () => {
 
     expect(selectCurrentOccurrence(occurrences)?.dueDate).toBe("2026-06-15")
     expect(selectCurrentOccurrence(occurrences)?.status).toBe("paid")
+  })
+})
+
+describe("getDefaultResumeStartDate", () => {
+  test("returns the next schedule occurrence on or after today", () => {
+    expect(getDefaultResumeStartDate("2026-05-15", "monthly", TODAY)).toBe(
+      "2026-07-15",
+    )
+  })
+
+  test("returns today for one-time bills whose due date already passed", () => {
+    expect(getDefaultResumeStartDate("2026-05-15", "one_time", TODAY)).toBe(
+      TODAY,
+    )
+  })
+})
+
+describe("getNextDueDateAfter", () => {
+  test("returns the next due date strictly after today", () => {
+    expect(
+      getNextDueDateAfter(
+        makeBill({ first_due_date: "2026-07-28", frequency: "monthly" }),
+        "2026-08-05",
+      ),
+    ).toBe("2026-08-28")
+  })
+
+  test("returns null when no future due remains", () => {
+    expect(
+      getNextDueDateAfter(
+        makeBill({
+          frequency: "one_time",
+          first_due_date: "2026-07-04",
+          total_payments: 1,
+        }),
+        "2026-08-05",
+      ),
+    ).toBeNull()
   })
 })
 

@@ -49,18 +49,6 @@ const transactions: Transaction[] = [
   },
 ]
 
-mock.module("@/hooks/use-finance", () => ({
-  useFinance: () => ({
-    state: {
-      categories: [
-        { id: "category-1", name: "Groceries" },
-        { id: "category-2", name: "Books" },
-      ],
-    },
-    transactions,
-  }),
-}))
-
 mock.module("@/components/reset-url-filters-button", () => ({
   ResetUrlFiltersButton: ({ onReset }: { onReset: () => void }) => (
     <button
@@ -146,24 +134,46 @@ mock.module("./pagination", () => ({
 
 const { TransactionsContent } = await import("./transactions-content")
 
+const contentProps = {
+  transactions,
+  totalCount: transactions.length,
+  totalTransactionCount: transactions.length,
+  pagination: {
+    safePage: 1,
+    totalPages: 1,
+  },
+  categoryOptions: [
+    { value: "category-1", label: "Groceries" },
+    { value: "category-2", label: "Books" },
+  ],
+}
+
 afterEach(cleanup)
 
 describe("TransactionsContent URL state", () => {
   test("hydrates transaction controls from the URL", () => {
-    render(<TransactionsContent />, {
-      wrapper: withNuqsTestingAdapter({
-        searchParams: "?q=book&category=category-2",
-      }),
-    })
+    render(
+      <TransactionsContent
+        {...contentProps}
+        transactions={[transactions[1]]}
+        totalCount={1}
+      />,
+      {
+        wrapper: withNuqsTestingAdapter({
+          searchParams: "?q=book&category=category-2",
+        }),
+      },
+    )
 
     const search = screen.getByRole("textbox", {
       name: "Search transactions",
     }) as HTMLInputElement
 
     expect(search.value).toBe("book")
-    expect(screen.getByRole("combobox", { name: "Category" }).value).toBe(
-      "category-2",
-    )
+    expect(
+      (screen.getByRole("combobox", { name: "Category" }) as HTMLSelectElement)
+        .value,
+    ).toBe("category-2")
     expect(screen.queryByText("Groceries Market")).toBeNull()
     expect(screen.getByText("Book Shop")).toBeTruthy()
     expect(
@@ -175,7 +185,7 @@ describe("TransactionsContent URL state", () => {
     const user = userEvent.setup()
     const updates: Parameters<OnUrlUpdateFunction>[0][] = []
 
-    render(<TransactionsContent />, {
+    render(<TransactionsContent {...contentProps} />, {
       wrapper: withNuqsTestingAdapter({
         searchParams: "?page=2",
         hasMemory: true,
@@ -201,7 +211,7 @@ describe("TransactionsContent URL state", () => {
     const user = userEvent.setup()
     const updates: Parameters<OnUrlUpdateFunction>[0][] = []
 
-    render(<TransactionsContent />, {
+    render(<TransactionsContent {...contentProps} />, {
       wrapper: withNuqsTestingAdapter({
         searchParams:
           "?q=book&sort=oldest&page=2&budget=budget-1&direction=expense",
