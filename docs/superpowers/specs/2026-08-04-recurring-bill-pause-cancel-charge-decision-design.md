@@ -1,7 +1,7 @@
 # Recurring Bill Pause, Cancel, and Statement Charge Decision — Design
 
 **Date:** 2026-08-04  
-**Status:** Approved for planning
+**Status:** Superseded by `docs/superpowers/specs/2026-08-05-recurring-bill-end-of-period-cancel-pause-design.md`
 
 ## Summary
 
