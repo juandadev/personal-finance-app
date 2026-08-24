@@ -5,6 +5,7 @@ import { z } from "zod"
 
 import { auth } from "@/lib/auth/server"
 import type { AuthFormState } from "@/lib/auth/form-state"
+import { logServerError } from "@/lib/observability/server-logger"
 
 const loginSchema = z.object({
   email: z.string().trim().email("Enter a valid email address."),
@@ -32,7 +33,7 @@ export async function signInWithEmail(
   try {
     result = await auth.signIn.email(parsed.data)
   } catch (error) {
-    console.error("Sign-in request failed:", error)
+    logServerError("email_sign_in_request_failed", error)
 
     return {
       message:
@@ -42,9 +43,7 @@ export async function signInWithEmail(
 
   if (result.error) {
     return {
-      message:
-        result.error.message ||
-        "We could not sign you in. Check your details and try again.",
+      message: "We could not sign you in. Check your details and try again.",
     }
   }
 

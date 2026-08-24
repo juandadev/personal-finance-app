@@ -41,7 +41,7 @@ Add a read-only effective status date to the recurring-bill occurrence view mode
 | Paid or skipped bill               | Not used                                                      | Persisted `paid` or `skipped` status                  |
 | Card assignment cannot be resolved | Original bill due date                                        | Existing date-based status                            |
 
-The card cycle is resolved with the existing `getBillOccurrenceStatementCycle` rules. This includes rolling past paid and elapsed statement cycles and handling subscription-only cards through virtual statements. The resulting `paymentDueDate` is therefore the same due date used by the statement that eventually settles the occurrence.
+The card cycle is resolved with the existing `getBillOccurrenceStatementCycle` rules. This includes rolling past paid statement cycles and keeping unpaid cycles (including virtual statements with no stored row) until they are paid. The resulting `paymentDueDate` is therefore the same due date used by the statement that eventually settles the occurrence.
 
 The view model exposes both the original due date and the effective status date. Recurring-bill row UI displays the effective status date; payment and statement code continue to use the original due date.
 

@@ -9,6 +9,7 @@ import {
   useRef,
 } from "react"
 import type { Dispatch, ReactNode } from "react"
+import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import {
   financeReducer,
@@ -20,6 +21,9 @@ import {
   assignTransactionToBudgetAction,
   archiveCreditCardAction,
   archiveRecurringBillAction,
+  pauseRecurringBillAction,
+  undoScheduledRecurringBillEndAction,
+  resumeRecurringBillAction,
   closeCreditCardStatementAction,
   createBudgetAction,
   createCashForecastAdjustmentAction,
@@ -61,6 +65,7 @@ import { createInitialFinanceState } from "@/lib/finance/seed"
 import { selectFinanceViewModel } from "@/lib/finance/selectors"
 import type {
   BudgetRecord,
+  CreatableRecurringBillRecord,
   CreditCardRecord,
   FinanceState,
   FinanceViewModel,
@@ -70,11 +75,10 @@ import type {
   NewCounterpartyRecord,
   NewCreditCardRecord,
   NewPotRecord,
-  NewRecurringBillRecord,
   NewTransactionRecord,
   PotRecord,
   RecurringBillPaymentSource,
-  RecurringBillRecord,
+  UpdatableRecurringBillRecord,
 } from "@/lib/finance/types"
 import { SidebarProvider } from "@/components/ui/sidebar"
 
@@ -95,11 +99,21 @@ export function FinanceProvider({
   children,
   initialState,
 }: FinanceProviderProps) {
+  const router = useRouter()
   const [state, dispatch] = useReducer(
     financeReducer,
     initialState ?? createInitialFinanceState(),
   )
   const stateRef = useRef(state)
+  const initialStateRef = useRef(initialState)
+
+  useEffect(() => {
+    if (initialState && initialStateRef.current !== initialState) {
+      dispatch({ type: "state/replace", state: initialState })
+    }
+
+    initialStateRef.current = initialState
+  }, [initialState])
 
   useEffect(() => {
     stateRef.current = state
@@ -115,6 +129,7 @@ export function FinanceProvider({
           createTransactionAction(transaction, budgetId).then((result) => {
             if (result.ok) {
               dispatch({ type: "transaction/save", payload: result.data })
+              router.refresh()
             }
 
             return result
@@ -129,6 +144,7 @@ export function FinanceProvider({
           updateTransactionAction(id, updates, budgetId).then((result) => {
             if (result.ok) {
               dispatch({ type: "transaction/save", payload: result.data })
+              router.refresh()
             }
 
             return result
@@ -145,6 +161,7 @@ export function FinanceProvider({
                 accountSummaries: result.data.accountSummaries,
                 creditCardStatements: result.data.creditCardStatements,
               })
+              router.refresh()
             }
 
             return result
@@ -285,6 +302,7 @@ export function FinanceProvider({
                   type: "budget-assignment/upsert",
                   assignment: result.data,
                 })
+                router.refresh()
               }
 
               return result
@@ -299,6 +317,7 @@ export function FinanceProvider({
                 type: "budget-assignment/delete",
                 transaction_id: transactionId,
               })
+              router.refresh()
             }
 
             return result
@@ -360,7 +379,7 @@ export function FinanceProvider({
             return result
           }),
         ),
-      addRecurringBill: (bill: Omit<NewRecurringBillRecord, "archived_at">) =>
+      addRecurringBill: (bill: CreatableRecurringBillRecord) =>
         runFinanceAction(() =>
           createRecurringBillAction(bill).then((result) => {
             if (result.ok) {
@@ -372,9 +391,7 @@ export function FinanceProvider({
         ),
       updateRecurringBill: (
         id: string,
-        updates: Partial<
-          Omit<RecurringBillRecord, "id" | "user_id" | "archived_at">
-        >,
+        updates: Partial<UpdatableRecurringBillRecord>,
       ) =>
         runFinanceAction(() =>
           updateRecurringBillAction(id, updates).then((result) => {
@@ -385,9 +402,45 @@ export function FinanceProvider({
             return result
           }),
         ),
+      pauseRecurringBill: (id: string) =>
+        runFinanceAction(() =>
+          pauseRecurringBillAction(id).then((result) => {
+            if (result.ok) {
+              dispatch({
+                type: "recurring-bill/update",
+                bill: result.data.bill,
+              })
+            }
+
+            return result
+          }),
+        ),
       archiveRecurringBill: (id: string) =>
         runFinanceAction(() =>
           archiveRecurringBillAction(id).then((result) => {
+            if (result.ok) {
+              dispatch({
+                type: "recurring-bill/update",
+                bill: result.data.bill,
+              })
+            }
+
+            return result
+          }),
+        ),
+      undoScheduledRecurringBillEnd: (id: string) =>
+        runFinanceAction(() =>
+          undoScheduledRecurringBillEndAction(id).then((result) => {
+            if (result.ok) {
+              dispatch({ type: "recurring-bill/update", bill: result.data })
+            }
+
+            return result
+          }),
+        ),
+      resumeRecurringBill: (id: string, firstDueDate: string) =>
+        runFinanceAction(() =>
+          resumeRecurringBillAction(id, firstDueDate).then((result) => {
             if (result.ok) {
               dispatch({ type: "recurring-bill/update", bill: result.data })
             }
@@ -777,7 +830,7 @@ export function FinanceProvider({
         )
       },
     }),
-    [dispatch],
+    [dispatch, router],
   )
 
   const value = useMemo<FinanceContextValue>(

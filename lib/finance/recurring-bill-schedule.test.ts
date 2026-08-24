@@ -1,10 +1,14 @@
 import { describe, expect, test } from "bun:test"
 
 import type { RecurringBillPaymentRecord } from "@/lib/finance/types"
+import type { RecurringBillRecord } from "@/lib/finance/types"
 import {
   getBillOccurrenceStatementCycle,
+  getDefaultResumeStartDate,
+  getNextDueDateAfter,
   getOccurrenceDueDate,
   getRecurringBillDueStatus,
+  inactiveTimestampForCutoffDate,
   resolveRecurringBillOccurrences,
   selectCurrentOccurrence,
 } from "@/lib/finance/recurring-bill-schedule"
@@ -13,7 +17,8 @@ const TODAY = "2026-07-08"
 
 function makeBill(
   overrides: Partial<
-    Parameters<typeof resolveRecurringBillOccurrences>[0]
+    Parameters<typeof resolveRecurringBillOccurrences>[0] &
+      Pick<RecurringBillRecord, "credit_card_id">
   > = {},
 ) {
   return {
@@ -21,7 +26,11 @@ function makeBill(
     first_due_date: "2026-05-15",
     total_payments: null,
     archived_at: null,
+    paused_at: null,
+    scheduled_end_date: null,
+    scheduled_end_mode: null,
     amount_cents: 5000,
+    credit_card_id: null,
     ...overrides,
   }
 }
@@ -129,6 +138,50 @@ describe("resolveRecurringBillOccurrences", () => {
     expect(occurrences.at(-1)?.dueDate).toBe("2026-06-15")
   })
 
+  test("stops generating past the pause cutoff but keeps settled history", () => {
+    const payments = [makePayment({ due_date: "2026-05-15" })]
+    const occurrences = resolveRecurringBillOccurrences(
+      makeBill({ paused_at: "2026-06-20T12:00:00.000Z" }),
+      payments,
+      TODAY,
+    )
+
+    expect(occurrences.map((occurrence) => occurrence.dueDate)).toEqual([
+      "2026-05-15",
+      "2026-06-15",
+    ])
+  })
+
+  test("excludes unsettled occurrences on or after the pause cutoff", () => {
+    const occurrences = resolveRecurringBillOccurrences(
+      makeBill({
+        first_due_date: "2026-08-10",
+        paused_at: inactiveTimestampForCutoffDate("2026-08-10"),
+      }),
+      [],
+      "2026-08-04",
+      { includeAllFuture: true, throughDate: "2026-09-30" },
+    )
+
+    expect(occurrences.map((occurrence) => occurrence.dueDate)).toEqual([])
+  })
+
+  test("keeps the current period when a card bill is ending on the next due date", () => {
+    const occurrences = resolveRecurringBillOccurrences(
+      makeBill({
+        first_due_date: "2026-07-28",
+        scheduled_end_date: "2026-08-28",
+      }),
+      [],
+      "2026-08-05",
+      { includeAllFuture: true, throughDate: "2026-09-30" },
+    )
+
+    expect(occurrences.map((occurrence) => occurrence.dueDate)).toEqual([
+      "2026-07-28",
+    ])
+  })
+
   test("stops generating past the archive cutoff but keeps settled history", () => {
     const payments = [makePayment({ due_date: "2026-05-15" })]
     const occurrences = resolveRecurringBillOccurrences(
@@ -167,9 +220,9 @@ describe("resolveRecurringBillOccurrences", () => {
       },
     )
 
-    expect(defaultOccurrences.map((occurrence) => occurrence.dueDate)).toEqual([
-      "2026-08-01",
-    ])
+    expect(defaultOccurrences.map((occurrence) => occurrence.dueDate)).toEqual(
+      [],
+    )
     expect(zonedOccurrences).toEqual([])
   })
 
@@ -293,6 +346,44 @@ describe("selectCurrentOccurrence", () => {
   })
 })
 
+describe("getDefaultResumeStartDate", () => {
+  test("returns the next schedule occurrence on or after today", () => {
+    expect(getDefaultResumeStartDate("2026-05-15", "monthly", TODAY)).toBe(
+      "2026-07-15",
+    )
+  })
+
+  test("returns today for one-time bills whose due date already passed", () => {
+    expect(getDefaultResumeStartDate("2026-05-15", "one_time", TODAY)).toBe(
+      TODAY,
+    )
+  })
+})
+
+describe("getNextDueDateAfter", () => {
+  test("returns the next due date strictly after today", () => {
+    expect(
+      getNextDueDateAfter(
+        makeBill({ first_due_date: "2026-07-28", frequency: "monthly" }),
+        "2026-08-05",
+      ),
+    ).toBe("2026-08-28")
+  })
+
+  test("returns null when no future due remains", () => {
+    expect(
+      getNextDueDateAfter(
+        makeBill({
+          frequency: "one_time",
+          first_due_date: "2026-07-04",
+          total_payments: 1,
+        }),
+        "2026-08-05",
+      ),
+    ).toBeNull()
+  })
+})
+
 describe("getBillOccurrenceStatementCycle", () => {
   const card = { closing_day_of_month: 20, payment_due_day_of_month: 5 }
 
@@ -361,13 +452,39 @@ describe("getBillOccurrenceStatementCycle", () => {
     expect(cycle.periodStart).toBe("2026-04-21")
   })
 
-  test("rolls elapsed cycles without a statement row into the current cycle", () => {
-    // No purchases ever happened, so no statement rows exist. An occurrence
-    // due two cycles ago must land on the current payable cycle instead of a
-    // past cycle that will never get a statement.
+  test("keeps an elapsed unpaid cycle with no statement row", () => {
     const cycle = getBillOccurrenceStatementCycle("2026-05-04", card, [], TODAY)
 
-    expect(cycle.periodStart).toBe("2026-06-21")
-    expect(cycle.periodEnd).toBe("2026-07-20")
+    expect(cycle.periodStart).toBe("2026-04-21")
+    expect(cycle.periodEnd).toBe("2026-05-20")
+    expect(cycle.paymentDueDate).toBe("2026-06-05")
+  })
+
+  test("keeps a closed unpaid cycle that is still due after period end", () => {
+    const banamex = {
+      closing_day_of_month: 7,
+      payment_due_day_of_month: 15,
+    }
+    const cycle = getBillOccurrenceStatementCycle(
+      "2026-08-06",
+      banamex,
+      [
+        {
+          period_start: "2026-05-08",
+          period_end: "2026-06-07",
+          lifecycle_status: "paid",
+        },
+        {
+          period_start: "2026-06-08",
+          period_end: "2026-07-07",
+          lifecycle_status: "paid",
+        },
+      ],
+      "2026-08-14",
+    )
+
+    expect(cycle.periodStart).toBe("2026-07-08")
+    expect(cycle.periodEnd).toBe("2026-08-07")
+    expect(cycle.paymentDueDate).toBe("2026-08-15")
   })
 })

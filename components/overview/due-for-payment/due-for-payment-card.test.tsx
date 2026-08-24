@@ -63,7 +63,13 @@ mock.module("@/hooks/use-finance", () => ({
 }))
 
 mock.module("@/components/money-amount", () => ({
-  MoneyAmount: ({ amount }: { amount: number }) => <span>{`$${amount}`}</span>,
+  MoneyAmount: ({
+    amount,
+    forceDecimals,
+  }: {
+    amount: number
+    forceDecimals?: boolean
+  }) => <span>{`$${amount.toFixed(forceDecimals ? 2 : 0)}`}</span>,
 }))
 
 mock.module("@/components/contact-avatar", () => ({

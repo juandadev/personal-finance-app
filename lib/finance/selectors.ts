@@ -343,6 +343,9 @@ function selectRecurringBills(
       categoryId: bill.category_id,
       category: category.name,
       archivedAt: bill.archived_at ?? undefined,
+      pausedAt: bill.paused_at ?? undefined,
+      scheduledEndDate: bill.scheduled_end_date ?? undefined,
+      scheduledEndMode: bill.scheduled_end_mode ?? undefined,
       occurrences: occurrenceStates.map(toOccurrenceView),
       currentOccurrence: currentOccurrence
         ? toOccurrenceView(currentOccurrence)
@@ -355,10 +358,14 @@ function selectRecurringBills(
 
 const URGENT_BILL_STATUSES = new Set(["due-soon", "due-today", "overdue"])
 
+function isActiveRecurringBill(bill: RecurringBill) {
+  return !bill.archivedAt && !bill.pausedAt
+}
+
 function selectManualBillsDueReminder(bills: RecurringBill[]): RecurringBill[] {
   const filtered = bills.filter(
     (bill) =>
-      !bill.archivedAt &&
+      isActiveRecurringBill(bill) &&
       !bill.creditCardId &&
       URGENT_BILL_STATUSES.has(bill.status),
   )
@@ -383,7 +390,7 @@ function selectRecurringBillsSummary(
 ): FinanceViewModel["recurringBillsSummary"] {
   const currentMonth = today.slice(0, 7)
   const nextMonth = getNextYearMonth(currentMonth)
-  const activeBills = recurringBills.filter((bill) => !bill.archivedAt)
+  const activeBills = recurringBills.filter(isActiveRecurringBill)
 
   let paidCount = 0
   let paidAmount = 0
@@ -969,7 +976,7 @@ export function selectFinanceViewModel(
     today,
   )
   const totalBillsAmount = recurringBills
-    .filter((bill) => !bill.archivedAt)
+    .filter((bill) => !bill.archivedAt && !bill.pausedAt)
     .reduce((sum, bill) => sum + bill.amount, 0)
   const creditCardObligations = buildCreditCardObligations({
     cards: state.creditCards,

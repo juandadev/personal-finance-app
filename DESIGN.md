@@ -319,6 +319,20 @@ Finance data must stay readable on mobile.
   reject, and always render `result.message` through the inline status
   message when `ok` is `false`.
 
+### Account & Data
+
+- Keep account controls in a dedicated Settings page with separate cards for
+  identity, portable data, privacy information, and destructive actions.
+- Describe exports and deletion in plain language before presenting the action;
+  state what is included, whether the action is reversible, and what remains in
+  time-limited backups.
+- Data export is a secondary action. Account deletion uses a destructive button,
+  an `AlertDialog`, an exact typed confirmation phrase, and current-password
+  verification when the account supports password sign-in.
+- Keep the privacy notice reachable from Settings and signed-out auth screens.
+  Legal placeholders or review notes belong in source documentation, not in
+  polished user-facing copy.
+
 ### Error States
 
 - Route-level crashes use the `app/error.tsx` boundary: a centered `Card` with
@@ -537,17 +551,26 @@ Button labels should be action-specific: `Add Money`, `Create Budget`,
   desktop. `Pay Bill` and `Skip` live in that menu on mobile.
 - The bill dialog locks `frequency` and `first due date` once a bill has any
   settled payment. Locked fields render disabled with helper text explaining
-  to archive and recreate the bill to reschedule.
+  to archive and recreate the bill to reschedule frequency. Resume is the
+  allowed path to set a new start date without recreating the bill.
 - Paying an occurrence always asks for the payment source: the bank account or
   one of the user's credit cards (using `CreditCardBadge`).
-- Skip and Archive are confirmed with `AlertDialog`. Copy states that skipping
-  records no money movement and archiving stops future occurrences while
-  keeping history.
+- Skip, Pause, Cancel, and Resume are confirmed with `AlertDialog`. Skipping
+  records no money movement. For **card-assigned** bills, Pause and Cancel
+  schedule an end on the next due date after today: the bill stays in the
+  Active list with `Pauses on …` / `Cancels on …` until that date, the current
+  statement charge is always kept, and that end date is never charged. Undo
+  clears a pending end before it takes effect. After the end date, Cancel moves
+  the bill to Archived and Pause moves it to Paused (resumable with a new start
+  date on or after today). **Non-card** Pause and Cancel stop immediately from
+  today.
 - Card-assigned bill occurrences render inside the card's statement history as
   pending lines: muted row, `Pending` badge, due date. Statement balances
   shown anywhere include pending bill amounts.
-- Archived bills stay listed under an `Archived` group with muted styling, no
-  pay/skip actions, and no new occurrences.
+- Active bills stay in the main list. Paused bills appear under a `Paused`
+  group with muted styling, `Resume` and `Cancel` actions, and no pay/skip.
+  Archived bills appear under `Archived` with the same muted treatment and no
+  resume action.
 - Overview left column includes a **Due for payment** card under Transactions.
   It lists active manual bills (no credit card) whose current status is
   `Overdue`, `Due Today`, or `Due Soon`. Show at most 4 rows; empty state copy

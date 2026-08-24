@@ -42,6 +42,9 @@ const bill: RecurringBillRecord = {
   credit_card_id: card.id,
   category_id: "category-1",
   archived_at: null,
+  paused_at: null,
+  scheduled_end_date: null,
+  scheduled_end_mode: null,
 }
 
 const statement: CreditCardStatementRecord = {
@@ -164,6 +167,24 @@ describe("buildCreditCardObligations", () => {
     expect(persisted?.isPaid).toBe(true)
   })
 
+  test("keeps the current pending charge when a card bill is ending", () => {
+    const obligation = build({
+      recurringBills: [
+        {
+          ...bill,
+          first_due_date: "2026-07-28",
+          scheduled_end_date: "2026-08-28",
+          scheduled_end_mode: "archive",
+        },
+      ],
+      asOfDate: "2026-08-05",
+      throughDate: "2026-09-30",
+    }).find((candidate) => candidate.periodStart === "2026-07-21")
+
+    expect(obligation?.pendingBillAmountCents).toBe(10_000)
+    expect(obligation?.pendingBillLines).toHaveLength(1)
+  })
+
   test("adds pending annuality installments to statement totals", () => {
     const obligations = build({
       cards: [
@@ -186,5 +207,59 @@ describe("buildCreditCardObligations", () => {
     expect(withAnnuality?.pendingAnnualityLines).toHaveLength(1)
     expect(withAnnuality?.pendingAnnualityAmountCents).toBe(30_000)
     expect(withAnnuality?.amountCents).toBeGreaterThanOrEqual(30_000)
+  })
+
+  test("keeps a payable virtual statement after close when no purchase exists", () => {
+    const installmentCard = {
+      ...card,
+      closing_day_of_month: 7,
+      payment_due_day_of_month: 15,
+    }
+    const obligations = build({
+      cards: [installmentCard],
+      statements: [
+        {
+          ...statement,
+          period_start: "2026-06-08",
+          period_end: "2026-07-07",
+          payment_due_date: "2026-07-15",
+          lifecycle_status: "paid",
+          paid_at: "2026-07-15",
+        },
+      ],
+      transactions: [],
+      recurringBills: [
+        {
+          ...bill,
+          first_due_date: "2026-07-06",
+          amount_cents: 242_066,
+        },
+      ],
+      recurringBillPayments: [
+        {
+          id: "bill-payment-july",
+          user_id: "user-1",
+          recurring_bill_id: bill.id,
+          due_date: "2026-07-06",
+          amount_cents: 242_066,
+          status: "paid",
+          transaction_id: "transaction-july",
+          paid_at: "2026-07-15",
+        },
+      ],
+      asOfDate: "2026-08-14",
+      throughDate: "2026-08-14",
+    })
+    const payable = obligations.find(
+      (obligation) => obligation.periodStart === "2026-07-08",
+    )
+
+    expect(payable?.isVirtual).toBe(true)
+    expect(payable?.periodEnd).toBe("2026-08-07")
+    expect(payable?.paymentDueDate).toBe("2026-08-15")
+    expect(payable?.amountCents).toBe(242_066)
+    expect(
+      obligations.find((obligation) => obligation.periodStart === "2026-08-08"),
+    ).toBeUndefined()
   })
 })

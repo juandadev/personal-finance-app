@@ -8,6 +8,7 @@ import {
   AuthPasswordField,
   AuthSubmitButton,
 } from "@/components/auth/auth-page-shell"
+import { GoogleSignInButton } from "@/components/auth/google-sign-in-button"
 import { FormStatusMessage } from "@/components/ui/form"
 import { useStandardForm } from "@/lib/forms/use-standard-form"
 
@@ -48,6 +49,8 @@ export function LoginForm() {
       aria-label="Login form"
       onSubmit={standardForm.handleSubmit}
     >
+      <GoogleSignInButton />
+
       <standardForm.form.Field name="email">
         {(field) => (
           <AuthField

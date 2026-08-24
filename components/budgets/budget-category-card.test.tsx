@@ -29,7 +29,11 @@ mock.module("@/hooks/use-finance", () => ({
 }))
 
 mock.module("@/components/actions", () => ({
+  HeaderMenuItem: ({ children }: { children: ReactNode }) => <>{children}</>,
   ItemActions: ({ children }: { children: ReactNode }) => <>{children}</>,
+  ModuleHeaderActions: ({ children }: { children?: ReactNode }) => (
+    <>{children}</>
+  ),
 }))
 
 mock.module("./delete-budget-dialog", () => ({

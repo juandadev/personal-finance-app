@@ -13,7 +13,12 @@ import { ItemActions } from "@/components/actions"
 import { ContactAvatar } from "@/components/contact-avatar"
 import { MoneyAmount } from "@/components/money-amount"
 import { PrivacyValue } from "@/components/privacy-value"
-import { ArchiveBillDialog } from "@/components/recurring-bills/archive-bill-dialog"
+import {
+  ArchiveBillDialog,
+  InactiveBillDialog,
+} from "@/components/recurring-bills/inactive-bill-dialog"
+import { UndoScheduledEndDialog } from "@/components/recurring-bills/undo-scheduled-end-dialog"
+import { ResumeBillDialog } from "@/components/recurring-bills/resume-bill-dialog"
 import { EditBillDialog } from "@/components/recurring-bills/bill-dialog"
 import { PayBillDialog } from "@/components/recurring-bills/pay-bill-dialog"
 import { SkipBillOccurrenceDialog } from "@/components/recurring-bills/skip-bill-occurrence-dialog"
@@ -159,20 +164,29 @@ function StatusIndicator({
   iconClassName?: string
 }) {
   const status = bill.status
+  const endingLabel = endingBillLabel(bill)
 
   return (
-    <span className="flex items-center gap-1.5">
-      <span className={cn("text-sm", statusClassName(status))}>
-        {scheduleLabel(bill)} - <BillScheduleShortDate bill={bill} /> ·{" "}
-        <span className="font-semibold">{statusLabels[status]}</span>
+    <span className="flex flex-col gap-0.5">
+      <span className="flex items-center gap-1.5">
+        <span className={cn("text-sm", statusClassName(status))}>
+          {scheduleLabel(bill)} - <BillScheduleShortDate bill={bill} /> ·{" "}
+          <span className="font-semibold">{statusLabels[status]}</span>
+        </span>
+        <StatusIcon status={status} iconClassName={iconClassName} />
       </span>
-      <StatusIcon status={status} iconClassName={iconClassName} />
+      {endingLabel ? (
+        <span className="text-muted-foreground text-xs font-semibold">
+          {endingLabel}
+        </span>
+      ) : null}
     </span>
   )
 }
 
 function MobileDueDateIndicator({ bill }: { bill: RecurringBill }) {
   const status = bill.status
+  const endingLabel = endingBillLabel(bill)
   const frequency =
     bill.frequency === "yearly"
       ? "Yearly"
@@ -181,16 +195,23 @@ function MobileDueDateIndicator({ bill }: { bill: RecurringBill }) {
         : "Monthly"
 
   return (
-    <span
-      className={cn(
-        "flex items-center gap-1.5 text-xs",
-        statusClassName(status),
-      )}
-    >
-      <span className="truncate">
-        {frequency} - <BillScheduleShortDate bill={bill} />
+    <span className="flex flex-col gap-0.5">
+      <span
+        className={cn(
+          "flex items-center gap-1.5 text-xs",
+          statusClassName(status),
+        )}
+      >
+        <span className="truncate">
+          {frequency} - <BillScheduleShortDate bill={bill} />
+        </span>
+        <StatusIcon status={status} iconClassName="size-3.5 shrink-0" />
       </span>
-      <StatusIcon status={status} iconClassName="size-3.5 shrink-0" />
+      {endingLabel ? (
+        <span className="text-muted-foreground text-xs font-semibold">
+          {endingLabel}
+        </span>
+      ) : null}
     </span>
   )
 }
@@ -250,14 +271,16 @@ function BillIdentity({
         initials={bill.contactInitials}
         color={bill.contactColor}
         avatarUrl={bill.avatarUrl || undefined}
-        className={cn("shrink-0", bill.archivedAt && "opacity-60")}
+        className={cn("shrink-0", isInactiveBill(bill) && "opacity-60")}
       />
       <div className="min-w-0">
         <div className="flex items-center gap-1.5">
           <span
             className={cn(
               "truncate font-bold",
-              bill.archivedAt ? "text-muted-foreground" : "text-foreground",
+              bill.archivedAt || bill.pausedAt
+                ? "text-muted-foreground"
+                : "text-foreground",
             )}
           >
             {bill.concept}
@@ -274,6 +297,31 @@ function BillIdentity({
   )
 }
 
+function isEndingBill(bill: RecurringBill) {
+  return Boolean(
+    bill.scheduledEndDate &&
+    bill.scheduledEndMode &&
+    !bill.archivedAt &&
+    !bill.pausedAt,
+  )
+}
+
+function endingBillLabel(bill: RecurringBill) {
+  if (!bill.scheduledEndDate || !bill.scheduledEndMode) {
+    return null
+  }
+
+  const formattedDate = formatDisplayDate(bill.scheduledEndDate, "d MMM, yyyy")
+
+  return bill.scheduledEndMode === "pause"
+    ? `Pauses on ${formattedDate}`
+    : `Cancels on ${formattedDate}`
+}
+
+function isInactiveBill(bill: RecurringBill) {
+  return Boolean(bill.archivedAt || bill.pausedAt)
+}
+
 function BillActions({
   bill,
   variant = "desktop",
@@ -282,12 +330,18 @@ function BillActions({
   variant?: "desktop" | "mobile"
 }) {
   const [isEditOpen, setIsEditOpen] = useState(false)
+  const [isPauseOpen, setIsPauseOpen] = useState(false)
   const [isArchiveOpen, setIsArchiveOpen] = useState(false)
+  const [isResumeOpen, setIsResumeOpen] = useState(false)
   const [isPayOpen, setIsPayOpen] = useState(false)
   const [isSkipOpen, setIsSkipOpen] = useState(false)
+  const [isUndoOpen, setIsUndoOpen] = useState(false)
   const occurrence = bill.currentOccurrence
+  const isActive = !bill.archivedAt && !bill.pausedAt
+  const isEnding = isEndingBill(bill)
+  const isPaused = Boolean(bill.pausedAt) && !bill.archivedAt
   const isActionable =
-    !bill.archivedAt &&
+    isActive &&
     occurrence &&
     occurrence.status !== "paid" &&
     occurrence.status !== "skipped"
@@ -303,7 +357,7 @@ function BillActions({
           <PayBillDialog bill={bill} occurrence={occurrence} />
         </>
       ) : null}
-      {!bill.archivedAt ? (
+      {isActive ? (
         <ItemActions ariaLabel={`More options for ${bill.concept}`}>
           {canSettleManually && collapseSettleActions ? (
             <>
@@ -315,17 +369,42 @@ function BillActions({
               </DropdownMenuItem>
             </>
           ) : null}
+          {isEnding ? (
+            <DropdownMenuItem onSelect={() => setIsUndoOpen(true)}>
+              Undo {bill.scheduledEndMode === "pause" ? "Pause" : "Cancel"}
+            </DropdownMenuItem>
+          ) : null}
           <DropdownMenuItem onSelect={() => setIsEditOpen(true)}>
             Edit Bill
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => setIsPauseOpen(true)}>
+            {isEnding && bill.scheduledEndMode === "pause"
+              ? "Update Pause"
+              : "Pause Bill"}
           </DropdownMenuItem>
           {bill.hasPayments ? (
             <DropdownMenuItem
               variant="destructive"
               onSelect={() => setIsArchiveOpen(true)}
             >
-              Archive Bill
+              {isEnding && bill.scheduledEndMode === "archive"
+                ? "Update Cancel"
+                : "Cancel Bill"}
             </DropdownMenuItem>
           ) : null}
+        </ItemActions>
+      ) : null}
+      {isPaused ? (
+        <ItemActions ariaLabel={`More options for ${bill.concept}`}>
+          <DropdownMenuItem onSelect={() => setIsResumeOpen(true)}>
+            Resume Bill
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            variant="destructive"
+            onSelect={() => setIsArchiveOpen(true)}
+          >
+            Cancel Bill
+          </DropdownMenuItem>
         </ItemActions>
       ) : null}
       {canSettleManually && occurrence && collapseSettleActions ? (
@@ -351,13 +430,38 @@ function BillActions({
             open={isEditOpen}
             onOpenChange={setIsEditOpen}
           />
-          {bill.hasPayments ? (
-            <ArchiveBillDialog
+          <InactiveBillDialog
+            bill={bill}
+            mode="pause"
+            open={isPauseOpen}
+            onOpenChange={setIsPauseOpen}
+          />
+          <ArchiveBillDialog
+            bill={bill}
+            open={isArchiveOpen}
+            onOpenChange={setIsArchiveOpen}
+          />
+          {isEnding ? (
+            <UndoScheduledEndDialog
               bill={bill}
-              open={isArchiveOpen}
-              onOpenChange={setIsArchiveOpen}
+              open={isUndoOpen}
+              onOpenChange={setIsUndoOpen}
             />
           ) : null}
+        </>
+      ) : null}
+      {isPaused ? (
+        <>
+          <ResumeBillDialog
+            bill={bill}
+            open={isResumeOpen}
+            onOpenChange={setIsResumeOpen}
+          />
+          <ArchiveBillDialog
+            bill={bill}
+            open={isArchiveOpen}
+            onOpenChange={setIsArchiveOpen}
+          />
         </>
       ) : null}
     </>
@@ -366,7 +470,7 @@ function BillActions({
 
 export function BillTableRow({ bill }: BillTableRowProps) {
   return (
-    <TableRow className={cn(bill.archivedAt && "opacity-70")}>
+    <TableRow className={cn(isInactiveBill(bill) && "opacity-70")}>
       <TableCell>
         <BillIdentity bill={bill} />
       </TableCell>
@@ -395,7 +499,7 @@ export function MobileBillRow({ bill }: BillTableRowProps) {
     <li
       className={cn(
         "flex items-start gap-2 py-4",
-        bill.archivedAt && "opacity-70",
+        isInactiveBill(bill) && "opacity-70",
       )}
     >
       <ContactAvatar
@@ -403,13 +507,13 @@ export function MobileBillRow({ bill }: BillTableRowProps) {
         initials={bill.contactInitials}
         color={bill.contactColor}
         avatarUrl={bill.avatarUrl || undefined}
-        className={cn("shrink-0", bill.archivedAt && "opacity-60")}
+        className={cn("shrink-0", isInactiveBill(bill) && "opacity-60")}
       />
       <div className="min-w-0 flex-1">
         <span
           className={cn(
             "block truncate text-sm font-bold",
-            bill.archivedAt ? "text-muted-foreground" : "text-foreground",
+            isInactiveBill(bill) ? "text-muted-foreground" : "text-foreground",
           )}
         >
           {bill.concept}

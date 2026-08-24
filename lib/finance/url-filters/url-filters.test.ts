@@ -271,6 +271,11 @@ describe("recurring bill filters", () => {
       archivedAt: "2026-07-01",
       status: "paid",
     })
+    const paused = makeBill({
+      id: "paused",
+      pausedAt: "2026-07-02",
+      status: "upcoming",
+    })
     const filters = normalizeRecurringBillFilters({
       q: "internet",
       sort: "latest",
@@ -292,6 +297,28 @@ describe("recurring bill filters", () => {
     expect(filterRecurringBills([matching, archived], filters)).toEqual([
       matching,
     ])
+    expect(
+      filterRecurringBills(
+        [matching, paused, archived],
+        normalizeRecurringBillFilters({
+          q: "",
+          sort: "latest",
+          page: 1,
+          category: [],
+          counterparty: [],
+          frequency: [],
+          status: [],
+          dueFrom: null,
+          dueTo: null,
+          minAmount: null,
+          maxAmount: null,
+          source: [],
+          card: [],
+          lifecycle: "paused",
+          schedule: null,
+        }),
+      ),
+    ).toEqual([paused])
   })
 })
 

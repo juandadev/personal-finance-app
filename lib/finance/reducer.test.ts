@@ -23,6 +23,23 @@ const adjustment: CashForecastAdjustmentRecord = {
   updated_at: "2026-07-01T00:00:00.000Z",
 }
 
+describe("financeReducer shell state", () => {
+  test("replaces the client snapshot after a server refresh", () => {
+    const current = createInitialFinanceState()
+    const refreshed = {
+      ...createInitialFinanceState(),
+      preferences: {
+        ...createInitialFinanceState().preferences,
+        user_id: "user-1",
+      },
+    }
+
+    expect(
+      financeReducer(current, { type: "state/replace", state: refreshed }),
+    ).toBe(refreshed)
+  })
+})
+
 describe("financeReducer cash forecast events", () => {
   test("saves zero-income settings without treating them as missing", () => {
     const state = createInitialFinanceState()

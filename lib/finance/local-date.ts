@@ -32,3 +32,21 @@ export function assertDateNotAfterLocalToday(
 
   return localToday
 }
+
+export function localDateToEndOfDayInstant(
+  isoDate: string,
+  timezone: string,
+): string {
+  const [year = 0, month = 0, day = 0] = isoDate.split("-").map(Number)
+  const base = Date.UTC(year, month - 1, day, 23, 59, 59, 999)
+
+  for (let offsetHours = 0; offsetHours < 48; offsetHours += 1) {
+    const candidate = new Date(base - offsetHours * 3_600_000)
+
+    if (getLocalIsoDate(candidate, timezone) === isoDate) {
+      return candidate.toISOString()
+    }
+  }
+
+  return new Date(base).toISOString()
+}

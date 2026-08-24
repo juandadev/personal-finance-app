@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/select"
 import { useFinance } from "@/hooks/use-finance"
 import { formatDollarInput } from "@/lib/finance/form-utils"
-import type { NewRecurringBillRecord } from "@/lib/finance/types"
+import type { CreatableRecurringBillRecord } from "@/lib/finance/types"
 import {
   currencyCentsSchema,
   requiredSelectSchema,
@@ -190,7 +190,7 @@ function BillDialog({
       defaultValues,
       schema: billFormSchema,
       onSubmit: async ({ applyActionResult, resetForm, value }) => {
-        const payload: Omit<NewRecurringBillRecord, "archived_at"> = {
+        const payload: CreatableRecurringBillRecord = {
           id: bill?.id ?? crypto.randomUUID(),
           counterparty_id: value.counterpartyId,
           concept: value.concept,

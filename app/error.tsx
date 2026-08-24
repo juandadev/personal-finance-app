@@ -15,8 +15,8 @@ export default function AppError({
   reset: () => void
 }) {
   useEffect(() => {
-    console.error("Unhandled app error:", error)
-  }, [error])
+    console.error("Unhandled app error.", { digest: error.digest })
+  }, [error.digest])
 
   return (
     <div className="bg-background flex min-h-svh items-center justify-center px-5 py-8">

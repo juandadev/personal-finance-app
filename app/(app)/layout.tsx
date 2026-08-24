@@ -1,10 +1,8 @@
 import type { ReactNode } from "react"
-import { redirect } from "next/navigation"
 
 import { FinanceAppShell } from "@/components/providers/finance-app-shell"
-import { isAdminUser } from "@/lib/admin/access"
-import { auth } from "@/lib/auth/server"
-import { loadFinanceState } from "@/lib/finance/queries"
+import { requireAuth } from "@/lib/auth/session"
+import { loadFinanceShellState } from "@/lib/finance/queries"
 
 export const dynamic = "force-dynamic"
 
@@ -16,23 +14,14 @@ function getSessionDisplayName(user: {
 }
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
-  const { data: session } = await auth.getSession()
+  const session = await requireAuth({ redirectTo: "/login" })
 
-  if (!session?.user?.id) {
-    redirect("/login")
-  }
-
-  const initialState = await loadFinanceState(
+  const initialState = await loadFinanceShellState(
     session.user.id,
     getSessionDisplayName(session.user),
   )
 
   return (
-    <FinanceAppShell
-      initialState={initialState}
-      isAdmin={isAdminUser(session.user)}
-    >
-      {children}
-    </FinanceAppShell>
+    <FinanceAppShell initialState={initialState}>{children}</FinanceAppShell>
   )
 }

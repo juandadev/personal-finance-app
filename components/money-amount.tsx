@@ -74,7 +74,7 @@ export function MoneyAmount({
     ? formatCompactAmount(amount, variant, currency)
     : fullAmount
 
-  const amountClassName = cn("tabular-nums tracking-tight", className)
+  const amountClassName = cn("tabular-nums tracking-tighter", className)
 
   if (!shouldCompact) {
     return (

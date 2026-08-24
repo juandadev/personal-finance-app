@@ -75,8 +75,22 @@ Required values:
 
 - `DATABASE_URL`: pooled Neon Postgres connection string for the app runtime.
 - `DATABASE_DIRECT_URL`: direct Neon Postgres connection string for migrations.
+- `AUTH_DATABASE_URL`: pooled connection string for a dedicated webhook login
+  role that is a member of the migration-created `finance_auth_gate` NOLOGIN
+  role. It must not reuse the finance runtime or database-owner role.
+- `SCHEDULER_DATABASE_URL`: pooled connection string for the dedicated
+  monthly-close login role. It must not reuse the web or owner role.
+- `INVITATION_OPERATOR_DATABASE_URL`: optional direct connection string for a
+  dedicated invitation operator. Invite commands fall back to
+  `DATABASE_DIRECT_URL` when it is unset.
 - `NEON_AUTH_BASE_URL`: Neon Auth branch URL.
 - `NEON_AUTH_COOKIE_SECRET`: at least 32 characters, for example from `openssl rand -base64 32`.
+- `CRON_SECRET`: at least 32 random bytes used only by the scheduled route.
+- `PRIVACY_CONTROLLER_NAME`, `PRIVACY_CONTROLLER_ADDRESS`,
+  `PRIVACY_CONTACT_EMAIL`, and `SECURITY_CONTACT_EMAIL`: production privacy
+  notice and incident contacts.
+- `NEXT_PUBLIC_ENABLE_ANALYTICS`: leave `false` for the closed beta unless the
+  privacy notice and processor review explicitly cover Analytics.
 
 ### Development
 
@@ -103,17 +117,70 @@ bun run db:migrate
 
 The schema uses normalized finance tables, UUID record IDs, integer cents, foreign keys, and PostgreSQL Row Level Security. Runtime queries are parameterized raw SQL through `pg`; no ORM is used.
 
+### Beta Invitations
+
+Migration `023_beta_invitations.sql` creates the invitation and processed
+webhook-event tables, the `finance_auth_gate` NOLOGIN role, and one
+`SECURITY DEFINER` authorization function. Create a dedicated Neon login role,
+grant it membership in `finance_auth_gate`, and use that role only in
+`AUTH_DATABASE_URL`. The role receives function execution only; it does not
+receive direct access to either invitation table.
+
+If you create a dedicated invitation operator instead of using the migration
+owner, grant it only `CONNECT`, `USAGE` on `public`, and `SELECT`, `INSERT`, and
+`UPDATE` on `public.beta_invitations`. It does not need access to
+`public.auth_webhook_events` or the webhook authorization function.
+
+Invitation records are keyed by normalized email and contain no raw invitation
+token. Every command requires actor and reason metadata:
+
+```bash
+bun run auth:invites create person@example.com --expires-in 7d --actor juanda --reason "Private beta"
+bun run auth:invites revoke person@example.com --actor juanda --reason "Access withdrawn"
+bun run auth:invites list --status active
+bun run auth:invites list --status all
+```
+
+### Neon Auth Production Configuration
+
+The application code does not mutate Neon configuration. Complete these steps
+for each production branch in the Neon Console or Neon API:
+
+1. Configure the HTTPS webhook URL as
+   `https://<trusted-app-domain>/api/webhooks/neon-auth`, enable only
+   `user.before_create`, and use a timeout comfortably below Neon's 15-second
+   global retry budget (5 seconds is the documented default).
+2. Add every production application origin to Neon Auth trusted domains.
+3. Enable required email verification. The authenticated layout rejects
+   sessions whose `emailVerified` value is false.
+4. Configure a custom SMTP provider for production delivery.
+5. Configure production Google OAuth credentials. Register
+   `{NEON_AUTH_BASE_URL}/callback/google` as Google's authorized redirect URI;
+   the application origin remains the trusted post-auth callback URL.
+6. Set the Auth application name and disable **Allow Localhost** on the
+   production branch.
+
+The webhook verifies Neon's detached Ed25519 JWS against
+`{NEON_AUTH_BASE_URL}/.well-known/jwks.json`, checks timestamp freshness, and
+fails closed. Do not put database credentials, OAuth secrets, or SMTP
+credentials in source control.
+
 ## Available Scripts
 
 ```bash
 bun run dev          # Start the local development server
 bun run build        # Create a production build
 bun run db:migrate   # Apply raw SQL migrations
+bun run auth:invites # Create, revoke, or list beta invitations
 bun run start        # Start the production server
+bun run test         # Run the Bun test suite
+bun run typecheck    # Type-check without emitting files
 bun run lint         # Run ESLint
 bun run lint:fix     # Fix lint issues where possible
 bun run format       # Format files with Prettier
 bun run format:check # Check formatting
+bun run audit        # Fail on high or critical dependency advisories
+bun run ci           # Run all local CI gates
 ```
 
 ## Project Structure

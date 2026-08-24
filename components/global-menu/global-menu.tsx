@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useSyncExternalStore } from "react"
 import { EyeIcon, EyeSlashIcon } from "@phosphor-icons/react"
 import { AnimatePresence, motion, useReducedMotion } from "motion/react"
 import { useHotkeys } from "react-hotkeys-hook"
@@ -16,6 +16,9 @@ import {
 import { useFinance } from "@/hooks/use-finance"
 import { getModShiftPeriodShortcutLabel } from "@/lib/platform"
 
+const subscribePlatform = () => () => undefined
+const getServerShortcutLabel = () => "Ctrl+⇧+."
+
 export function GlobalMenu() {
   const {
     state: {
@@ -24,11 +27,11 @@ export function GlobalMenu() {
     actions,
   } = useFinance()
   const shouldReduceMotion = useReducedMotion()
-  const [shortcutLabel, setShortcutLabel] = useState("Ctrl+⇧+.")
-
-  useEffect(() => {
-    setShortcutLabel(getModShiftPeriodShortcutLabel())
-  }, [])
+  const shortcutLabel = useSyncExternalStore(
+    subscribePlatform,
+    getModShiftPeriodShortcutLabel,
+    getServerShortcutLabel,
+  )
 
   const togglePrivacy = () => {
     void actions.updateUiPreferences(!hideAmounts)

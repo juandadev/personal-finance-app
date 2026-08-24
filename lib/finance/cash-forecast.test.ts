@@ -91,6 +91,9 @@ function makeBill(
     credit_card_id: null,
     category_id: "category-1",
     archived_at: null,
+    paused_at: null,
+    scheduled_end_date: null,
+    scheduled_end_mode: null,
     ...overrides,
   }
 }

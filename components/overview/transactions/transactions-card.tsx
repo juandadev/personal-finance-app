@@ -10,11 +10,14 @@ import {
   cardActionLinkClasses,
 } from "@/components/ui/card"
 import { EmptyDataCard } from "@/components/empty-data-card"
-import { useFinance } from "@/hooks/use-finance"
+import type { Transaction } from "@/lib/types"
 import { TransactionItem } from "./transaction-item"
 
-export function TransactionsCard() {
-  const { transactions } = useFinance()
+export function TransactionsCard({
+  transactions,
+}: {
+  transactions: Transaction[]
+}) {
   const hasTransactions = transactions.length > 0
 
   return (
@@ -34,7 +37,7 @@ export function TransactionsCard() {
 
         {hasTransactions ? (
           <ul className="divide-muted-foreground/10 mt-8 divide-y">
-            {transactions.slice(0, 4).map((transaction) => (
+            {transactions.map((transaction) => (
               <TransactionItem key={transaction.id} transaction={transaction} />
             ))}
           </ul>

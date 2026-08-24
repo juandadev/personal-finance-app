@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import Link from "next/link"
 import { CaretDownIcon } from "@phosphor-icons/react"
 
@@ -38,12 +38,6 @@ export function ForecastBudgetProjectionsPanel() {
   )
   const [error, setError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
-
-  useEffect(() => {
-    if (!isSaving) {
-      setSelectedCategoryIds(new Set(savedIncludedIds))
-    }
-  }, [isSaving, savedIncludedIds])
 
   const includedCount = selectedCategoryIds.size
 

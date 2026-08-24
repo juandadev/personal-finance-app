@@ -39,14 +39,15 @@ export default async function v0NextConfig(phase, { defaultConfig }) {
       ...userConfig.experimental?.serverActions,
       allowedOrigins: [
         ...(userConfig.experimental?.serverActions?.allowedOrigins || []),
-        '*.vusercontent.net',
+        ...(process.env.NODE_ENV === 'development' ? ['*.vusercontent.net'] : []),
       ],
     },
   },
   allowedDevOrigins: [
     ...(userConfig.allowedDevOrigins || []),
-    '*.vusercontent.net',
-    '*.dev-vm.vusercontent.net',
+    ...(process.env.NODE_ENV === 'development'
+      ? ['*.vusercontent.net', '*.dev-vm.vusercontent.net']
+      : []),
   ],
 }
 }

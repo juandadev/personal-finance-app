@@ -7,7 +7,12 @@ import {
 } from "nuqs/server"
 import type { BillStatus, SortOption } from "@/lib/types"
 
-const queryOptions = {
+const serverQueryOptions = {
+  history: "replace" as const,
+  shallow: false,
+}
+
+const clientQueryOptions = {
   history: "replace" as const,
   shallow: true,
 }
@@ -42,30 +47,31 @@ const billStatusValues = [
 ] as const satisfies readonly BillStatus[]
 
 const billSourceValues = ["bank_account", "credit_card"] as const
-const billLifecycleValues = ["all", "active", "archived"] as const
+const billLifecycleValues = ["all", "active", "paused", "archived"] as const
 const billScheduleValues = ["ongoing", "finite"] as const
 
 export const transactionQueryParsers = {
-  q: parseAsString.withDefault("").withOptions(queryOptions),
+  q: parseAsString.withDefault("").withOptions(serverQueryOptions),
   sort: parseAsStringLiteral(sortValues)
     .withDefault("latest")
-    .withOptions(queryOptions),
-  page: parseAsInteger.withDefault(1).withOptions(queryOptions),
-  category: parseAsNativeArrayOf(parseAsString).withOptions(queryOptions),
-  budget: parseAsNativeArrayOf(parseAsString).withOptions(queryOptions),
-  account: parseAsNativeArrayOf(parseAsString).withOptions(queryOptions),
-  counterparty: parseAsNativeArrayOf(parseAsString).withOptions(queryOptions),
+    .withOptions(serverQueryOptions),
+  page: parseAsInteger.withDefault(1).withOptions(serverQueryOptions),
+  category: parseAsNativeArrayOf(parseAsString).withOptions(serverQueryOptions),
+  budget: parseAsNativeArrayOf(parseAsString).withOptions(serverQueryOptions),
+  account: parseAsNativeArrayOf(parseAsString).withOptions(serverQueryOptions),
+  counterparty:
+    parseAsNativeArrayOf(parseAsString).withOptions(serverQueryOptions),
   method: parseAsNativeArrayOf(
     parseAsStringLiteral(transactionPaymentMethodValues),
-  ).withOptions(queryOptions),
-  card: parseAsNativeArrayOf(parseAsString).withOptions(queryOptions),
+  ).withOptions(serverQueryOptions),
+  card: parseAsNativeArrayOf(parseAsString).withOptions(serverQueryOptions),
   direction: parseAsStringLiteral(transactionDirectionValues).withOptions(
-    queryOptions,
+    serverQueryOptions,
   ),
-  from: parseAsString.withOptions(queryOptions),
-  to: parseAsString.withOptions(queryOptions),
-  minAmount: parseAsFloat.withOptions(queryOptions),
-  maxAmount: parseAsFloat.withOptions(queryOptions),
+  from: parseAsString.withOptions(serverQueryOptions),
+  to: parseAsString.withOptions(serverQueryOptions),
+  minAmount: parseAsFloat.withOptions(serverQueryOptions),
+  maxAmount: parseAsFloat.withOptions(serverQueryOptions),
 }
 
 export type TransactionQueryState = {
@@ -86,31 +92,33 @@ export type TransactionQueryState = {
 }
 
 export const recurringBillQueryParsers = {
-  q: parseAsString.withDefault("").withOptions(queryOptions),
+  q: parseAsString.withDefault("").withOptions(clientQueryOptions),
   sort: parseAsStringLiteral(sortValues)
     .withDefault("latest")
-    .withOptions(queryOptions),
-  page: parseAsInteger.withDefault(1).withOptions(queryOptions),
-  category: parseAsNativeArrayOf(parseAsString).withOptions(queryOptions),
-  counterparty: parseAsNativeArrayOf(parseAsString).withOptions(queryOptions),
+    .withOptions(clientQueryOptions),
+  page: parseAsInteger.withDefault(1).withOptions(clientQueryOptions),
+  category: parseAsNativeArrayOf(parseAsString).withOptions(clientQueryOptions),
+  counterparty:
+    parseAsNativeArrayOf(parseAsString).withOptions(clientQueryOptions),
   frequency: parseAsNativeArrayOf(
     parseAsStringLiteral(billFrequencyValues),
-  ).withOptions(queryOptions),
+  ).withOptions(clientQueryOptions),
   status: parseAsNativeArrayOf(
     parseAsStringLiteral(billStatusValues),
-  ).withOptions(queryOptions),
-  dueFrom: parseAsString.withOptions(queryOptions),
-  dueTo: parseAsString.withOptions(queryOptions),
-  minAmount: parseAsFloat.withOptions(queryOptions),
-  maxAmount: parseAsFloat.withOptions(queryOptions),
+  ).withOptions(clientQueryOptions),
+  dueFrom: parseAsString.withOptions(clientQueryOptions),
+  dueTo: parseAsString.withOptions(clientQueryOptions),
+  minAmount: parseAsFloat.withOptions(clientQueryOptions),
+  maxAmount: parseAsFloat.withOptions(clientQueryOptions),
   source: parseAsNativeArrayOf(
     parseAsStringLiteral(billSourceValues),
-  ).withOptions(queryOptions),
-  card: parseAsNativeArrayOf(parseAsString).withOptions(queryOptions),
+  ).withOptions(clientQueryOptions),
+  card: parseAsNativeArrayOf(parseAsString).withOptions(clientQueryOptions),
   lifecycle: parseAsStringLiteral(billLifecycleValues)
     .withDefault("all")
-    .withOptions(queryOptions),
-  schedule: parseAsStringLiteral(billScheduleValues).withOptions(queryOptions),
+    .withOptions(clientQueryOptions),
+  schedule:
+    parseAsStringLiteral(billScheduleValues).withOptions(clientQueryOptions),
 }
 
 export type RecurringBillQueryState = {
