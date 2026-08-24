@@ -555,6 +555,67 @@ describe("selectFinanceViewModel credit-card total pending", () => {
     expect(card.totalPendingAmount).toBe(1374.87)
     expect(card.oldestPayableStatement?.id).toBe("statement-july")
   })
+
+  test("shows the closed unpaid cycle as the payable statement when it has only pending bills", () => {
+    const viewModel = selectFinanceViewModel(
+      makeState(
+        {
+          creditCards: [
+            {
+              id: "card-1",
+              user_id: "user-1",
+              nickname: "Clásica Banamex",
+              issuer: "Citibanamex",
+              network: "Visa",
+              last_four: "4242",
+              expiration_month: 12,
+              expiration_year: 2030,
+              credit_limit_cents: 100_000_00,
+              closing_day_of_month: 7,
+              payment_due_day_of_month: 15,
+              theme_color: "chart-3",
+              archived_at: null,
+              annuality_enabled: false,
+              annuality_amount_cents: null,
+              annuality_anniversary_month: null,
+              annuality_anniversary_day: null,
+              annuality_payment_count: null,
+            },
+          ],
+          creditCardStatements: [
+            makeStatement({
+              id: "statement-june",
+              period_start: "2026-06-08",
+              period_end: "2026-07-07",
+              payment_due_date: "2026-07-15",
+              statement_amount_cents: 242_066,
+              lifecycle_status: "paid",
+              paid_at: "2026-07-15",
+            }),
+          ],
+          recurringBillPayments: [
+            makePayment({ due_date: "2026-07-06", amount_cents: 242_066 }),
+          ],
+        },
+        {
+          id: "bill-1",
+          first_due_date: "2026-07-06",
+          amount_cents: 242_066,
+        },
+      ),
+      "2026-08-14",
+    )
+    const card = viewModel.creditCards[0]
+    const payable = card?.oldestPayableStatement
+
+    expect(payable?.periodStart).toBe("2026-07-08")
+    expect(payable?.periodEnd).toBe("2026-08-07")
+    expect(payable?.paymentDueDate).toBe("2026-08-15")
+    expect(payable?.totalAmount).toBe(2420.66)
+    expect(payable?.isVirtual).toBe(true)
+    expect(card?.currentStatement?.periodStart).toBe("2026-07-08")
+    expect(card?.dueStatus).toBe("due-soon")
+  })
 })
 
 describe("selectFinanceViewModel recurring bill status presentation", () => {

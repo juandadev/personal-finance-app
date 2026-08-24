@@ -343,16 +343,13 @@ export function selectCurrentOccurrence(
 
 /**
  * Statement cycle a card-assigned bill occurrence attaches to. Starting from
- * the cycle containing the due date, the occurrence rolls forward past:
+ * the cycle containing the due date, the occurrence rolls forward only past
+ * cycles whose statement is already paid (frozen history).
  *
- * - cycles whose statement is already paid (frozen history), and
- * - fully elapsed cycles that never got a statement row (statement rows are
- *   only created by purchases, so a subscription-only card would otherwise
- *   trap occurrences in cycles that can never be paid).
- *
- * It lands on the first cycle with an unpaid statement row, or the current
- * cycle (or the one right after it when the current statement is already
- * paid) even if no row exists yet.
+ * It lands on the first unpaid cycle, including a past cycle with no stored
+ * statement row. Those cycles stay payable as virtual statements until paid.
+ * Do not skip an elapsed unpaid cycle: the payment due date is after the
+ * period ends, and a Recurring Bill still belongs on that statement.
  */
 export function getBillOccurrenceStatementCycle(
   dueDate: string,
@@ -364,7 +361,7 @@ export function getBillOccurrenceStatementCycle(
     CreditCardStatementRecord,
     "period_start" | "period_end" | "lifecycle_status"
   >[],
-  today = todayIsoDate(),
+  _today = todayIsoDate(),
 ): CreditCardStatementCycle {
   const statementStatusByPeriodStart = new Map(
     statements.map((statement) => [
@@ -372,7 +369,6 @@ export function getBillOccurrenceStatementCycle(
       statement.lifecycle_status,
     ]),
   )
-  const currentCycle = getCreditCardStatementCycle(today, card)
 
   let cycle = getCreditCardStatementCycle(dueDate, card)
 
@@ -380,11 +376,7 @@ export function getBillOccurrenceStatementCycle(
   for (let step = 0; step < MAX_GENERATED_OCCURRENCES; step += 1) {
     const status = statementStatusByPeriodStart.get(cycle.periodStart)
 
-    if (status !== undefined && status !== "paid") {
-      return cycle
-    }
-
-    if (status === undefined && cycle.periodEnd >= currentCycle.periodEnd) {
+    if (status !== "paid") {
       return cycle
     }
 

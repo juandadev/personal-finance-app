@@ -452,13 +452,39 @@ describe("getBillOccurrenceStatementCycle", () => {
     expect(cycle.periodStart).toBe("2026-04-21")
   })
 
-  test("rolls elapsed cycles without a statement row into the current cycle", () => {
-    // No purchases ever happened, so no statement rows exist. An occurrence
-    // due two cycles ago must land on the current payable cycle instead of a
-    // past cycle that will never get a statement.
+  test("keeps an elapsed unpaid cycle with no statement row", () => {
     const cycle = getBillOccurrenceStatementCycle("2026-05-04", card, [], TODAY)
 
-    expect(cycle.periodStart).toBe("2026-06-21")
-    expect(cycle.periodEnd).toBe("2026-07-20")
+    expect(cycle.periodStart).toBe("2026-04-21")
+    expect(cycle.periodEnd).toBe("2026-05-20")
+    expect(cycle.paymentDueDate).toBe("2026-06-05")
+  })
+
+  test("keeps a closed unpaid cycle that is still due after period end", () => {
+    const banamex = {
+      closing_day_of_month: 7,
+      payment_due_day_of_month: 15,
+    }
+    const cycle = getBillOccurrenceStatementCycle(
+      "2026-08-06",
+      banamex,
+      [
+        {
+          period_start: "2026-05-08",
+          period_end: "2026-06-07",
+          lifecycle_status: "paid",
+        },
+        {
+          period_start: "2026-06-08",
+          period_end: "2026-07-07",
+          lifecycle_status: "paid",
+        },
+      ],
+      "2026-08-14",
+    )
+
+    expect(cycle.periodStart).toBe("2026-07-08")
+    expect(cycle.periodEnd).toBe("2026-08-07")
+    expect(cycle.paymentDueDate).toBe("2026-08-15")
   })
 })
