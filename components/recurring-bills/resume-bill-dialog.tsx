@@ -14,8 +14,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
+import { DatePicker } from "@/components/ui/date-picker"
 import { FormField, FormStatusMessage } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
 import { useFinance } from "@/hooks/use-finance"
 import {
   getDefaultResumeStartDate,
@@ -107,12 +107,15 @@ export function ResumeBillDialog({
         <div className="mt-5 space-y-5">
           <FormField id="resume-start-date" label="Start date">
             {(field) => (
-              <Input
+              <DatePicker
                 {...field}
-                type="date"
                 min={today}
                 value={startDate}
-                onChange={(event) => setStartDate(event.target.value)}
+                onChange={(nextDate) => {
+                  if (nextDate) {
+                    setStartDate(nextDate)
+                  }
+                }}
               />
             )}
           </FormField>

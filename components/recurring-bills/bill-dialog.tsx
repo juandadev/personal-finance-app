@@ -18,6 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { DatePicker } from "@/components/ui/date-picker"
 import { FormField, FormStatusMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import {
@@ -427,14 +428,15 @@ function BillDialog({
                   error={form.fieldErrors.firstDueDate}
                 >
                   {(fieldProps) => (
-                    <Input
+                    <DatePicker
                       {...fieldProps}
-                      type="date"
                       disabled={scheduleLocked}
                       value={field.state.value}
-                      onChange={(event) =>
-                        form.setValue("firstDueDate", event.target.value)
-                      }
+                      onChange={(nextDate) => {
+                        if (nextDate) {
+                          form.setValue("firstDueDate", nextDate)
+                        }
+                      }}
                       onBlur={field.handleBlur}
                     />
                   )}

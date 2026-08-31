@@ -15,8 +15,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
+import { DatePicker } from "@/components/ui/date-picker"
 import { FormStatusMessage } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useFinance } from "@/hooks/use-finance"
 import { getForecastLocalDate } from "@/lib/finance/forecast-period"
@@ -194,12 +194,15 @@ export function PayCreditCardStatementDialog({
           ) : null}
           <div className="space-y-2">
             <Label htmlFor="credit-card-paid-at">Payment Date</Label>
-            <Input
+            <DatePicker
               id="credit-card-paid-at"
-              type="date"
               max={localToday}
               value={paidAt}
-              onChange={(event) => setPaidAt(event.target.value)}
+              onChange={(nextDate) => {
+                if (nextDate) {
+                  setPaidAt(nextDate)
+                }
+              }}
             />
           </div>
           {statusMessage ? (

@@ -1,5 +1,6 @@
 "use client"
 
+import { useActionState, type FormEvent } from "react"
 import { z } from "zod"
 
 import { signInWithEmail } from "@/app/(auth)/login/actions"
@@ -20,34 +21,50 @@ const loginFormSchema = z.object({
 type LoginFormValues = z.input<typeof loginFormSchema>
 
 export function LoginForm() {
+  const [actionState, formAction, isActionPending] = useActionState(
+    signInWithEmail,
+    null,
+  )
   const standardForm = useStandardForm({
     defaultValues: {
       email: "",
       password: "",
     } satisfies LoginFormValues,
     schema: loginFormSchema,
-    onSubmit: async ({ applyActionResult, value }) => {
-      const formData = new FormData()
-      formData.set("email", value.email)
-      formData.set("password", value.password)
-
-      const result = await signInWithEmail(null, formData)
-
-      if (result) {
-        applyActionResult({
-          ok: false,
-          message: result.message,
-          fieldErrors: result.fieldErrors,
-        })
-      }
-    },
+    onSubmit: () => undefined,
   })
+
+  const emailError =
+    standardForm.fieldErrors.email ?? actionState?.fieldErrors?.email?.[0]
+  const passwordError =
+    standardForm.fieldErrors.password ?? actionState?.fieldErrors?.password?.[0]
+  const statusMessage = standardForm.status?.message ?? actionState?.message
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    const formData = new FormData(event.currentTarget)
+    const raw = {
+      email: String(formData.get("email") ?? ""),
+      password: String(formData.get("password") ?? ""),
+    }
+
+    standardForm.setValue("email", raw.email)
+    standardForm.setValue("password", raw.password)
+
+    const parsed = standardForm.validateValues(raw)
+
+    if (!parsed.success) {
+      event.preventDefault()
+      event.stopPropagation()
+    }
+  }
 
   return (
     <form
       className="space-y-4"
       aria-label="Login form"
-      onSubmit={standardForm.handleSubmit}
+      method="post"
+      action={formAction}
+      onSubmit={handleSubmit}
     >
       <GoogleSignInButton />
 
@@ -59,12 +76,15 @@ export function LoginForm() {
             type="email"
             label="Email"
             autoComplete="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             value={field.state.value}
             onChange={(event) =>
               standardForm.setValue("email", event.target.value)
             }
             onBlur={field.handleBlur}
-            error={standardForm.fieldErrors.email}
+            error={emailError}
           />
         )}
       </standardForm.form.Field>
@@ -80,22 +100,18 @@ export function LoginForm() {
               standardForm.setValue("password", event.target.value)
             }
             onBlur={field.handleBlur}
-            error={standardForm.fieldErrors.password}
+            error={passwordError}
           />
         )}
       </standardForm.form.Field>
-      {standardForm.status?.message ? (
-        <FormStatusMessage variant={standardForm.status.variant}>
-          {standardForm.status.message}
+      {statusMessage ? (
+        <FormStatusMessage variant={standardForm.status?.variant ?? "error"}>
+          {statusMessage}
         </FormStatusMessage>
       ) : null}
-      <standardForm.form.Subscribe selector={(state) => state.isSubmitting}>
-        {(isSubmitting) => (
-          <AuthSubmitButton disabled={isSubmitting}>
-            {isSubmitting ? "Signing in..." : "Login"}
-          </AuthSubmitButton>
-        )}
-      </standardForm.form.Subscribe>
+      <AuthSubmitButton disabled={isActionPending}>
+        {isActionPending ? "Signing in..." : "Login"}
+      </AuthSubmitButton>
     </form>
   )
 }

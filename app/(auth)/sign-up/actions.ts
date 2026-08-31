@@ -3,13 +3,21 @@
 import { redirect } from "next/navigation"
 import { z } from "zod"
 
-import { auth } from "@/lib/auth/server"
+import { formDataFromActionArgs } from "@/lib/auth/action-form-data"
 import type { AuthFormState } from "@/lib/auth/form-state"
+import {
+  blockedAuthOriginMessage,
+  getRequestOrigin,
+} from "@/lib/auth/request-origin"
+import { auth } from "@/lib/auth/server"
 import {
   PASSWORD_MIN_LENGTH,
   PASSWORD_MIN_LENGTH_MESSAGE,
 } from "@/lib/auth/password-policy"
-import { logServerError } from "@/lib/observability/server-logger"
+import {
+  logSecurityEvent,
+  logServerError,
+} from "@/lib/observability/server-logger"
 
 const signUpSchema = z.object({
   name: z.string().trim().min(1, "Enter your name."),
@@ -18,13 +26,22 @@ const signUpSchema = z.object({
 })
 
 export async function signUpWithEmail(
-  _previousState: AuthFormState | null,
-  formData: FormData,
+  previousState: AuthFormState | FormData | null,
+  formData?: FormData,
 ): Promise<AuthFormState | null> {
+  const data = formDataFromActionArgs(previousState, formData)
+
+  if (!data) {
+    return {
+      message:
+        "We could not create this account. Confirm your invitation and verification details, then try again.",
+    }
+  }
+
   const parsed = signUpSchema.safeParse({
-    name: formData.get("name"),
-    email: formData.get("email"),
-    password: formData.get("password"),
+    name: data.get("name"),
+    email: data.get("email"),
+    password: data.get("password"),
   })
 
   if (!parsed.success) {
@@ -48,6 +65,24 @@ export async function signUpWithEmail(
   }
 
   if (result.error) {
+    const origin = await getRequestOrigin()
+    const status = result.error.status
+    const code =
+      "code" in result.error && typeof result.error.code === "string"
+        ? result.error.code
+        : null
+
+    logSecurityEvent("email_sign_up_rejected", {
+      status,
+      code,
+    })
+
+    if (status === 403 || code === "INVALID_ORIGIN") {
+      return {
+        message: blockedAuthOriginMessage(origin),
+      }
+    }
+
     return {
       message:
         "We could not create this account. Confirm your invitation and verification details, then try again.",

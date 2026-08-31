@@ -1,5 +1,6 @@
 "use client"
 
+import { useActionState, type FormEvent } from "react"
 import { z } from "zod"
 
 import { signUpWithEmail } from "@/app/(auth)/sign-up/actions"
@@ -25,6 +26,10 @@ const signUpFormSchema = z.object({
 type SignUpFormValues = z.input<typeof signUpFormSchema>
 
 export function SignUpForm() {
+  const [actionState, formAction, isActionPending] = useActionState(
+    signUpWithEmail,
+    null,
+  )
   const standardForm = useStandardForm({
     defaultValues: {
       name: "",
@@ -32,29 +37,44 @@ export function SignUpForm() {
       password: "",
     } satisfies SignUpFormValues,
     schema: signUpFormSchema,
-    onSubmit: async ({ applyActionResult, value }) => {
-      const formData = new FormData()
-      formData.set("name", value.name)
-      formData.set("email", value.email)
-      formData.set("password", value.password)
-
-      const result = await signUpWithEmail(null, formData)
-
-      if (result) {
-        applyActionResult({
-          ok: false,
-          message: result.message,
-          fieldErrors: result.fieldErrors,
-        })
-      }
-    },
+    onSubmit: () => undefined,
   })
+
+  const nameError =
+    standardForm.fieldErrors.name ?? actionState?.fieldErrors?.name?.[0]
+  const emailError =
+    standardForm.fieldErrors.email ?? actionState?.fieldErrors?.email?.[0]
+  const passwordError =
+    standardForm.fieldErrors.password ?? actionState?.fieldErrors?.password?.[0]
+  const statusMessage = standardForm.status?.message ?? actionState?.message
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    const formData = new FormData(event.currentTarget)
+    const raw = {
+      name: String(formData.get("name") ?? ""),
+      email: String(formData.get("email") ?? ""),
+      password: String(formData.get("password") ?? ""),
+    }
+
+    standardForm.setValue("name", raw.name)
+    standardForm.setValue("email", raw.email)
+    standardForm.setValue("password", raw.password)
+
+    const parsed = standardForm.validateValues(raw)
+
+    if (!parsed.success) {
+      event.preventDefault()
+      event.stopPropagation()
+    }
+  }
 
   return (
     <form
       className="space-y-4"
       aria-label="Sign-up form"
-      onSubmit={standardForm.handleSubmit}
+      method="post"
+      action={formAction}
+      onSubmit={handleSubmit}
     >
       <GoogleSignInButton />
 
@@ -71,7 +91,7 @@ export function SignUpForm() {
               standardForm.setValue("name", event.target.value)
             }
             onBlur={field.handleBlur}
-            error={standardForm.fieldErrors.name}
+            error={nameError}
           />
         )}
       </standardForm.form.Field>
@@ -83,12 +103,15 @@ export function SignUpForm() {
             type="email"
             label="Email"
             autoComplete="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             value={field.state.value}
             onChange={(event) =>
               standardForm.setValue("email", event.target.value)
             }
             onBlur={field.handleBlur}
-            error={standardForm.fieldErrors.email}
+            error={emailError}
           />
         )}
       </standardForm.form.Field>
@@ -105,22 +128,18 @@ export function SignUpForm() {
               standardForm.setValue("password", event.target.value)
             }
             onBlur={field.handleBlur}
-            error={standardForm.fieldErrors.password}
+            error={passwordError}
           />
         )}
       </standardForm.form.Field>
-      {standardForm.status?.message ? (
-        <FormStatusMessage variant={standardForm.status.variant}>
-          {standardForm.status.message}
+      {statusMessage ? (
+        <FormStatusMessage variant={standardForm.status?.variant ?? "error"}>
+          {statusMessage}
         </FormStatusMessage>
       ) : null}
-      <standardForm.form.Subscribe selector={(state) => state.isSubmitting}>
-        {(isSubmitting) => (
-          <AuthSubmitButton disabled={isSubmitting}>
-            {isSubmitting ? "Creating account..." : "Create Account"}
-          </AuthSubmitButton>
-        )}
-      </standardForm.form.Subscribe>
+      <AuthSubmitButton disabled={isActionPending}>
+        {isActionPending ? "Creating account..." : "Create Account"}
+      </AuthSubmitButton>
     </form>
   )
 }

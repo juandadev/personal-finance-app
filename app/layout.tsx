@@ -1,4 +1,4 @@
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Public_Sans } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { NuqsAdapter } from "nuqs/adapters/next/app"
@@ -20,6 +20,12 @@ export const metadata: Metadata = {
     index: false,
     follow: false,
   },
+}
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 }
 
 const analyticsEnabled =

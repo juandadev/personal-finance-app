@@ -28,6 +28,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { DatePicker } from "@/components/ui/date-picker"
 import { FormField, FormStatusMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { useFinance } from "@/hooks/use-finance"
@@ -416,14 +417,15 @@ function ScheduledCreditCardChargeDialog({
                 error={form.fieldErrors.chargeDate}
               >
                 {(fieldProps) => (
-                  <Input
+                  <DatePicker
                     {...fieldProps}
-                    type="date"
                     min={isEditing ? undefined : localToday}
                     value={field.state.value}
-                    onChange={(event) =>
-                      form.setValue("chargeDate", event.target.value)
-                    }
+                    onChange={(nextDate) => {
+                      if (nextDate) {
+                        form.setValue("chargeDate", nextDate)
+                      }
+                    }}
                     onBlur={field.handleBlur}
                   />
                 )}

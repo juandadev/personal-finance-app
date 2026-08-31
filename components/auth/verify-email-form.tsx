@@ -109,6 +109,7 @@ export function VerifyEmailForm() {
     <form
       className="space-y-4"
       aria-label="Verify email form"
+      method="post"
       onSubmit={handleVerify}
     >
       <AuthField

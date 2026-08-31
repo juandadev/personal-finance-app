@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { DatePicker } from "@/components/ui/date-picker"
 import { FormField, FormStatusMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import {
@@ -430,17 +431,15 @@ export function PotTransferDialog({
                         error={standardForm.fieldErrors.postedAt}
                       >
                         {(fieldProps) => (
-                          <Input
+                          <DatePicker
                             {...fieldProps}
-                            type="date"
                             max={localToday}
                             value={field.state.value}
-                            onChange={(event) =>
-                              standardForm.setValue(
-                                "postedAt",
-                                event.target.value,
-                              )
-                            }
+                            onChange={(nextDate) => {
+                              if (nextDate) {
+                                standardForm.setValue("postedAt", nextDate)
+                              }
+                            }}
                             onBlur={field.handleBlur}
                           />
                         )}

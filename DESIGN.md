@@ -280,8 +280,14 @@ Finance data must stay readable on mobile.
 
 ### Forms and Dialogs
 
-- Use shadcn dialog, alert dialog, select, input, label, and form primitives
-  unless a product-specific wrapper already exists.
+- Use shadcn dialog, alert dialog, select, input, date picker, label, and form
+  primitives unless a product-specific wrapper already exists.
+- Date fields use the shared `DatePicker` (`Popover` + `Calendar`), never native
+  `input type="date"`. iOS Safari paints its own date control with different
+  padding, format, and an intrinsic min-width that overflows dialogs; Chrome’s
+  device toolbar does not reproduce that. Store `yyyy-MM-dd` in form state and
+  show the selected value with `formatDisplayDate`. Cap selectable days with
+  `min` / `max` on the picker, not native `min` / `max` attributes.
 - TanStack Form is the standard client form engine for data-entry forms.
 - Zod is the standard validation schema layer. Client schemas should prevent
   known invalid input before submit, while server-side schemas remain the final
@@ -303,6 +309,11 @@ Finance data must stay readable on mobile.
   above the primary submit button.
 - Primary submit actions should be full-width on auth forms and right-aligned or
   grouped in dialogs.
+- Auth email/password forms must use `method="post"` and a Server Action as the
+  form `action` so sign-in and sign-up still work if the browser submits before
+  client JS hydrates (common on phones and password managers). Never rely on a
+  client `onSubmit` handler alone; a GET fallback puts credentials in the URL
+  and reloads an empty form.
 - Long finance dialog forms should use `DialogFinanceForm` so submit actions,
   status messages, and destructive buttons stay pinned at the bottom while
   fields scroll independently inside `DialogBody`.
@@ -368,6 +379,10 @@ Finance data must stay readable on mobile.
 - Keep header-level and item-level ellipsis menus as separate variants: header
   menus contain secondary module actions; item menus contain actions for one
   record.
+- Actions menus must not open on touch pointer-down. On touch and pen input,
+  open the menu only after a tap (pointer up without a drag) so a scroll that
+  starts on the ellipsis does not interrupt scrolling or leave the menu open.
+  Mouse and keyboard continue to open on press or key activation.
 
 ## Component Standards
 
@@ -401,6 +416,9 @@ Phosphor filled icons (`@phosphor-icons/react`), and `cn()` for class merging.
   instantly instead of replaying enter animations. Keep tooltip entrance
   animation tied to Radix's `delayed-open` state so `instant-open` tooltips are
   visually quiet.
+- Tooltips are hover-only. Do not show them on touch or coarse-pointer devices
+  (phones and tablets). Icon-only controls still need an accessible name; never
+  rely on a tooltip for essential mobile information.
 
 ### Buttons
 
@@ -426,6 +444,8 @@ Button labels should be action-specific: `Add Money`, `Create Budget`,
 - Use `rounded-lg`, tokenized border color, and `focus-visible:ring-ring`.
 - Placeholder text should not replace a visible label.
 - Search inputs should include an icon and remain compact in filter rows.
+- Date controls use the input-like `Button` trigger (`variant="input"` /
+  `size="input"`) so padding and height match other fields on every device.
 
 ### Navigation
 
@@ -548,7 +568,8 @@ Button labels should be action-specific: `Add Money`, `Create Budget`,
 - Mobile bill rows stay compact: avatar, concept, contact, a short schedule line
   (`Monthly - 1st`, `Yearly - Aug 15th`) with the status icon, amount, and an
   overflow menu. The short date uses the same full-date hover tooltip as
-  desktop. `Pay Bill` and `Skip` live in that menu on mobile.
+  desktop, which does not appear on touch devices. `Pay Bill` and `Skip` live
+  in that menu on mobile.
 - The bill dialog locks `frequency` and `first due date` once a bill has any
   settled payment. Locked fields render disabled with helper text explaining
   to archive and recreate the bill to reschedule frequency. Resume is the

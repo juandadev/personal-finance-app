@@ -150,6 +150,21 @@ export function useStandardForm<
     (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault()
       event.stopPropagation()
+
+      // Prefer native field values so iOS autofill and keyboard "Go" submit
+      // still see what is in the DOM, not only React-controlled state.
+      const formData = new FormData(event.currentTarget)
+
+      for (const fieldName of Object.keys(form.state.values) as Array<
+        Extract<keyof TValues, string>
+      >) {
+        const nextValue = formData.get(fieldName)
+
+        if (typeof nextValue === "string") {
+          form.setFieldValue(fieldName as never, nextValue as never)
+        }
+      }
+
       void form.handleSubmit()
     },
     [form],

@@ -44,7 +44,7 @@ export default async function v0NextConfig(phase, { defaultConfig }) {
     },
   },
   allowedDevOrigins: [
-    ...(userConfig.allowedDevOrigins || ["100.67.103.115"]),
+    ...(userConfig.allowedDevOrigins || ["100.67.103.115","compas-mac-mini.tailb42922.ts.net"]),
     ...(process.env.NODE_ENV === 'development'
       ? ['*.vusercontent.net', '*.dev-vm.vusercontent.net']
       : []),

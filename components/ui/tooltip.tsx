@@ -3,6 +3,7 @@
 import * as React from "react"
 import * as TooltipPrimitive from "@radix-ui/react-tooltip"
 
+import { useCanHover } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 
 function TooltipProvider({
@@ -19,9 +20,18 @@ function TooltipProvider({
 }
 
 function Tooltip({
+  open,
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Root>) {
-  return <TooltipPrimitive.Root data-slot="tooltip" {...props} />
+  const canHover = useCanHover()
+
+  return (
+    <TooltipPrimitive.Root
+      data-slot="tooltip"
+      {...props}
+      open={canHover ? open : false}
+    />
+  )
 }
 
 function TooltipTrigger({

@@ -18,12 +18,33 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic"
 
+function firstSearchParam(value?: string | string[]) {
+  return Array.isArray(value) ? value[0] : value
+}
+
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ verification?: string | string[] }>
+  searchParams: Promise<{
+    email?: string | string[]
+    password?: string | string[]
+    verification?: string | string[]
+  }>
 }) {
-  const { verification } = await searchParams
+  const params = await searchParams
+  const leakedEmail = firstSearchParam(params.email)
+  const leakedPassword = firstSearchParam(params.password)
+
+  if (leakedEmail || leakedPassword) {
+    const verification = firstSearchParam(params.verification)
+    redirect(
+      verification
+        ? `/login?verification=${encodeURIComponent(verification)}`
+        : "/login",
+    )
+  }
+
+  const verification = firstSearchParam(params.verification)
   const { data: session } = await auth.getSession()
 
   if (session?.user?.emailVerified) {

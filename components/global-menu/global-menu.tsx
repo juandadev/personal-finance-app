@@ -54,7 +54,7 @@ export function GlobalMenu() {
   const label = hideAmounts ? "Show amounts" : "Hide amounts"
 
   return (
-    <div className="pointer-events-none fixed right-2 bottom-16 z-40 flex flex-col items-end gap-2 lg:right-4 lg:bottom-4">
+    <div className="pointer-events-none fixed right-2 bottom-[calc(max(1rem,env(safe-area-inset-bottom))+4.5rem)] z-40 flex flex-col items-end gap-2 md:bottom-[calc(max(1rem,env(safe-area-inset-bottom))+5.5rem)] lg:right-4 lg:bottom-4">
       <TooltipProvider skipDelayDuration={0}>
         <Tooltip>
           <TooltipTrigger asChild>

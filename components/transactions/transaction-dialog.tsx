@@ -18,6 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { DatePicker } from "@/components/ui/date-picker"
 import { FormField, FormStatusMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import {
@@ -511,14 +512,15 @@ function TransactionDialog({
                 error={mainForm.fieldErrors.postedAt}
               >
                 {(fieldProps) => (
-                  <Input
+                  <DatePicker
                     {...fieldProps}
-                    type="date"
                     max={localToday}
                     value={field.state.value}
-                    onChange={(event) =>
-                      mainForm.setValue("postedAt", event.target.value)
-                    }
+                    onChange={(nextDate) => {
+                      if (nextDate) {
+                        mainForm.setValue("postedAt", nextDate)
+                      }
+                    }}
                     onBlur={field.handleBlur}
                   />
                 )}

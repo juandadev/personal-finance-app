@@ -6,10 +6,52 @@ import { CaretRightIcon, CheckIcon, CircleIcon } from "@phosphor-icons/react"
 
 import { cn } from "@/lib/utils"
 
+const TOUCH_TAP_MOVE_THRESHOLD_PX = 10
+
+type DropdownMenuOpenContextValue = {
+  open: boolean
+  setOpen: (open: boolean) => void
+}
+
+const DropdownMenuOpenContext =
+  React.createContext<DropdownMenuOpenContextValue | null>(null)
+
+function isImmediatePointerOpen(event: React.PointerEvent) {
+  return event.pointerType === "mouse" || event.pointerType === ""
+}
+
 function DropdownMenu({
+  open: openProp,
+  defaultOpen = false,
+  onOpenChange,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) {
-  return <DropdownMenuPrimitive.Root data-slot="dropdown-menu" {...props} />
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(defaultOpen)
+  const isControlled = openProp !== undefined
+  const open = isControlled ? openProp : uncontrolledOpen
+
+  const setOpen = React.useCallback(
+    (nextOpen: boolean) => {
+      if (!isControlled) {
+        setUncontrolledOpen(nextOpen)
+      }
+      onOpenChange?.(nextOpen)
+    },
+    [isControlled, onOpenChange],
+  )
+
+  const contextValue = React.useMemo(() => ({ open, setOpen }), [open, setOpen])
+
+  return (
+    <DropdownMenuOpenContext.Provider value={contextValue}>
+      <DropdownMenuPrimitive.Root
+        data-slot="dropdown-menu"
+        {...props}
+        open={open}
+        onOpenChange={setOpen}
+      />
+    </DropdownMenuOpenContext.Provider>
+  )
 }
 
 function DropdownMenuPortal({
@@ -21,12 +63,64 @@ function DropdownMenuPortal({
 }
 
 function DropdownMenuTrigger({
+  onPointerDown,
+  onPointerUp,
+  onPointerCancel,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Trigger>) {
+  const menu = React.useContext(DropdownMenuOpenContext)
+  const touchOriginRef = React.useRef<{
+    x: number
+    y: number
+    id: number
+  } | null>(null)
+
   return (
     <DropdownMenuPrimitive.Trigger
       data-slot="dropdown-menu-trigger"
       {...props}
+      onPointerDown={(event) => {
+        onPointerDown?.(event)
+        if (event.defaultPrevented || !menu) {
+          return
+        }
+        if (event.button !== 0 || isImmediatePointerOpen(event)) {
+          return
+        }
+
+        event.preventDefault()
+        touchOriginRef.current = {
+          x: event.clientX,
+          y: event.clientY,
+          id: event.pointerId,
+        }
+      }}
+      onPointerUp={(event) => {
+        onPointerUp?.(event)
+        const origin = touchOriginRef.current
+        touchOriginRef.current = null
+        if (event.defaultPrevented || !menu || !origin) {
+          return
+        }
+        if (origin.id !== event.pointerId) {
+          return
+        }
+
+        const deltaX = event.clientX - origin.x
+        const deltaY = event.clientY - origin.y
+        if (
+          deltaX * deltaX + deltaY * deltaY >
+          TOUCH_TAP_MOVE_THRESHOLD_PX * TOUCH_TAP_MOVE_THRESHOLD_PX
+        ) {
+          return
+        }
+
+        menu.setOpen(!menu.open)
+      }}
+      onPointerCancel={(event) => {
+        touchOriginRef.current = null
+        onPointerCancel?.(event)
+      }}
     />
   )
 }
