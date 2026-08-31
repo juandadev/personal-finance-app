@@ -136,7 +136,7 @@ export function ForecastActivityReport({
               </h2>
               <p className="text-muted-foreground mt-1 text-sm">
                 {month.isCurrentPeriod
-                  ? "Actual bank cash activity to date plus pending forecast items."
+                  ? "Posted bank movements already in today’s balance, plus pending items still left this month."
                   : "Projected income and payments for the selected month."}
               </p>
             </div>

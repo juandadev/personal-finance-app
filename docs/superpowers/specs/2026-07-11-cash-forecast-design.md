@@ -6,11 +6,13 @@
 ## Summary
 
 Add a `Cash Forecast` module that summarizes the user's primary payment-account
-cash flow for the current local calendar month and estimates its balance for the
-next 12 full calendar months. The 13-month report reconstructs the current
-month's opening balance from actual cash activity, combines actual activity to
-date with pending items, and carries the reconciled ending balance through every
-future month.
+cash for the current local calendar month and estimates its balance for the
+next 12 full calendar months. The 13-month report starts the current month from
+today's live primary-account balance, applies still-pending income and
+obligations, and carries that ending balance through every future month.
+
+Amended by
+[Forecast Current Month From Live Balance — Design](./2026-08-31-forecast-current-month-from-live-balance-design.md).
 
 The report combines a saved default monthly income, month-specific additional
 income, direct recurring bills, credit-card statement payments, and custom
@@ -24,12 +26,11 @@ month pins it and updates a paginated activity list below the chart.
 
 ## Goals
 
-- Show a reconciled current month plus estimated ending balances for the next 12
-  full months.
-- Reconstruct the current month's opening balance from today's actual primary
-  account balance and actual cash movement to date.
-- Distinguish actual primary-account cash transactions from pending forecast
-  activity.
+- Show a current-month runway from today's live balance plus estimated ending
+  balances for the next 12 full months.
+- Use today's actual primary-account balance as the current-month opening.
+- Distinguish still-pending forecast activity from posted bank activity that is
+  already in today's balance.
 - Carry every monthly surplus or deficit into all later projected balances.
 - Start from the actual primary payment-account balance.
 - Account for current-period custom adjustments and known remaining obligations
@@ -67,10 +68,10 @@ month pins it and updates a paginated activity list below the chart.
   savings accounts.
 - Return 13 ordered months: the current local calendar month followed by 12 full
   future months.
-- Treat the current month as an actual-to-date plus pending reconciliation.
-- Count only primary-account transactions whose payment method changes cash:
-  `bank_account` and `credit_card_payment`. Credit-card purchases and vouchers
-  do not count as actual cash movement.
+- Treat the current month as today's live balance plus still-pending activity.
+- Do not count posted primary-account cash activity again in current-month
+  totals. Use current-month salary receipts only to reduce remaining default
+  income.
 - Keep current-period custom adjustments pending until the user edits or deletes
   them; do not infer settlement by matching transactions.
 - Apply a credit-card obligation in its statement payment-due month.
@@ -82,15 +83,12 @@ month pins it and updates a paginated activity list below the chart.
 
 ## Terminology
 
-- **Current-month reconciliation:** The whole-month summary that reconstructs
-  opening balance, adds actual cash movement to date, and applies pending
-  activity to derive the current month's ending balance.
-- **Opening balance:** The amount carried into a forecast month before that
-  month's projected income and outflows.
+- **Current-month runway:** Today's primary-account balance plus still-pending
+  income minus still-pending outflows for the current local month.
+- **Opening balance:** Today's primary-account balance for the current month,
+  or the prior month's ending balance for future months.
 - **Monthly change:** Total projected income minus total projected outflows.
 - **Ending balance:** Opening balance plus monthly change.
-- **Actual activity:** A posted primary-account transaction that has already
-  changed cash.
 - **Pending activity:** A forecast adjustment or unpaid generated obligation
   that has not yet changed cash.
 - **Pinned month:** The month whose activity list is currently displayed.
@@ -145,7 +143,7 @@ Generated forecast output is never written to either table.
 
 The pure forecast engine returns:
 
-- A current-month reconciliation summary.
+- A current-month runway summary.
 - Exactly 13 ordered months, beginning with the current local month.
 - For each month:
   - period and display label;
@@ -164,10 +162,8 @@ The pure forecast engine returns:
 
 Activity rows use signed integer cents: income is positive and outflow is
 negative. Every row includes a stable key, source type, source identifier when
-available, label, period, actual-or-pending status, and optional effective date.
-Current-month actual rows use the transaction ID as their source ID and a stable
-`cash-transaction:<id>` key. Credit-card payment rows may include nested charge
-details.
+available, label, period, pending status, and optional effective date.
+Credit-card payment rows may include nested charge details.
 
 ## Architecture
 
@@ -177,8 +173,8 @@ Keep the feature within the existing finance pipeline:
    account, bill, card, statement, payment, and preference records.
 2. Finance state and reducer events represent settings and adjustment
    create/update/delete results.
-3. A focused pure forecast module derives the reconciliation, 13 months, and
-   activities.
+3. A focused pure forecast module derives the current-month runway, 13 months,
+   and activities.
 4. The finance selector/view-model layer exposes the derived report to the
    Forecast page.
 5. Server actions use Zod and the existing `{ ok, message, data }` result
@@ -212,47 +208,43 @@ only actual cash balance included in this forecast.
 If no primary payment account exists, return a blocking setup state rather than
 calculating from zero.
 
-### 2. Build the Current-Month Reconciliation
+### 2. Build the Current-Month Runway
 
-Select primary-account transactions posted from the first day of the current
-local month through the configured-timezone current date. Actual income is the
-sum of positive cash-changing transactions. Actual outflow is the absolute sum
-of negative `bank_account` and `credit_card_payment` transactions. Exclude
-`credit_card` purchases and vouchers because they did not move bank cash.
-
-Reconstruct and project the current month as follows:
+Use today's primary-account balance as the current-month opening. Do not
+reconstruct month-open cash or count posted cash activity again.
 
 ```text
-actual net cash movement = actual income - actual outflow
-opening balance = today's actual balance - actual net cash movement
+opening balance = today's actual balance
 ending balance =
   today's actual balance
+  + remaining default income
   + pending current additional income
   - remaining direct recurring bills
   - remaining credit-card statement payments
   - pending current planned outflows
+  - opted-in budget projections
 ```
 
 Remaining obligations include overdue or remaining direct-bank recurring-bill
 occurrences and overdue or remaining credit-card statement obligations due on
 or before the end of the current local month.
 
-The reconciliation must:
+The current month must:
 
 - exclude paid or skipped bill occurrences;
 - exclude archived bills from future occurrence generation;
 - exclude card payments already reflected in the actual account balance;
 - include an overdue unpaid obligation even when its due date is before today;
 - avoid adding card-assigned bills separately from their statement obligation;
-- exclude the default monthly income;
+- include remaining default income;
 - include current one-time additional income and planned outflows;
 - include monthly planned outflows active in the current period; and
 - keep custom items pending until explicitly edited or deleted.
 
-Settled direct bills appear only through their actual bank transaction. Paid
-statements appear only through their actual `credit_card_payment` transaction.
-Existing bill-payment and statement-payment records remain authoritative for
-excluding their generated pending obligations.
+Paid bills and statements do not appear as pending rows. Existing bill-payment
+and statement-payment records remain authoritative for excluding their
+generated pending obligations. Posted cash activity stays on Overview and
+Transactions.
 
 ### 3. Calculate Each Future Month
 
@@ -368,7 +360,6 @@ The summary card contains:
 - `Current-Month Ending Balance · <Month Year>` for the current month or
   `Projected Ending Balance · <Month Year>` for future months;
 - the selected or previewed ending balance in large tabular numerals;
-- reconstructed current-month opening balance;
 - today's primary-account balance;
 - pending current-month income and outflows; and
 - a short indication of whether the value is selected or being previewed.
@@ -404,8 +395,8 @@ Below the chart, show:
 - a responsive activity list; and
 - pagination with 10 parent rows per page.
 
-The current month lists actual cash transactions to date and pending activity.
-Every parent row visibly includes `Actual` or `Pending` in its source metadata.
+The current month lists posted cash movements as `Actual` rows and still-pending
+items as `Pending` rows. Posted rows do not change current-month totals.
 Future activity behavior remains projected and otherwise unchanged.
 
 For the current month, order actual cash transactions by effective date first,
@@ -455,16 +446,14 @@ names and amounts, muted source metadata, and right-aligned money.
 
 ### Pure Calculation Tests
 
-- Current opening balance equals today's balance minus actual net cash movement
-  to date.
-- The partial current month does not add default income.
-- Current actual income and outflow include only primary-account cash-changing
-  payment methods.
+- Current opening balance equals today's primary-account balance.
+- The current month adds remaining default income when greater than zero.
+- Current-month totals ignore posted cash activity already in today's balance.
 - Current custom additional income, one-time planned outflows, and active
   monthly planned outflows remain pending and affect current ending balance.
 - Current ending balance carries positively or negatively into the next month.
-- Settled recurring bills and paid statements appear as actual transactions and
-  not as pending obligations.
+- Settled recurring bills and paid statements do not appear as pending
+  obligations.
 - Unpaid current obligations contribute exactly once.
 - Monthly surplus and deficit carry forward across all later months.
 - Negative balances remain valid and continue carrying forward.

@@ -498,14 +498,17 @@ Button labels should be action-specific: `Add Money`, `Create Budget`,
 - Forecast activity uses 10 parent rows per page. Credit-card statement
   children expand beneath their parent and do not count toward pagination.
   Desktop uses the dense table pattern; mobile uses stacked list rows.
-- The current month is a reconciled whole-month cash summary. Its activity list
-  combines actual primary-account cash transactions posted to date with pending
-  forecast items, and every row visibly says `Actual` or `Pending`. Current
-  totals combine both groups; empty copy names both actual and pending activity.
-- The current-month summary shows reconstructed opening balance, today's actual
-  balance, pending additional income, and pending outflows. Future months remain
-  projections, and the saved default monthly income starts with the first
-  future month.
+- The current month is a today-plus-pending runway. Its activity list shows
+  posted primary-account cash movements already in today's balance plus pending
+  forecast items, and every row visibly says `Actual` or `Pending`. Total
+  Income, Total Outflows, and Monthly Change sum the listed rows so they match
+  the table. The current-month ending balance still uses today's live balance
+  plus pending income minus pending outflows. Empty copy names both actual and
+  pending activity.
+- The current-month summary shows today's actual balance, pending income
+  (remaining default income plus additional income), and pending outflows.
+  Future months remain projections, and the saved default monthly income starts
+  with the first future month.
 - User-created additional-income and planned-outflow adjustments may be
   one-time or repeat monthly from their selected start month. They remain
   pending forecast-only entries until edited or deleted.

@@ -66,9 +66,10 @@ const report: ReadyForecast = {
     creditCardObligationsCents: 20_000,
     remainingObligationsCents: 50_000,
     pendingAdditionalIncomeCents: 5_000,
+    pendingIncomeCents: 80_000,
     pendingPlannedOutflowCents: 10_000,
     pendingOutflowsCents: 60_000,
-    openingBalanceCents: 150_000,
+    openingBalanceCents: 200_000,
     activities: [],
   },
   months,
@@ -144,7 +145,7 @@ describe("ForecastSummaryChart", () => {
           ...report,
           bridge: {
             ...report.bridge,
-            openingBalanceCents: -10_000,
+            startingBalanceCents: -10_000,
             pendingOutflowsCents: 60_000,
           },
         }}
@@ -153,8 +154,9 @@ describe("ForecastSummaryChart", () => {
       />,
     )
 
+    expect(screen.queryByText("Current Month Opening")).toBeNull()
     expect(
-      bridgeValue("Current Month Opening")?.className.includes(
+      bridgeValue("Balance on Jul 12, 2026")?.className.includes(
         "text-destructive",
       ),
     ).toBe(true)
@@ -164,7 +166,7 @@ describe("ForecastSummaryChart", () => {
       ),
     ).toBe(true)
     expect(
-      bridgeValue("Balance on Jul 12, 2026")?.className.includes(
+      bridgeValue("Pending Income This Month")?.className.includes(
         "text-destructive",
       ),
     ).toBe(false)

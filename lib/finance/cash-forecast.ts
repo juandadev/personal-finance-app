@@ -77,6 +77,7 @@ export interface CashForecastBridge {
   creditCardObligationsCents: number
   remainingObligationsCents: number
   pendingAdditionalIncomeCents: number
+  pendingIncomeCents: number
   pendingPlannedOutflowCents: number
   pendingOutflowsCents: number
   openingBalanceCents: number
@@ -767,19 +768,6 @@ export function buildCashForecast(
   const salaryCategoryId = getSalaryCategoryId(state)
   const savedDefaultIncomeCents =
     state.cashForecastSettings?.default_monthly_income_cents ?? 0
-  const reconciliationIncomeCents = sumPositiveCents(currentActualTransactions)
-  const reconciliationOutflowCents = sumNegativeCents(currentActualTransactions)
-  const reconciliationNetMovementCents =
-    reconciliationIncomeCents - reconciliationOutflowCents
-  const forecastActualTransactions = currentActualTransactions.filter(
-    (transaction) => !isPotMovementTransaction(transaction, ownerContactId),
-  )
-  const forecastActualIncomeCents = sumPositiveCents(forecastActualTransactions)
-  const forecastActualOutflowCents = sumNegativeCents(
-    forecastActualTransactions,
-  )
-  const forecastActualNetMovementCents =
-    forecastActualIncomeCents - forecastActualOutflowCents
   const salaryReceivedCents = sumPositiveCents(
     currentActualTransactions.filter(
       (transaction) =>
@@ -792,8 +780,14 @@ export function buildCashForecast(
     0,
     savedDefaultIncomeCents - salaryReceivedCents,
   )
-  const currentOpeningBalanceCents =
-    primaryAccount.current_balance_cents - reconciliationNetMovementCents
+  const pendingDefaultIncomeCents =
+    remainingDefaultIncomeCents > 0 &&
+    isExcluded("default_income", "default_income", currentPeriod)
+      ? 0
+      : remainingDefaultIncomeCents
+  const pendingIncomeCents =
+    pendingDefaultIncomeCents + pendingAdditionalIncomeCents
+  const currentOpeningBalanceCents = primaryAccount.current_balance_cents
   const bridgeActivities = sortDatedActivities([
     ...currentDirectBills.map((projection) => {
       const activity = directBillActivity(projection, currentPeriod)
@@ -835,12 +829,6 @@ export function buildCashForecast(
       : cardObligations.filter(
           (obligation) => obligation.paymentDueDate.slice(0, 7) === period,
         )
-    const monthActualIncomeCents = isCurrentPeriod
-      ? forecastActualIncomeCents
-      : 0
-    const monthActualOutflowCents = isCurrentPeriod
-      ? forecastActualOutflowCents
-      : 0
     const additionalIncomeActivities = additionalIncome.map((adjustment) =>
       adjustmentActivity(
         adjustment,
@@ -919,16 +907,27 @@ export function buildCashForecast(
           : sum + Math.abs(activity.amountCents),
       0,
     )
-    const totalIncomeCents =
-      monthActualIncomeCents + defaultIncomeCents + additionalIncomeCents
-    const totalOutflowsCents =
-      monthActualOutflowCents +
+    const monthActualIncomeCents = isCurrentPeriod
+      ? sumPositiveCents(currentActualTransactions)
+      : 0
+    const monthActualOutflowCents = isCurrentPeriod
+      ? sumNegativeCents(currentActualTransactions)
+      : 0
+    const pendingIncomeCentsForMonth =
+      defaultIncomeCents + additionalIncomeCents
+    const pendingOutflowCentsForMonth =
       directBillOutflowCents +
       creditCardOutflowCents +
       plannedOutflowCents +
       budgetProjectionOutflowCents
+    const totalIncomeCents = monthActualIncomeCents + pendingIncomeCentsForMonth
+    const totalOutflowsCents =
+      monthActualOutflowCents + pendingOutflowCentsForMonth
     const monthlyChangeCents = totalIncomeCents - totalOutflowsCents
-    const endingBalanceCents = openingBalanceCents + monthlyChangeCents
+    const endingBalanceCents =
+      openingBalanceCents +
+      pendingIncomeCentsForMonth -
+      pendingOutflowCentsForMonth
     const datedOutflows = sortDatedActivities([
       ...directBillActivities,
       ...monthCardObligations.map((obligation) =>
@@ -937,7 +936,7 @@ export function buildCashForecast(
     ])
     const activities: CashForecastActivity[] = [
       ...(isCurrentPeriod
-        ? forecastActualTransactions.map((transaction) =>
+        ? currentActualTransactions.map((transaction) =>
             actualTransactionActivity(transaction, period),
           )
         : []),
@@ -996,13 +995,14 @@ export function buildCashForecast(
       period: currentPeriod,
       asOfDate,
       startingBalanceCents: primaryAccount.current_balance_cents,
-      actualIncomeCents: forecastActualIncomeCents,
-      actualOutflowCents: forecastActualOutflowCents,
-      actualNetMovementCents: forecastActualNetMovementCents,
+      actualIncomeCents: 0,
+      actualOutflowCents: 0,
+      actualNetMovementCents: 0,
       directBillObligationsCents,
       creditCardObligationsCents,
       remainingObligationsCents,
       pendingAdditionalIncomeCents,
+      pendingIncomeCents,
       pendingPlannedOutflowCents,
       pendingOutflowsCents,
       openingBalanceCents: currentOpeningBalanceCents,

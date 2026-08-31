@@ -9,10 +9,14 @@
 Revise the Cash Forecast engine so the **current month** projects **remaining**
 default monthly income instead of excluding it entirely. Salary received in the
 current month (category slug `salary`) reduces that pending amount so the
-forecast does not double-count pay already recorded. Pot main-account movements
-are excluded from forecast income and outflow totals because they are internal
-reallocations, not external cash flow. The account-owner contact is reserved for
-pot movements and hidden from manual transaction entry.
+forecast does not double-count pay already recorded. The current month now
+starts from today's live primary-account balance; pot main-account movements
+are already in that balance and do not change Forecast totals. They can still
+appear as Actual activity. The account-owner contact is reserved for pot
+movements and hidden from manual transaction entry.
+
+Amended by
+[Forecast Current Month From Live Balance — Design](./2026-08-31-forecast-current-month-from-live-balance-design.md).
 
 Implementation stays inside the pure `buildCashForecast` module plus a small UI
 filter on the transaction contact picker. No schema migration is required.
@@ -23,9 +27,9 @@ filter on the transaction contact picker. No schema migration is required.
   income.
 - Reduce remaining default income by salary-category transactions posted in the
   current month (category slug `salary`, case-insensitive).
-- Exclude pot main-account transactions from forecast income and outflow totals.
-- Keep opening-balance reconstruction accurate using **all** cash-changing
-  transactions, including pot movements.
+- Keep pot main-account transactions out of forecast totals because they are
+  already in today's live balance. Still show them as Actual activity.
+- Use today's primary-account balance as the current-month opening.
 - Hide the account-owner contact from manual Add/Edit Transaction dialogs.
 - Leave future-month projection unchanged (full default income every month).
 
@@ -37,7 +41,7 @@ filter on the transaction contact picker. No schema migration is required.
 - Excluding pot movements from the user's actual bank balance or account
   summaries.
 - Adjusting future months based on salary already received in the current month.
-- Showing pot main-account movements in the forecast activity list.
+- Counting posted cash activity again in the current-month ending balance.
 
 ## Core Decisions
 
@@ -51,11 +55,8 @@ filter on the transaction contact picker. No schema migration is required.
   main-account movement.
 - **Owner contact UX:** Hide the account-owner contact from manual transaction
   entry so the counterparty signal stays reliable.
-- **Two totals in the engine:**
-  - **Reconciliation totals** — all cash-changing transactions; used only for
-    opening-balance reconstruction.
-  - **Forecast totals** — exclude owner-contact transactions; used for current
-    month income/outflow display, monthly totals, chart data, and activity rows.
+- **Current-month totals:** pending income and pending outflows only. Posted
+  cash activity is used solely to compute salary received.
 
 ## Terminology
 
@@ -64,31 +65,19 @@ salaryReceivedCents)` for the current period only.
 - **Salary received:** Sum of positive, cash-changing, primary-account
   transactions in the current month whose category slug is `salary`, excluding
   owner-contact transactions.
-- **Forecast actual income:** Positive cash-changing transactions counted toward
-  current-month projected income, excluding owner-contact transactions.
-- **Forecast actual outflow:** Absolute sum of negative cash-changing
-  transactions counted toward current-month projected outflows, excluding
-  owner-contact transactions.
 - **Pot main-account movement:** A pot Add Money or Withdraw action routed
   through the primary bank account, recorded as a transaction using the
-  account-owner counterparty.
+  account-owner counterparty. Already reflected in today's live balance.
 
 ## Algorithm Changes
 
-### Opening balance (unchanged anchor)
-
-Select all primary-account cash-changing transactions posted from the first day
-of the current local month through the configured as-of date.
+### Opening balance
 
 ```text
-reconciliationIncomeCents = sum(positive cash-changing transactions)
-reconciliationOutflowCents = sum(abs(negative cash-changing transactions))
-reconciliationNetCents = reconciliationIncomeCents − reconciliationOutflowCents
-openingBalanceCents = todayPrimaryBalanceCents − reconciliationNetCents
+openingBalanceCents = todayPrimaryBalanceCents
 ```
 
-This includes pot movements because they did move bank cash and must reconcile
-to today's actual balance.
+Posted cash activity, including pot movements, is already in that live balance.
 
 ### Current-month projected income
 
@@ -100,15 +89,11 @@ salaryReceivedCents =
       where category_id = salaryCategoryId
       and counterparty is not account owner)
 
-forecastActualIncomeCents =
-  sum(positive cash-changing primary-account transactions in current month
-      where counterparty is not account owner)
-
 remainingDefaultIncomeCents =
   max(0, default_monthly_income_cents − salaryReceivedCents)
 
-totalIncomeCents =
-  forecastActualIncomeCents
+displayTotalIncomeCents =
+  actualIncomeCents
   + remainingDefaultIncomeCents
   + additionalIncomeCents
 ```
@@ -122,57 +107,56 @@ totalIncomeCents = default_monthly_income_cents + additionalIncomeCents
 ### Current-month projected outflows
 
 ```text
-forecastActualOutflowCents =
-  sum(abs(negative cash-changing primary-account transactions in current month
-          where counterparty is not account owner))
-
-totalOutflowsCents =
-  forecastActualOutflowCents
+displayTotalOutflowsCents =
+  actualOutflowCents
   + directBillOutflowCents
   + creditCardOutflowCents
   + plannedOutflowCents
   + budgetProjectionOutflowCents
 ```
 
-Pot deposits from the main account (negative owner-contact transactions) are
-excluded symmetrically with pot withdrawals.
+Posted pot deposits and other bank outflows are already in today's balance and
+do not change the ending. They do count in display totals so the table adds up.
 
 ### Ending balance
 
 ```text
-monthlyChangeCents = totalIncomeCents − totalOutflowsCents
-endingBalanceCents = openingBalanceCents + monthlyChangeCents
+monthlyChangeCents = displayTotalIncomeCents − displayTotalOutflowsCents
+endingBalanceCents =
+  openingBalanceCents
+  + remainingDefaultIncomeCents
+  + additionalIncomeCents
+  − pending outflows
 ```
 
-Because opening balance is anchored to today's actual balance and forecast
-totals exclude internal pot movements, the current month ending balance reflects
-real external income still expected plus pending obligations.
+Because opening balance is today's actual balance, the current month ending
+reflects remaining expected income plus pending obligations without replaying
+posted cash. Display totals still include listed Actual rows.
 
 ### Worked example
 
 Default monthly income: $40,000. Salary received this month: $20,000. Pot
-withdrawal to bank: $5,000. Today's balance: $125,000. Reconstructed opening:
-$100,000.
+withdrawal to bank: $5,000. Today's balance: $125,000.
 
-| Component                            | Amount   |
-| ------------------------------------ | -------- |
-| Forecast actual income (salary only) | $20,000  |
-| Remaining default income             | $20,000  |
-| Pot withdrawal                       | excluded |
-| Total projected income               | $40,000  |
+| Component                | Amount                     |
+| ------------------------ | -------------------------- |
+| Today's balance          | $125,000                   |
+| Remaining default income | $20,000                    |
+| Pot withdrawal           | already in today's balance |
+| Total projected income   | $20,000                    |
 
-Ending balance before pending outflows: $100,000 + $40,000 = $140,000.
+Ending balance before pending outflows: $125,000 + $20,000 = $145,000.
 
 ## Domain Output
 
 ### `CashForecastMonth` (current period)
 
-| Field                | Meaning                                          |
-| -------------------- | ------------------------------------------------ |
-| `actualIncomeCents`  | Forecast actual income (excludes pot movements)  |
-| `actualOutflowCents` | Forecast actual outflow (excludes pot movements) |
-| `defaultIncomeCents` | Remaining default income for the current month   |
-| `totalIncomeCents`   | Sum per algorithm above                          |
+| Field                | Meaning                                            |
+| -------------------- | -------------------------------------------------- |
+| `actualIncomeCents`  | Listed current-month cash income, including pots   |
+| `actualOutflowCents` | Listed current-month cash outflows, including pots |
+| `defaultIncomeCents` | Remaining default income for the current month     |
+| `totalIncomeCents`   | Display sum of listed income rows                  |
 
 Future months: `defaultIncomeCents` remains the full saved default;
 `actualIncomeCents` and `actualOutflowCents` remain zero.
@@ -181,14 +165,13 @@ Future months: `defaultIncomeCents` remains the full saved default;
 
 **Current month**
 
-- Include forecast actual transactions (non-owner-contact) as `cash_transaction`
-  rows with status `actual`.
+- Include posted cash-changing primary-account transactions as `cash_transaction`
+  rows with status `actual`, including owner-contact pot movements.
 - When `remainingDefaultIncomeCents > 0`, add one pending row:
   - key: `default-income:{period}`
   - sourceType: `default_income`
   - label: `Remaining Monthly Income`
   - status: `pending`
-- Omit owner-contact transactions entirely.
 
 **Future months**
 
@@ -199,10 +182,11 @@ Future months: `defaultIncomeCents` remains the full saved default;
 
 Expose forecast-adjusted values for display consistency:
 
-- `actualIncomeCents` → forecast actual income
-- `actualOutflowCents` → forecast actual outflow
-- `actualNetMovementCents` → forecast actual income − forecast actual outflow
-- `openingBalanceCents` → still derived from full reconciliation net
+- `actualIncomeCents` → 0
+- `actualOutflowCents` → 0
+- `actualNetMovementCents` → 0
+- `openingBalanceCents` → today's primary-account balance
+- `pendingIncomeCents` → remaining default income plus additional income
 
 ## UI Changes
 
@@ -219,32 +203,36 @@ transfer dialogs remain unchanged.
 
 No new controls. Existing chart and activity report consume updated engine
 output. The current-month income bar and totals reflect remaining default
-income plus non-pot actual income.
+income plus additional income.
 
 ## Edge Cases
 
-| Case                                        | Behavior                                                  |
-| ------------------------------------------- | --------------------------------------------------------- |
-| Salary received exceeds default             | `remainingDefaultIncomeCents = 0`                         |
-| No `salary` slug category                   | Full default applies as remaining income                  |
-| Category renamed from Salary                | Slug updates; link breaks until name/slug is restored     |
-| Multiple salary transactions                | Sum all qualifying salary receipts                        |
-| Non-salary income                           | Counts in forecast actual income; does not reduce default |
-| Owner contact used only by pot movements    | Reliable after hiding from manual entry                   |
-| Pot direct adjustment / pot-to-pot transfer | No bank transaction; forecast unaffected                  |
+| Case                                        | Behavior                                              |
+| ------------------------------------------- | ----------------------------------------------------- |
+| Salary received exceeds default             | `remainingDefaultIncomeCents = 0`                     |
+| No `salary` slug category                   | Full default applies as remaining income              |
+| Category renamed from Salary                | Slug updates; link breaks until name/slug is restored |
+| Multiple salary transactions                | Sum all qualifying salary receipts                    |
+| Non-salary income                           | Already in today's balance; does not reduce default   |
+| Owner contact used only by pot movements    | Reliable after hiding from manual entry               |
+| Pot direct adjustment / pot-to-pot transfer | No bank transaction; forecast unaffected              |
 
 ## Testing
 
 Add or update unit tests in `lib/finance/cash-forecast.test.ts`:
 
 1. Current month includes remaining default after partial salary.
-2. Current month total income does not double-count salary.
+2. Current month total income does not double-count salary already in today's
+   balance.
 3. Salary above default clamps remaining default to zero.
-4. Pot withdrawal excluded from forecast income; opening balance still correct.
-5. Pot deposit excluded from forecast outflow.
-6. Non-salary income included without reducing remaining default.
+4. Pot withdrawal does not lower the current-month ending below today's
+   balance plus remaining income.
+5. Pot deposit does not raise the current-month ending above today's balance
+   plus remaining income.
+6. Non-salary income does not reduce remaining default.
 7. Future months still use full default income.
-8. Owner-contact transactions omitted from forecast activities.
+8. Posted cash and owner-contact pot movements appear as Actual activity and
+   count in display totals, not in the ending balance.
 
 Add or update component test for transaction contact picker excluding account
 owner when `excludeAccountOwner` is set.

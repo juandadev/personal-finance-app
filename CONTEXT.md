@@ -55,3 +55,19 @@ _Avoid_: Soft delete, delayed archive, cancel immediately
 **Cancel (Recurring Bill)**:
 The product action that ends a Recurring Bill permanently (persisted as archive), keeping history; for card-assigned bills this uses a Scheduled End on the next due date after today.
 _Avoid_: Delete, remove charge, keep/remove prompt
+
+**Cash Forecast**:
+A derived 13-month view of Primary Account cash from today's live balance through still-pending income and obligations.
+_Avoid_: Cash flow report, month-to-date reconciliation
+
+**Primary Account**:
+The single cash payment account whose live balance is the Cash Forecast anchor.
+_Avoid_: Checking account, main account, combined balances
+
+**Current-Month Ending Balance**:
+Today's Primary Account balance plus still-pending income minus still-pending outflows for the current local month.
+_Avoid_: Reconstructed opening, month-to-date actuals
+
+**Pot Main-Account Movement**:
+An Add Money or Withdraw routed through the Primary Account and already reflected in today's live balance.
+_Avoid_: External outflow, forecast actual

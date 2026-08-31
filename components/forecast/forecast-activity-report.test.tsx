@@ -147,6 +147,26 @@ describe("ForecastActivityReport", () => {
     ).toBeGreaterThan(0)
   })
 
+  test("renders current-month empty copy for actual and pending activity", () => {
+    render(
+      <ForecastActivityReport
+        adjustments={[]}
+        currency="USD"
+        month={makeMonth([], true)}
+        periods={["2026-08"]}
+      />,
+    )
+
+    expect(
+      screen.queryAllByText("No actual cash activity or pending items").length,
+    ).toBeGreaterThan(0)
+    expect(
+      screen.getByText(
+        "Posted bank movements already in today’s balance, plus pending items still left this month.",
+      ),
+    ).toBeTruthy()
+  })
+
   test("expands statement details while paginating by parent activities", async () => {
     const user = userEvent.setup()
     const statement: CashForecastActivity = {
@@ -279,7 +299,7 @@ describe("ForecastActivityReport", () => {
     ).toBeGreaterThan(0)
     expect(
       screen.getByText(
-        "Actual bank cash activity to date plus pending forecast items.",
+        "Posted bank movements already in today’s balance, plus pending items still left this month.",
       ),
     ).toBeTruthy()
   })

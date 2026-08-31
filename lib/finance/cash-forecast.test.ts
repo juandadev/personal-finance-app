@@ -329,7 +329,7 @@ describe("buildCashForecast blockers", () => {
 })
 
 describe("buildCashForecast projection", () => {
-  test("reconstructs current opening from actual cash movement and projects remaining default income", () => {
+  test("starts the current month from today's balance and projects remaining default income", () => {
     const forecast = expectReady(
       makeState({
         accounts: [
@@ -380,12 +380,13 @@ describe("buildCashForecast projection", () => {
     expect(current).toMatchObject({
       period: "2026-07",
       isCurrentPeriod: true,
-      openingBalanceCents: 100_000,
+      openingBalanceCents: 160_000,
       actualIncomeCents: 80_000,
       actualOutflowCents: 20_000,
       defaultIncomeCents: 200_000,
       totalIncomeCents: 280_000,
       totalOutflowsCents: 20_000,
+      monthlyChangeCents: 260_000,
       endingBalanceCents: 360_000,
     })
     expect(current.activities.map((activity) => activity.key)).toEqual([
@@ -469,7 +470,7 @@ describe("buildCashForecast projection", () => {
     expect(negative.months[1]?.openingBalanceCents).toBe(-50_000)
   })
 
-  test("shows a settled direct bill only as its actual cash transaction", () => {
+  test("omits a settled direct bill from pending activity", () => {
     const forecast = expectReady(
       makeState({
         accounts: [
@@ -508,6 +509,8 @@ describe("buildCashForecast projection", () => {
 
     expect(current.actualOutflowCents).toBe(10_000)
     expect(current.directBillOutflowCents).toBe(0)
+    expect(current.totalOutflowsCents).toBe(10_000)
+    expect(current.endingBalanceCents).toBe(90_000)
     expect(current.activities).toHaveLength(1)
     expect(current.activities[0]).toMatchObject({
       key: "cash-transaction:bill-cash-transaction",
@@ -516,7 +519,7 @@ describe("buildCashForecast projection", () => {
     })
   })
 
-  test("shows a paid card statement only as its actual cash payment", () => {
+  test("omits a paid card statement from pending activity", () => {
     const card = makeCard()
     const statement = {
       id: "statement-1",
@@ -572,6 +575,8 @@ describe("buildCashForecast projection", () => {
 
     expect(current.actualOutflowCents).toBe(25_000)
     expect(current.creditCardOutflowCents).toBe(0)
+    expect(current.totalOutflowsCents).toBe(25_000)
+    expect(current.endingBalanceCents).toBe(75_000)
     expect(current.activities).toHaveLength(1)
     expect(current.activities[0]?.sourceType).toBe("cash_transaction")
   })
@@ -619,6 +624,75 @@ describe("buildCashForecast projection", () => {
         (activity) => activity.sourceType === "credit_card_statement",
       ),
     ).toHaveLength(1)
+  })
+
+  test("reduces the current month by overdue unpaid card statements", () => {
+    const amex = makeCard({ id: "amex", nickname: "Amex Platinum" })
+    const joy = makeCard({ id: "joy", nickname: "Joy Banamex" })
+    const costco = makeCard({ id: "costco", nickname: "Costco Banamex" })
+    const forecast = expectReady(
+      makeState({
+        accounts: [
+          {
+            ...makeState().accounts[0]!,
+            current_balance_cents: 1_247_624,
+          },
+        ],
+        cashForecastSettings: {
+          ...makeState().cashForecastSettings!,
+          default_monthly_income_cents: 0,
+        },
+        creditCards: [amex, joy, costco],
+        creditCardStatements: [
+          {
+            id: "amex-statement",
+            user_id: "user-1",
+            credit_card_id: amex.id,
+            period_start: "2026-05-21",
+            period_end: "2026-06-20",
+            payment_due_date: "2026-07-11",
+            statement_amount_cents: 800_000,
+            lifecycle_status: "closed",
+            paid_at: null,
+          },
+          {
+            id: "joy-statement",
+            user_id: "user-1",
+            credit_card_id: joy.id,
+            period_start: "2026-05-21",
+            period_end: "2026-06-20",
+            payment_due_date: "2026-07-11",
+            statement_amount_cents: 600_000,
+            lifecycle_status: "closed",
+            paid_at: null,
+          },
+          {
+            id: "costco-statement",
+            user_id: "user-1",
+            credit_card_id: costco.id,
+            period_start: "2026-05-21",
+            period_end: "2026-06-20",
+            payment_due_date: "2026-07-11",
+            statement_amount_cents: 500_000,
+            lifecycle_status: "closed",
+            paid_at: null,
+          },
+        ],
+      }),
+    )
+    const current = forecast.months[0]!
+
+    expect(current).toMatchObject({
+      openingBalanceCents: 1_247_624,
+      creditCardOutflowCents: 1_900_000,
+      endingBalanceCents: -652_376,
+    })
+    expect(forecast.months[1]?.openingBalanceCents).toBe(-652_376)
+    expect(
+      current.activities.filter(
+        (activity) => activity.sourceType === "credit_card_statement",
+      ),
+    ).toHaveLength(3)
   })
 
   test("returns current month plus 12 future periods across a year boundary", () => {
@@ -709,6 +783,7 @@ describe("buildCashForecast projection", () => {
       creditCardObligationsCents: 25_000,
       remainingObligationsCents: 35_000,
       pendingAdditionalIncomeCents: 500_000,
+      pendingIncomeCents: 700_000,
       pendingPlannedOutflowCents: 500_000,
       pendingOutflowsCents: 535_000,
       openingBalanceCents: 100_000,
@@ -1095,9 +1170,13 @@ describe("buildCashForecast current-month income", () => {
       actualIncomeCents: 80_000,
       defaultIncomeCents: 120_000,
       totalIncomeCents: 200_000,
-      openingBalanceCents: 40_000,
+      openingBalanceCents: 120_000,
       endingBalanceCents: 240_000,
     })
+    expect(current.activities.map((activity) => activity.key)).toEqual([
+      "cash-transaction:salary",
+      "default-income:2026-07",
+    ])
     expect(
       current.activities.find(
         (activity) => activity.sourceType === "default_income",
@@ -1135,7 +1214,7 @@ describe("buildCashForecast current-month income", () => {
       actualIncomeCents: 250_000,
       defaultIncomeCents: 0,
       totalIncomeCents: 250_000,
-      openingBalanceCents: 0,
+      openingBalanceCents: 250_000,
       endingBalanceCents: 250_000,
     })
     expect(
@@ -1145,7 +1224,7 @@ describe("buildCashForecast current-month income", () => {
     ).toBe(false)
   })
 
-  test("excludes pot withdrawals from forecast income while preserving opening balance", () => {
+  test("does not treat a pot withdrawal as extra current-month income", () => {
     const forecast = expectReady(
       makeIncomeForecastFixtures({
         accounts: [
@@ -1175,18 +1254,22 @@ describe("buildCashForecast current-month income", () => {
     )
 
     expect(forecast.months[0]).toMatchObject({
-      actualIncomeCents: 20_000,
+      actualIncomeCents: 25_000,
       defaultIncomeCents: 180_000,
-      totalIncomeCents: 200_000,
-      openingBalanceCents: 100_000,
-      endingBalanceCents: 300_000,
+      totalIncomeCents: 205_000,
+      openingBalanceCents: 125_000,
+      endingBalanceCents: 305_000,
     })
     expect(
       forecast.months[0]?.activities.map((activity) => activity.key),
-    ).toEqual(["cash-transaction:salary", "default-income:2026-07"])
+    ).toEqual([
+      "cash-transaction:salary",
+      "cash-transaction:pot-withdrawal",
+      "default-income:2026-07",
+    ])
   })
 
-  test("excludes pot deposits from forecast outflow", () => {
+  test("does not add a pot deposit back into the current-month ending", () => {
     const forecast = expectReady(
       makeIncomeForecastFixtures({
         accounts: [
@@ -1208,14 +1291,16 @@ describe("buildCashForecast current-month income", () => {
     )
 
     expect(forecast.months[0]).toMatchObject({
-      actualOutflowCents: 0,
+      actualOutflowCents: 5_000,
       defaultIncomeCents: 200_000,
       totalIncomeCents: 200_000,
-      openingBalanceCents: 120_000,
-      endingBalanceCents: 320_000,
+      totalOutflowsCents: 5_000,
+      openingBalanceCents: 115_000,
+      endingBalanceCents: 315_000,
     })
-    expect(forecast.months[0]?.activities).toHaveLength(1)
-    expect(forecast.months[0]?.activities[0]?.sourceType).toBe("default_income")
+    expect(
+      forecast.months[0]?.activities.map((activity) => activity.key),
+    ).toEqual(["cash-transaction:pot-deposit", "default-income:2026-07"])
   })
 
   test("counts non-salary income without reducing remaining default income", () => {
@@ -1262,6 +1347,8 @@ describe("buildCashForecast current-month income", () => {
       actualIncomeCents: 23_000,
       defaultIncomeCents: 180_000,
       totalIncomeCents: 203_000,
+      openingBalanceCents: 123_000,
+      endingBalanceCents: 303_000,
     })
   })
 

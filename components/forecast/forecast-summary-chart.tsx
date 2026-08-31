@@ -191,17 +191,6 @@ export function ForecastSummaryChart({
 
             <dl className="grid gap-3 sm:grid-cols-2 xl:min-w-md">
               <BridgeValue
-                label="Current Month Opening"
-                amountCents={report.bridge.openingBalanceCents}
-                value={
-                  <MoneyAmount
-                    amount={report.bridge.openingBalanceCents / 100}
-                    currency={report.currency}
-                    forceDecimals
-                  />
-                }
-              />
-              <BridgeValue
                 label={`Balance on ${formatDisplayDate(report.bridge.asOfDate)}`}
                 amountCents={report.bridge.startingBalanceCents}
                 value={
@@ -214,10 +203,10 @@ export function ForecastSummaryChart({
               />
               <BridgeValue
                 label="Pending Income This Month"
-                amountCents={report.bridge.pendingAdditionalIncomeCents}
+                amountCents={report.bridge.pendingIncomeCents}
                 value={
                   <MoneyAmount
-                    amount={report.bridge.pendingAdditionalIncomeCents / 100}
+                    amount={report.bridge.pendingIncomeCents / 100}
                     currency={report.currency}
                     forceDecimals
                   />
