@@ -79,13 +79,18 @@ Required values:
   role that is a member of the migration-created `finance_auth_gate` NOLOGIN
   role. It must not reuse the finance runtime or database-owner role.
 - `SCHEDULER_DATABASE_URL`: pooled connection string for the dedicated
-  monthly-close login role. It must not reuse the web or owner role.
+  monthly-close login role. It must not reuse the web or owner role. In local
+  development only, the monthly close falls back to `DATABASE_URL` when this
+  is unset.
 - `INVITATION_OPERATOR_DATABASE_URL`: optional direct connection string for a
   dedicated invitation operator. Invite commands fall back to
   `DATABASE_DIRECT_URL` when it is unset.
 - `NEON_AUTH_BASE_URL`: Neon Auth branch URL.
 - `NEON_AUTH_COOKIE_SECRET`: at least 32 characters, for example from `openssl rand -base64 32`.
 - `CRON_SECRET`: at least 32 random bytes used only by the scheduled route.
+- `ADMIN_EMAIL_PRIVILEGES`: local development only. The signed-in email that
+  can open `/admin` and manually run the monthly budget close. Ignored outside
+  `NODE_ENV=development`.
 - `PRIVACY_CONTROLLER_NAME`, `PRIVACY_CONTROLLER_ADDRESS`,
   `PRIVACY_CONTACT_EMAIL`, and `SECURITY_CONTACT_EMAIL`: production privacy
   notice and incident contacts.

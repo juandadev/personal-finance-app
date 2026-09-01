@@ -1,6 +1,7 @@
 import type { ReactNode } from "react"
 
 import { FinanceAppShell } from "@/components/providers/finance-app-shell"
+import { isAdminUser } from "@/lib/admin/access"
 import { requireAuth } from "@/lib/auth/session"
 import { loadFinanceShellState } from "@/lib/finance/queries"
 
@@ -22,6 +23,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   )
 
   return (
-    <FinanceAppShell initialState={initialState}>{children}</FinanceAppShell>
+    <FinanceAppShell
+      initialState={initialState}
+      isAdmin={isAdminUser(session.user)}
+    >
+      {children}
+    </FinanceAppShell>
   )
 }

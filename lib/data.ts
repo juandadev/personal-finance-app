@@ -3,6 +3,7 @@ import {
   ChartLineUpIcon,
   CreditCardIcon,
   GearSixIcon,
+  ShieldCheckIcon,
 } from "@phosphor-icons/react"
 import NavOverviewIcon from "@/components/icons/NavOverviewIcon"
 import NavTransactionsIcon from "@/components/icons/NavTransactionsIcon"
@@ -46,6 +47,13 @@ export const navItems: NavItem[] = [
   },
 ]
 
-export function getNavItems() {
-  return navItems
+const adminNavItem: NavItem = {
+  key: "admin",
+  label: "Admin",
+  icon: ShieldCheckIcon,
+  href: "/admin",
+}
+
+export function getNavItems({ isAdmin = false }: { isAdmin?: boolean } = {}) {
+  return isAdmin ? [...navItems, adminNavItem] : navItems
 }

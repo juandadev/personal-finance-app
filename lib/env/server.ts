@@ -2,6 +2,8 @@ import "server-only"
 
 import { z } from "zod"
 
+import { resolveSchedulerDatabaseUrl } from "@/lib/env/scheduler-url-policy"
+
 const postgresUrlSchema = z
   .string()
   .min(1)
@@ -33,7 +35,17 @@ export function getDatabaseDirectUrl() {
 }
 
 export function getSchedulerDatabaseUrl() {
-  return readRequired("SCHEDULER_DATABASE_URL", postgresUrlSchema)
+  const schedulerUrl = resolveSchedulerDatabaseUrl({
+    databaseUrl: process.env.DATABASE_URL,
+    nodeEnv: process.env.NODE_ENV,
+    schedulerUrl: process.env.SCHEDULER_DATABASE_URL,
+  })
+
+  if (!schedulerUrl) {
+    throw new Error("SCHEDULER_DATABASE_URL is missing or invalid.")
+  }
+
+  return schedulerUrl
 }
 
 export function getAuthDatabaseUrl() {

@@ -14,14 +14,16 @@ import type { FinanceState } from "@/lib/finance/types"
 interface FinanceAppShellProps {
   children: ReactNode
   initialState: FinanceState
+  isAdmin?: boolean
 }
 
 export function FinanceAppShell({
   children,
   initialState,
+  isAdmin = false,
 }: FinanceAppShellProps) {
   const pathname = usePathname()
-  const navItems = getNavItems()
+  const navItems = getNavItems({ isAdmin })
 
   return (
     <FinanceProvider initialState={initialState}>

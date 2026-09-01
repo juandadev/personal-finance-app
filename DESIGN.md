@@ -344,6 +344,20 @@ Finance data must stay readable on mobile.
   Legal placeholders or review notes belong in source documentation, not in
   polished user-facing copy.
 
+### Local Development Operator Tools
+
+Manual operator tools for the Scheduled Monthly Close exist only on the local
+development server (`NODE_ENV=development`) and only for the signed-in email
+in `ADMIN_EMAIL_PRIVILEGES`.
+
+- Show an `Admin` nav item only for that operator during local development.
+- `/admin` and its Server Action must deny every other environment and user
+  (`notFound()` / `Unauthorized.`). Never expose the privileged email or
+  `CRON_SECRET` to the browser.
+- The first tool is `Reset Budgets`: a Settings-style card with a destructive
+  confirmation that runs the same monthly close as production cron. Confirm
+  with `Reset Budgets Now`; cancel with `Keep Budgets`.
+
 ### Error States
 
 - Route-level crashes use the `app/error.tsx` boundary: a centered `Card` with
