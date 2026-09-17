@@ -21,12 +21,7 @@ export function SummaryCard({ stat }: SummaryCardProps) {
         {stat.label}
       </p>
       <p className="mt-3 text-3xl font-bold tracking-tight">
-        <MoneyAmount
-          amount={stat.amount}
-          expandedClassName={
-            isPrimary ? "bg-primary text-primary-foreground" : undefined
-          }
-        />
+        <MoneyAmount amount={stat.amount} />
       </p>
     </Card>
   )
