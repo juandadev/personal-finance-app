@@ -132,6 +132,8 @@ describe("resolveCreditCardAnnualityInstallments", () => {
         posted_at: "2026-07-15",
         description: "annuality:2026:1",
         created_at: "2026-07-15T00:00:00.000Z",
+        is_pot_movement: false,
+        pot_id: null,
       },
     ]
     const installments = resolveCreditCardAnnualityInstallments({

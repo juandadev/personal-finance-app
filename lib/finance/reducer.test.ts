@@ -8,6 +8,7 @@ import type {
   CashForecastAdjustmentRecord,
   CashForecastExclusionRecord,
   PotRecord,
+  RecurringBillRecord,
   TransactionRecord,
 } from "@/lib/finance/types"
 
@@ -158,6 +159,8 @@ describe("financeReducer pot movements", () => {
       posted_at: "2026-07-14",
       description: null,
       created_at: "2026-07-14T00:00:00.000Z",
+      is_pot_movement: true,
+      pot_id: "pot-1",
     }
     const summary: AccountSummaryRecord = {
       id: "summary-1",
@@ -228,5 +231,99 @@ describe("financeReducer pot movements", () => {
 
     expect(next.pots.map((pot) => pot.balance_cents)).toEqual([15_000, 10_000])
     expect(next.transactions).toEqual([])
+  })
+})
+
+describe("financeReducer planned saves", () => {
+  const pot: PotRecord = {
+    id: "pot-1",
+    user_id: "user-1",
+    name: "Vacation",
+    balance_cents: 20_000,
+    target_cents: 50_000,
+    theme_color: "chart-1",
+    due_date: null,
+  }
+  const bill: RecurringBillRecord = {
+    id: "bill-1",
+    user_id: "user-1",
+    counterparty_id: "owner-1",
+    concept: "Vacation fund",
+    amount_cents: 5_000,
+    currency: "USD",
+    frequency: "monthly",
+    first_due_date: "2026-07-01",
+    total_payments: null,
+    credit_card_id: null,
+    pot_id: pot.id,
+    category_id: "general-1",
+    archived_at: "2026-07-20T00:00:00.000Z",
+    paused_at: null,
+    scheduled_end_date: null,
+    scheduled_end_mode: null,
+  }
+  const transaction: TransactionRecord = {
+    id: "transaction-1",
+    user_id: "user-1",
+    account_id: "account-1",
+    counterparty_id: "owner-1",
+    category_id: "general-1",
+    concept: "Vacation fund",
+    amount_cents: -5_000,
+    is_voucher_expense: false,
+    payment_method: "bank_account",
+    credit_card_id: null,
+    credit_card_statement_id: null,
+    posted_at: "2026-07-01",
+    description: "Recurring bill due 2026-07-01.",
+    created_at: "2026-07-01T00:00:00.000Z",
+    is_pot_movement: true,
+    pot_id: pot.id,
+  }
+
+  test("settling a planned save updates the destination pot", () => {
+    const state = createInitialFinanceState()
+    const next = financeReducer(
+      { ...state, pots: [pot], recurringBills: [bill] },
+      {
+        type: "recurring-bill/settle",
+        billPayment: {
+          id: "payment-1",
+          user_id: "user-1",
+          recurring_bill_id: bill.id,
+          due_date: "2026-07-01",
+          amount_cents: 5_000,
+          status: "paid",
+          transaction_id: transaction.id,
+          paid_at: "2026-07-01",
+        },
+        transaction,
+        pots: [{ ...pot, balance_cents: 25_000 }],
+        accounts: [],
+        accountSummaries: [],
+      },
+    )
+
+    expect(next.pots[0]?.balance_cents).toBe(25_000)
+    expect(next.transactions).toEqual([transaction])
+    expect(next.recurringBillPayments).toHaveLength(1)
+  })
+
+  test("deleting a pot clears its links but keeps bills and movements", () => {
+    const state = createInitialFinanceState()
+    const next = financeReducer(
+      {
+        ...state,
+        pots: [pot],
+        recurringBills: [bill],
+        transactions: [transaction],
+      },
+      { type: "pot/delete", id: pot.id },
+    )
+
+    expect(next.pots).toEqual([])
+    expect(next.recurringBills[0]?.pot_id).toBeNull()
+    expect(next.transactions[0]?.pot_id).toBeNull()
+    expect(next.transactions[0]?.is_pot_movement).toBe(true)
   })
 })

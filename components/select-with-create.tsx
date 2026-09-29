@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type ReactNode } from "react"
+import type { ReactNode, RefObject } from "react"
 
 import { FormField } from "@/components/ui/form"
 import {
@@ -26,6 +26,7 @@ interface SelectWithCreateProps<TOption extends SelectWithCreateOption> {
   options: TOption[]
   placeholder?: string
   renderOption?: (option: TOption) => ReactNode
+  triggerRef?: RefObject<HTMLButtonElement | null>
   value: string
 }
 
@@ -39,14 +40,19 @@ export function SelectWithCreate<TOption extends SelectWithCreateOption>({
   options,
   placeholder = "Select an option",
   renderOption = (option) => option.label,
+  triggerRef,
   value,
 }: SelectWithCreateProps<TOption>) {
-  const [selectKey, setSelectKey] = useState(0)
   const selectedOption = options.find((option) => option.value === value)
 
   const handleValueChange = (nextValue: string) => {
+    // Radix's hidden native select can emit an empty value while new options
+    // register. There is no empty option here, so it must not clear the form.
+    if (!nextValue) {
+      return
+    }
+
     if (createItem && nextValue === createItem.value) {
-      setSelectKey((currentKey) => currentKey + 1)
       createItem.onSelect()
       return
     }
@@ -58,12 +64,11 @@ export function SelectWithCreate<TOption extends SelectWithCreateOption>({
     <FormField id={id} label={label} error={error}>
       {(fieldProps) => (
         <Select
-          key={selectKey}
           value={value}
           onValueChange={handleValueChange}
           disabled={disabled}
         >
-          <SelectTrigger {...fieldProps} variant="form">
+          <SelectTrigger {...fieldProps} ref={triggerRef} variant="form">
             <SelectValue placeholder={placeholder}>
               {selectedOption ? renderOption(selectedOption) : null}
             </SelectValue>

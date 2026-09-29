@@ -476,6 +476,7 @@ export function FinanceProvider({
                 type: "recurring-bill/settle",
                 billPayment: result.data.billPayment,
                 transaction: result.data.transaction,
+                pots: result.data.pots,
                 accounts: result.data.accounts,
                 accountSummaries: result.data.accountSummaries,
                 creditCardStatements: result.data.creditCardStatements,

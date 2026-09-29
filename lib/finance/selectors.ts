@@ -22,6 +22,7 @@ import {
   type RecurringBillOccurrenceState,
 } from "@/lib/finance/recurring-bill-schedule"
 import { formatDisplayDate } from "@/lib/format"
+import { getTransactionProtection } from "@/lib/finance/transaction-protection"
 import { sortRecurringBills } from "@/lib/finance/url-filters/recurring-bill-filters"
 import type {
   Budget,
@@ -45,6 +46,7 @@ import type {
   CreditCardStatementRecord,
   FinanceState,
   FinanceViewModel,
+  PotRecord,
   RecurringBillPaymentRecord,
   RecurringBillRecord,
   TransactionRecord,
@@ -96,6 +98,8 @@ function selectTransactions(
   creditCards: Map<string, CreditCardRecord>,
   budgetAssignments: FinanceState["budgetTransactionAssignments"],
   budgets: Map<string, BudgetRecord>,
+  pots: Map<string, PotRecord>,
+  billConceptByTransactionId: Map<string, string>,
 ) {
   const assignmentByTransactionId = new Map(
     budgetAssignments.map((assignment) => [
@@ -149,8 +153,30 @@ function selectTransactions(
       description: transaction.description ?? undefined,
       budgetId: assignment?.budget_id,
       budgetCategory: assignedCategory?.name,
+      protection: getTransactionProtection({
+        isPotMovement: transaction.is_pot_movement,
+        potName: transaction.pot_id
+          ? (pots.get(transaction.pot_id)?.name ?? null)
+          : null,
+        billConcept: billConceptByTransactionId.get(transaction.id) ?? null,
+      }),
     }
   })
+}
+
+function selectBillConceptByTransactionId(state: FinanceState) {
+  const billsById = byId(state.recurringBills)
+  const concepts = new Map<string, string>()
+
+  for (const payment of state.recurringBillPayments) {
+    const bill = billsById.get(payment.recurring_bill_id)
+
+    if (payment.transaction_id && bill) {
+      concepts.set(payment.transaction_id, bill.concept)
+    }
+  }
+
+  return concepts
 }
 
 function getPaymentMethodLabel(
@@ -307,6 +333,7 @@ function selectRecurringBills(
   categories: Map<string, CategoryRecord>,
   creditCards: Map<string, CreditCardRecord>,
   statementsByCardId: Map<string, CreditCardStatementRecord[]>,
+  pots: Map<string, PotRecord>,
   today: string,
 ): RecurringBill[] {
   return recurringBills.map((bill) => {
@@ -315,6 +342,7 @@ function selectRecurringBills(
       bill.counterparty_id,
       "counterparty",
     )
+    const pot = bill.pot_id ? pots.get(bill.pot_id) : undefined
     const category = getRequired(categories, bill.category_id, "category")
     const payments = paymentsByBillId.get(bill.id) ?? []
     const occurrenceStates = resolveBillOccurrencePresentation(
@@ -328,11 +356,11 @@ function selectRecurringBills(
 
     return {
       id: bill.id,
-      name: counterparty.display_name,
+      name: pot?.name ?? counterparty.display_name,
       concept: bill.concept,
-      avatarUrl: counterparty.avatar_url ?? "",
-      contactColor: counterparty.theme_color,
-      contactInitials: getInitials(counterparty.display_name),
+      avatarUrl: pot ? "" : (counterparty.avatar_url ?? ""),
+      contactColor: pot?.theme_color ?? counterparty.theme_color,
+      contactInitials: getInitials(pot?.name ?? counterparty.display_name),
       counterpartyId: bill.counterparty_id,
       amount: centsToDollars(bill.amount_cents),
       frequency: bill.frequency,
@@ -340,6 +368,8 @@ function selectRecurringBills(
       totalPayments: bill.total_payments ?? undefined,
       settledCount: payments.length,
       creditCardId: bill.credit_card_id ?? undefined,
+      potId: pot?.id,
+      potName: pot?.name,
       categoryId: bill.category_id,
       category: category.name,
       archivedAt: bill.archived_at ?? undefined,
@@ -957,6 +987,7 @@ export function selectFinanceViewModel(
     currentBudgetAssignments,
     categories,
   )
+  const potsById = byId(state.pots)
   const transactions = selectTransactions(
     state.transactions,
     categories,
@@ -964,6 +995,8 @@ export function selectFinanceViewModel(
     creditCardsById,
     currentBudgetAssignments,
     budgetsById,
+    potsById,
+    selectBillConceptByTransactionId(state),
   )
   const paymentsByBillId = groupPaymentsByBillId(state.recurringBillPayments)
   const recurringBills = selectRecurringBills(
@@ -973,6 +1006,7 @@ export function selectFinanceViewModel(
     categories,
     creditCardsById,
     creditCardStatementsByCardId,
+    potsById,
     today,
   )
   const totalBillsAmount = recurringBills

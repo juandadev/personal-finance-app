@@ -31,6 +31,9 @@ export type TransactionPageRow = {
   credit_card_last_four: string | null
   budget_id: string | null
   budget_category_name: string | null
+  is_pot_movement: boolean
+  pot_name: string | null
+  bill_concept: string | null
 }
 
 export const transactionPageFromSql = `
@@ -53,6 +56,15 @@ export const transactionPageFromSql = `
   LEFT JOIN categories budget_category
     ON budget_category.user_id = budget.user_id
     AND budget_category.id = budget.category_id
+  LEFT JOIN pots pot
+    ON pot.user_id = t.user_id
+    AND pot.id = t.pot_id
+  LEFT JOIN recurring_bill_payments bill_payment
+    ON bill_payment.user_id = t.user_id
+    AND bill_payment.transaction_id = t.id
+  LEFT JOIN recurring_bills bill
+    ON bill.user_id = bill_payment.user_id
+    AND bill.id = bill_payment.recurring_bill_id
 `
 
 export const transactionPageSelectSql = `
@@ -77,7 +89,10 @@ export const transactionPageSelectSql = `
     card.nickname AS credit_card_nickname,
     card.last_four AS credit_card_last_four,
     assignment.budget_id,
-    budget_category.name AS budget_category_name
+    budget_category.name AS budget_category_name,
+    t.is_pot_movement,
+    pot.name AS pot_name,
+    bill.concept AS bill_concept
 `
 
 type TransactionQueryParts = {

@@ -89,6 +89,7 @@ function makeBill(
     first_due_date: "2026-07-20",
     total_payments: null,
     credit_card_id: null,
+    pot_id: null,
     category_id: "category-1",
     archived_at: null,
     paused_at: null,
@@ -140,6 +141,8 @@ function makeTransaction(
     posted_at: "2026-07-10",
     description: null,
     created_at: "2026-07-01T00:00:00.000Z",
+    is_pot_movement: false,
+    pot_id: null,
     ...overrides,
   }
 }
@@ -1028,6 +1031,8 @@ describe("buildCashForecast projection", () => {
             posted_at: "2026-07-01",
             description: null,
             created_at: "2026-07-01T00:00:00.000Z",
+            is_pot_movement: false,
+            pot_id: null,
           },
         ],
       }),

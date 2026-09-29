@@ -60,6 +60,13 @@ export function PayBillDialog({
   const [statusMessage, setStatusMessage] = useState("")
   const [isPaying, setIsPaying] = useState(false)
   const activeCards = state.creditCards.filter((card) => !card.archived_at)
+  const pot = bill.potId
+    ? state.pots.find((candidate) => candidate.id === bill.potId)
+    : undefined
+  const isPlannedSave = Boolean(pot)
+  const potBalance = pot ? pot.balance_cents / 100 : 0
+  const potBalanceAfter = potBalance + occurrence.amount
+  const potTarget = pot ? pot.target_cents / 100 : 0
 
   const handleOpenChange = (nextOpen: boolean) => {
     setOpen(nextOpen)
@@ -76,7 +83,7 @@ export function PayBillDialog({
     setStatusMessage("")
 
     const source =
-      sourceValue === bankAccountValue
+      isPlannedSave || sourceValue === bankAccountValue
         ? ({ type: "bank_account" } as const)
         : ({ type: "credit_card", creditCardId: sourceValue } as const)
     const result = await actions.payRecurringBillOccurrence(
@@ -102,23 +109,43 @@ export function PayBillDialog({
         <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
       ) : controlledOpen === undefined ? (
         <AlertDialogTrigger asChild>
-          <Button size="sm">Pay Bill</Button>
+          <Button size="sm">{isPlannedSave ? "Save" : "Pay Bill"}</Button>
         </AlertDialogTrigger>
       ) : null}
       <AlertDialogContent variant="finance">
         <AlertDialogHeader className="text-left">
-          <AlertDialogCloseButton aria-label="Close pay bill dialog" />
-          <AlertDialogTitle variant="finance">Pay Bill?</AlertDialogTitle>
+          <AlertDialogCloseButton
+            aria-label={
+              isPlannedSave ? "Close save dialog" : "Close pay bill dialog"
+            }
+          />
+          <AlertDialogTitle variant="finance">
+            {pot ? `Save to ${pot.name}?` : "Pay Bill?"}
+          </AlertDialogTitle>
           <AlertDialogDescription variant="finance">
-            Paying from the bank account reduces your current balance now.
-            Charging a credit card adds it to that card&apos;s open statement.
+            {isPlannedSave ? (
+              <>
+                Saving moves this amount from your bank account into the pot
+                now.
+              </>
+            ) : (
+              <>
+                Paying from the bank account reduces your current balance now.
+                Charging a credit card adds it to that card&apos;s open
+                statement.
+              </>
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="mt-5 space-y-5">
           <dl className="bg-background grid gap-3 rounded-lg p-4 text-sm">
             <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">Bill</dt>
-              <dd className="text-right font-bold">{bill.name}</dd>
+              <dt className="text-muted-foreground">
+                {isPlannedSave ? "Planned Save" : "Bill"}
+              </dt>
+              <dd className="text-right font-bold">
+                {isPlannedSave ? bill.concept : bill.name}
+              </dd>
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-muted-foreground">Due Date</dt>
@@ -140,25 +167,46 @@ export function PayBillDialog({
                 <MoneyAmount amount={occurrence.amount} forceDecimals />
               </dd>
             </div>
+            {isPlannedSave ? (
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">Pot Balance</dt>
+                <dd className="text-right">
+                  <MoneyAmount amount={potBalance} forceDecimals />{" "}
+                  <span aria-hidden>→</span>
+                  <span className="sr-only">to</span>{" "}
+                  <span className="font-bold">
+                    <MoneyAmount amount={potBalanceAfter} forceDecimals />
+                  </span>
+                </dd>
+              </div>
+            ) : null}
           </dl>
-          <div className="space-y-2">
-            <Label htmlFor="pay-bill-source">Payment Source</Label>
-            <Select value={sourceValue} onValueChange={setSourceValue}>
-              <SelectTrigger id="pay-bill-source" variant="form">
-                <SelectValue placeholder="Select a payment source" />
-              </SelectTrigger>
-              <SelectContent matchTriggerWidth>
-                <SelectItem value={bankAccountValue} variant="form">
-                  Bank Account
-                </SelectItem>
-                {activeCards.map((card) => (
-                  <SelectItem key={card.id} value={card.id} variant="form">
-                    {card.nickname} •••• {card.last_four}
+          {isPlannedSave && potBalanceAfter > potTarget ? (
+            <p className="text-muted-foreground text-sm">
+              This exceeds your <MoneyAmount amount={potTarget} forceDecimals />{" "}
+              target.
+            </p>
+          ) : null}
+          {isPlannedSave ? null : (
+            <div className="space-y-2">
+              <Label htmlFor="pay-bill-source">Payment Source</Label>
+              <Select value={sourceValue} onValueChange={setSourceValue}>
+                <SelectTrigger id="pay-bill-source" variant="form">
+                  <SelectValue placeholder="Select a payment source" />
+                </SelectTrigger>
+                <SelectContent matchTriggerWidth>
+                  <SelectItem value={bankAccountValue} variant="form">
+                    Bank Account
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+                  {activeCards.map((card) => (
+                    <SelectItem key={card.id} value={card.id} variant="form">
+                      {card.nickname} •••• {card.last_four}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="pay-bill-paid-at">Payment Date</Label>
             <DatePicker
@@ -186,7 +234,13 @@ export function PayBillDialog({
                 void handlePay()
               }}
             >
-              {isPaying ? "Paying..." : "Pay Bill"}
+              {isPlannedSave
+                ? isPaying
+                  ? "Saving..."
+                  : "Save to Pot"
+                : isPaying
+                  ? "Paying..."
+                  : "Pay Bill"}
             </AlertDialogAction>
             <AlertDialogCancel
               variant="muted-link"

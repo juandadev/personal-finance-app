@@ -109,6 +109,8 @@ export interface TransactionRecord {
   posted_at: string
   description: string | null
   created_at: string
+  is_pot_movement: boolean
+  pot_id: FinanceRecordId | null
 }
 
 export interface BudgetRecord {
@@ -189,6 +191,7 @@ export interface RecurringBillRecord {
   first_due_date: string
   total_payments: number | null
   credit_card_id: FinanceRecordId | null
+  pot_id: FinanceRecordId | null
   category_id: FinanceRecordId
   archived_at: string | null
   paused_at: string | null
@@ -303,7 +306,7 @@ export type NewCounterpartyRecord = Omit<
 >
 export type NewTransactionRecord = Omit<
   TransactionRecord,
-  "user_id" | "created_at"
+  "user_id" | "created_at" | "is_pot_movement" | "pot_id"
 >
 export type NewCreditCardRecord = Omit<CreditCardRecord, "user_id">
 export type NewRecurringBillRecord = Omit<RecurringBillRecord, "user_id">

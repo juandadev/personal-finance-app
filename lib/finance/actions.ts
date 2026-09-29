@@ -386,6 +386,7 @@ const recurringBillSchema = z.object({
   first_due_date: isoDateSchema,
   total_payments: z.number().int().positive().nullable(),
   credit_card_id: recordIdSchema.nullable(),
+  pot_id: recordIdSchema.nullable(),
   category_id: recordIdSchema,
 })
 const recurringBillUpdateSchema = recurringBillSchema
@@ -1105,6 +1106,7 @@ export async function payRecurringBillOccurrenceAction(
   FinanceActionResult<{
     billPayment: RecurringBillPaymentRecord
     transaction: TransactionRecord
+    pots: PotRecord[]
     accounts: AccountRecord[]
     accountSummaries: AccountSummaryRecord[]
     creditCardStatements: CreditCardStatementRecord[]
@@ -1128,7 +1130,7 @@ export async function payRecurringBillOccurrenceAction(
 
     return {
       ok: true,
-      message: "Bill paid.",
+      message: data.pots.length > 0 ? "Money saved." : "Bill paid.",
       data,
     }
   } catch (error) {

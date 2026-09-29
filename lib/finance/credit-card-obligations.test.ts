@@ -40,6 +40,7 @@ const bill: RecurringBillRecord = {
   first_due_date: "2026-07-10",
   total_payments: 2,
   credit_card_id: card.id,
+  pot_id: null,
   category_id: "category-1",
   archived_at: null,
   paused_at: null,
@@ -74,6 +75,8 @@ const transaction: TransactionRecord = {
   posted_at: "2026-07-02",
   description: null,
   created_at: "2026-07-02T00:00:00.000Z",
+  is_pot_movement: false,
+  pot_id: null,
 }
 
 function build(

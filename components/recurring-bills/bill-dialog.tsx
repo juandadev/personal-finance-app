@@ -21,6 +21,7 @@ import {
 import { DatePicker } from "@/components/ui/date-picker"
 import { FormField, FormStatusMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -28,8 +29,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import { useFinance } from "@/hooks/use-finance"
 import { formatDollarInput } from "@/lib/finance/form-utils"
+import { getAccountOwnerContactId } from "@/lib/finance/pot-transactions"
 import type { CreatableRecurringBillRecord } from "@/lib/finance/types"
 import {
   currencyCentsSchema,
@@ -43,39 +46,67 @@ import { getInitials } from "@/lib/utils"
 
 const noCardValue = "none"
 
-const billFormSchema = z.object({
-  counterpartyId: requiredSelectSchema("Choose a contact."),
-  concept: requiredStringSchema("Enter a bill concept.", 80),
-  amount: currencyCentsSchema("Enter an amount greater than $0."),
-  frequency: z.enum(["monthly", "yearly", "one_time"]),
-  firstDueDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid first due date."),
-  totalPayments: z.string().transform((value, context) => {
-    const trimmed = value.trim()
+const billFormSchema = z
+  .object({
+    counterpartyId: z.string(),
+    concept: requiredStringSchema("Enter a bill concept.", 80),
+    amount: currencyCentsSchema("Enter an amount greater than $0."),
+    frequency: z.enum(["monthly", "yearly", "one_time"]),
+    firstDueDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid first due date."),
+    totalPayments: z.string().transform((value, context) => {
+      const trimmed = value.trim()
 
-    if (!trimmed) {
-      return null
+      if (!trimmed) {
+        return null
+      }
+
+      const parsed = Number(trimmed)
+
+      if (!Number.isInteger(parsed) || parsed <= 0) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Enter a whole number of payments, or leave empty.",
+        })
+
+        return z.NEVER
+      }
+
+      return parsed
+    }),
+    categoryId: requiredSelectSchema("Choose a category."),
+    creditCardId: z.string(),
+    potEnabled: z.boolean(),
+    potId: z.string(),
+  })
+  .superRefine((value, context) => {
+    if (isPlannedSave(value)) {
+      if (!value.potId) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Choose a pot.",
+          path: ["potId"],
+        })
+      }
+
+      return
     }
 
-    const parsed = Number(trimmed)
-
-    if (!Number.isInteger(parsed) || parsed <= 0) {
+    if (!value.counterpartyId) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Enter a whole number of payments, or leave empty.",
+        message: "Choose a contact.",
+        path: ["counterpartyId"],
       })
-
-      return z.NEVER
     }
-
-    return parsed
-  }),
-  categoryId: requiredSelectSchema("Choose a category."),
-  creditCardId: z.string(),
-})
+  })
 
 type BillFormValues = z.input<typeof billFormSchema>
+
+function isPlannedSave(values: { potEnabled: boolean; creditCardId: string }) {
+  return values.potEnabled && values.creditCardId === noCardValue
+}
 
 type SelectOption = {
   value: string
@@ -154,6 +185,15 @@ function BillDialog({
     state.categories.find((category) => category.slug === "bills")?.id ??
     state.categories[0]?.id ??
     ""
+  const generalCategoryId = state.categories.find(
+    (category) => category.name.toLowerCase() === "general",
+  )?.id
+  const ownerContactId = getAccountOwnerContactId(state)
+  const potOptions = useMemo<SelectOption[]>(
+    () => state.pots.map((pot) => ({ value: pot.id, label: pot.name })),
+    [state.pots],
+  )
+  const hasPots = potOptions.length > 0
   const defaultValues = useMemo<BillFormValues>(
     () =>
       ({
@@ -166,6 +206,8 @@ function BillDialog({
         totalPayments: bill?.totalPayments ? String(bill.totalPayments) : "",
         categoryId: bill?.categoryId ?? defaultCategoryId,
         creditCardId: bill?.creditCardId ?? noCardValue,
+        potEnabled: Boolean(bill?.potId),
+        potId: bill?.potId ?? "",
       }) satisfies BillFormValues,
     [bill, defaultCategoryId, state.counterparties],
   )
@@ -191,9 +233,23 @@ function BillDialog({
       defaultValues,
       schema: billFormSchema,
       onSubmit: async ({ applyActionResult, resetForm, value }) => {
+        const plannedSave = isPlannedSave(value)
+
+        if (plannedSave && !ownerContactId) {
+          applyActionResult({
+            ok: false,
+            message:
+              "Your account owner contact is not ready yet. Refresh and try again.",
+          })
+          return
+        }
+
         const payload: CreatableRecurringBillRecord = {
           id: bill?.id ?? crypto.randomUUID(),
-          counterparty_id: value.counterpartyId,
+          counterparty_id:
+            plannedSave && ownerContactId
+              ? ownerContactId
+              : value.counterpartyId,
           concept: value.concept,
           amount_cents: value.amount,
           currency: state.preferences.default_currency,
@@ -202,6 +258,7 @@ function BillDialog({
           total_payments: value.totalPayments,
           credit_card_id:
             value.creditCardId === noCardValue ? null : value.creditCardId,
+          pot_id: plannedSave ? value.potId : null,
           category_id: value.categoryId,
         }
         const result = bill
@@ -213,6 +270,7 @@ function BillDialog({
               first_due_date: payload.first_due_date,
               total_payments: payload.total_payments,
               credit_card_id: payload.credit_card_id,
+              pot_id: payload.pot_id,
               category_id: payload.category_id,
             })
           : await actions.addRecurringBill(payload)
@@ -236,6 +294,35 @@ function BillDialog({
     if (nextOpen) {
       form.reset(defaultValues)
       setDeleteStatusMessage("")
+    }
+  }
+
+  const handleCreditCardChange = (value: string) => {
+    form.setValue("creditCardId", value)
+
+    if (value !== noCardValue) {
+      form.setValue("potEnabled", false)
+      form.setValue("potId", "")
+    }
+  }
+
+  const handlePlannedSaveChange = (checked: boolean) => {
+    const { categoryId, counterpartyId } = form.form.state.values
+
+    form.setValue("potEnabled", checked)
+
+    if (checked) {
+      if (categoryId === defaultCategoryId && generalCategoryId) {
+        form.setValue("categoryId", generalCategoryId)
+      }
+
+      return
+    }
+
+    form.setValue("potId", "")
+
+    if (counterpartyId === ownerContactId) {
+      form.setValue("counterpartyId", "")
     }
   }
 
@@ -271,7 +358,8 @@ function BillDialog({
           </DialogTitle>
           <DialogDescription variant="finance">
             Schedule a recurring payment. Bills assigned to a credit card are
-            settled automatically when the card statement is paid.
+            settled automatically when the card statement is paid. Bills saved
+            to a pot move money from your bank account into that pot.
           </DialogDescription>
         </DialogHeader>
         <DialogCloseButton aria-label="Close recurring bill dialog" />
@@ -325,19 +413,27 @@ function BillDialog({
             </>
           }
         >
-          <form.form.Field name="counterpartyId">
-            {(field) => (
-              <ContactSelectWithQuickCreate
-                key={open ? "bill-contact-open" : "bill-contact-closed"}
-                id="bill-contact"
-                value={field.state.value}
-                onValueChange={(value) =>
-                  form.setValue("counterpartyId", value)
-                }
-                error={form.fieldErrors.counterpartyId}
-              />
-            )}
-          </form.form.Field>
+          <form.form.Subscribe
+            selector={(formState) => isPlannedSave(formState.values)}
+          >
+            {(plannedSave) =>
+              plannedSave ? null : (
+                <form.form.Field name="counterpartyId">
+                  {(field) => (
+                    <ContactSelectWithQuickCreate
+                      key={open ? "bill-contact-open" : "bill-contact-closed"}
+                      id="bill-contact"
+                      value={field.state.value}
+                      onValueChange={(value) =>
+                        form.setValue("counterpartyId", value)
+                      }
+                      error={form.fieldErrors.counterpartyId}
+                    />
+                  )}
+                </form.form.Field>
+              )
+            }
+          </form.form.Subscribe>
 
           <form.form.Field name="concept">
             {(field) => (
@@ -481,13 +577,69 @@ function BillDialog({
                 id="bill-credit-card"
                 label="Charges To"
                 value={field.state.value}
-                onValueChange={(value) => form.setValue("creditCardId", value)}
+                onValueChange={handleCreditCardChange}
                 options={cardOptions}
                 placeholder="Select a card"
                 error={form.fieldErrors.creditCardId}
               />
             )}
           </form.form.Field>
+
+          <form.form.Subscribe
+            selector={(formState) => ({
+              creditCardId: formState.values.creditCardId,
+              potEnabled: formState.values.potEnabled,
+            })}
+          >
+            {({ creditCardId, potEnabled }) =>
+              creditCardId === noCardValue ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <Label
+                        htmlFor="bill-planned-save"
+                        className="text-sm font-medium"
+                      >
+                        Save to a pot
+                      </Label>
+                      <p
+                        id="bill-planned-save-helper"
+                        className="text-muted-foreground text-xs"
+                      >
+                        {hasPots
+                          ? "Paying moves this amount from your bank account into the pot."
+                          : "Create a pot first."}
+                      </p>
+                    </div>
+                    <Switch
+                      id="bill-planned-save"
+                      aria-describedby="bill-planned-save-helper"
+                      checked={potEnabled}
+                      disabled={!hasPots && !potEnabled}
+                      onCheckedChange={handlePlannedSaveChange}
+                    />
+                  </div>
+                  {potEnabled ? (
+                    <form.form.Field name="potId">
+                      {(field) => (
+                        <BillFormSelect
+                          id="bill-pot"
+                          label="Pot"
+                          value={field.state.value}
+                          onValueChange={(value) =>
+                            form.setValue("potId", value)
+                          }
+                          options={potOptions}
+                          placeholder="Select a pot"
+                          error={form.fieldErrors.potId}
+                        />
+                      )}
+                    </form.form.Field>
+                  ) : null}
+                </div>
+              ) : null
+            }
+          </form.form.Subscribe>
         </DialogFinanceForm>
       </DialogContent>
     </Dialog>

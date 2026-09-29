@@ -30,6 +30,10 @@ import {
   type TransactionFilterOption,
   type TransactionPageRow,
 } from "@/lib/finance/transaction-page-query"
+import {
+  describeProtectedTransaction,
+  getTransactionProtection,
+} from "@/lib/finance/transaction-protection"
 import type { TransactionFilters } from "@/lib/finance/url-filters/normalize"
 import type {
   AccountRecord,
@@ -65,7 +69,7 @@ import type {
 import { getCurrentPeriod } from "@/lib/finance/period"
 import { parseUiPreferences } from "@/lib/finance/ui-preferences"
 import { formatDisplayDate } from "@/lib/format"
-import type { Transaction } from "@/lib/types"
+import type { Transaction, TransactionProtection } from "@/lib/types"
 import type { ThemeColor } from "@/lib/theme-colors"
 
 type ProfileRow = Omit<UserPreferencesRecord, "hideAmounts"> & {
@@ -156,6 +160,8 @@ const transactionSelectColumns = [
   "posted_at::text AS posted_at",
   "description",
   "created_at::text AS created_at",
+  "is_pot_movement",
+  "pot_id",
 ]
 const budgetSummaryColumns = ["user_id", "budget_id", "spent_cents"]
 const budgetAssignmentColumns = [
@@ -185,6 +191,7 @@ const recurringBillColumns = [
   "first_due_date::text AS first_due_date",
   "total_payments",
   "credit_card_id",
+  "pot_id",
   "category_id",
   "archived_at::text AS archived_at",
   "paused_at::text AS paused_at",
@@ -644,6 +651,11 @@ function toTransactionView(row: TransactionPageRow): Transaction {
     description: row.description ?? undefined,
     budgetId: row.budget_id ?? undefined,
     budgetCategory: row.budget_category_name ?? undefined,
+    protection: getTransactionProtection({
+      isPotMovement: row.is_pot_movement,
+      potName: row.pot_name,
+      billConcept: row.bill_concept,
+    }),
   }
 }
 
@@ -739,7 +751,7 @@ export async function loadLatestTransactions(
 
 async function assertUserRecord(
   client: PoolClient,
-  table: "accounts" | "categories" | "counterparties",
+  table: "accounts" | "categories" | "counterparties" | "pots",
   userId: string,
   id: string,
   label: string,
@@ -1077,7 +1089,8 @@ async function prepareTransactionPaymentMethod(
 async function insertTransactionRecord(
   client: PoolClient,
   userId: string,
-  transaction: NewTransactionRecord,
+  transaction: NewTransactionRecord &
+    Partial<Pick<TransactionRecord, "is_pot_movement" | "pot_id">>,
 ) {
   const result = await client.query<TransactionRecord>(
     `
@@ -1094,9 +1107,11 @@ async function insertTransactionRecord(
         credit_card_id,
         credit_card_statement_id,
         posted_at,
-        description
+        description,
+        is_pot_movement,
+        pot_id
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING ${transactionSelectColumns.join(", ")}
     `,
     [
@@ -1113,6 +1128,8 @@ async function insertTransactionRecord(
       transaction.credit_card_statement_id,
       transaction.posted_at,
       transaction.description,
+      transaction.is_pot_movement ?? false,
+      transaction.pot_id ?? null,
     ],
   )
 
@@ -1467,6 +1484,109 @@ export async function insertTransaction(
   })
 }
 
+async function getStoredTransactionProtection(
+  client: PoolClient,
+  userId: string,
+  transaction: TransactionRecord,
+) {
+  const billResult = await client.query<{ concept: string }>(
+    `
+      SELECT rb.concept
+      FROM recurring_bill_payments rbp
+      JOIN recurring_bills rb
+        ON rb.user_id = rbp.user_id
+        AND rb.id = rbp.recurring_bill_id
+      WHERE rbp.user_id = $1
+        AND rbp.transaction_id = $2
+      LIMIT 1
+    `,
+    [userId, transaction.id],
+  )
+  const potResult = transaction.pot_id
+    ? await client.query<{ name: string }>(
+        "SELECT name FROM pots WHERE user_id = $1 AND id = $2",
+        [userId, transaction.pot_id],
+      )
+    : null
+
+  return getTransactionProtection({
+    isPotMovement: transaction.is_pot_movement,
+    potName: potResult?.rows[0]?.name ?? null,
+    billConcept: billResult.rows[0]?.concept ?? null,
+  })
+}
+
+const protectedTransactionFields = [
+  "account_id",
+  "counterparty_id",
+  "amount_cents",
+  "posted_at",
+  "is_voucher_expense",
+  "payment_method",
+  "credit_card_id",
+] as const satisfies ReadonlyArray<keyof NewTransactionRecord>
+
+async function updateProtectedTransaction(
+  client: PoolClient,
+  userId: string,
+  existing: TransactionRecord,
+  protection: TransactionProtection,
+  updates: Omit<NewTransactionRecord, "id">,
+  budgetId: string | null,
+) {
+  const changesLockedField = protectedTransactionFields.some(
+    (field) => updates[field] !== existing[field],
+  )
+
+  if (changesLockedField) {
+    throw new Error(
+      `${describeProtectedTransaction(protection)} Only its concept, category, and description can change.`,
+    )
+  }
+
+  await assertUserRecord(
+    client,
+    "categories",
+    userId,
+    updates.category_id,
+    "Category",
+  )
+
+  const transactionResult = await client.query<TransactionRecord>(
+    `
+      UPDATE transactions
+      SET
+        category_id = $2,
+        concept = $3,
+        description = $4
+      WHERE user_id = $1 AND id = $5
+      RETURNING ${transactionSelectColumns.join(", ")}
+    `,
+    [
+      userId,
+      updates.category_id,
+      updates.concept,
+      updates.description,
+      existing.id,
+    ],
+  )
+  const savedTransaction = transactionResult.rows[0]
+  const budgetAssignment = await syncBudgetAssignment(
+    client,
+    userId,
+    savedTransaction,
+    protection.kind === "pot_movement" ? null : budgetId,
+  )
+
+  return {
+    transaction: savedTransaction,
+    accounts: [] as AccountRecord[],
+    accountSummaries: [] as AccountSummaryRecord[],
+    creditCardStatements: [] as CreditCardStatementRecord[],
+    budgetAssignment,
+  }
+}
+
 export async function updateTransaction(
   userId: string,
   id: string,
@@ -1480,12 +1600,30 @@ export async function updateTransaction(
         SELECT ${transactionSelectColumns.join(", ")}
         FROM transactions
         WHERE user_id = $1 AND id = $2
+        FOR UPDATE
       `,
       [userId, id],
     )
 
     if (!existingResult.rowCount) {
       throw new Error("Transaction not found.")
+    }
+
+    const protection = await getStoredTransactionProtection(
+      client,
+      userId,
+      existingResult.rows[0],
+    )
+
+    if (protection) {
+      return updateProtectedTransaction(
+        client,
+        userId,
+        existingResult.rows[0],
+        protection,
+        updates,
+        budgetId,
+      )
     }
 
     const preparedUpdates = await prepareTransactionPaymentMethod(
@@ -1617,6 +1755,16 @@ export async function deleteTransaction(userId: string, id: string) {
 
     if (!existingResult.rowCount) {
       throw new Error("Transaction not found.")
+    }
+
+    const protection = await getStoredTransactionProtection(
+      client,
+      userId,
+      existingResult.rows[0],
+    )
+
+    if (protection) {
+      throw new Error(describeProtectedTransaction(protection))
     }
 
     const effects = await applyAccountEffectsIfNeeded(
@@ -2487,16 +2635,62 @@ async function resolveUnsettledOccurrence(
   }
 }
 
+async function getAccountOwnerContactId(client: PoolClient, userId: string) {
+  const result = await client.query<{ id: string }>(
+    "SELECT id FROM counterparties WHERE user_id = $1 AND is_account_owner LIMIT 1",
+    [userId],
+  )
+  const ownerContact = result.rows[0]
+
+  if (!ownerContact) {
+    throw new Error(
+      "Your account owner contact is not ready yet. Refresh and try again.",
+    )
+  }
+
+  return ownerContact.id
+}
+
+// Planned Saves always belong to the account owner so their settlements are
+// recognized as pot movements.
+async function resolveRecurringBillCounterpartyId(
+  client: PoolClient,
+  userId: string,
+  bill: Pick<
+    RecurringBillRecord,
+    "counterparty_id" | "credit_card_id" | "pot_id"
+  >,
+) {
+  if (!bill.pot_id) {
+    return bill.counterparty_id
+  }
+
+  if (bill.credit_card_id) {
+    throw new Error(
+      "A recurring bill can charge a credit card or save to a pot, not both.",
+    )
+  }
+
+  await assertUserRecord(client, "pots", userId, bill.pot_id, "Pot")
+
+  return getAccountOwnerContactId(client, userId)
+}
+
 export async function insertRecurringBill(
   userId: string,
   bill: NewRecurringBillRecord,
 ) {
   return withFinanceTransaction(userId, async (client) => {
+    const counterpartyId = await resolveRecurringBillCounterpartyId(
+      client,
+      userId,
+      bill,
+    )
     await assertUserRecord(
       client,
       "counterparties",
       userId,
-      bill.counterparty_id,
+      counterpartyId,
       "Contact",
     )
     await assertUserRecord(
@@ -2526,17 +2720,18 @@ export async function insertRecurringBill(
           first_due_date,
           total_payments,
           credit_card_id,
+          pot_id,
           category_id,
           archived_at,
           paused_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
         RETURNING ${recurringBillColumns.join(", ")}
       `,
       [
         userId,
         bill.id,
-        bill.counterparty_id,
+        counterpartyId,
         bill.concept,
         bill.amount_cents,
         bill.currency,
@@ -2544,6 +2739,7 @@ export async function insertRecurringBill(
         bill.first_due_date,
         bill.total_payments,
         bill.credit_card_id,
+        bill.pot_id,
         bill.category_id,
         bill.archived_at,
         bill.paused_at,
@@ -2611,12 +2807,18 @@ export async function updateRecurringBill(
       updates.first_due_date !== undefined || updates.frequency === "one_time",
     )
 
-    if (updates.counterparty_id) {
+    const counterpartyId = await resolveRecurringBillCounterpartyId(
+      client,
+      userId,
+      nextBill,
+    )
+
+    if (counterpartyId !== existing.counterparty_id) {
       await assertUserRecord(
         client,
         "counterparties",
         userId,
-        updates.counterparty_id,
+        counterpartyId,
         "Contact",
       )
     }
@@ -2647,13 +2849,14 @@ export async function updateRecurringBill(
           first_due_date = COALESCE($7, first_due_date),
           total_payments = CASE WHEN $8::boolean THEN $9::integer ELSE total_payments END,
           credit_card_id = CASE WHEN $10::boolean THEN $11::uuid ELSE credit_card_id END,
-          category_id = COALESCE($12, category_id)
+          category_id = COALESCE($12, category_id),
+          pot_id = CASE WHEN $14::boolean THEN $15::uuid ELSE pot_id END
         WHERE user_id = $1 AND id = $13
         RETURNING ${recurringBillColumns.join(", ")}
       `,
       [
         userId,
-        updates.counterparty_id ?? null,
+        counterpartyId,
         updates.concept ?? null,
         updates.amount_cents ?? null,
         updates.currency ?? null,
@@ -2665,6 +2868,8 @@ export async function updateRecurringBill(
         updates.credit_card_id ?? null,
         updates.category_id ?? null,
         id,
+        updates.pot_id !== undefined,
+        updates.pot_id ?? null,
       ],
     )
 
@@ -2938,6 +3143,42 @@ export async function payRecurringBillOccurrence(
       localToday,
     )
     const occurrence = findOccurrence(dueDate)
+
+    if (bill.pot_id) {
+      if (source.type !== "bank_account") {
+        throw new Error(
+          "Planned Saves always move money from your primary bank account.",
+        )
+      }
+
+      const recorded = await recordPrimaryAccountPotMovement(client, userId, {
+        potId: bill.pot_id,
+        amountCents: occurrence.amountCents,
+        isDeposit: true,
+        categoryId: bill.category_id,
+        concept: bill.concept,
+        postedAt: paidAt,
+        description: `Recurring bill due ${occurrence.dueDate}.`,
+      })
+      const billPayment = await insertRecurringBillPaymentRow(client, userId, {
+        recurring_bill_id: bill.id,
+        due_date: occurrence.dueDate,
+        amount_cents: occurrence.amountCents,
+        status: "paid",
+        transaction_id: recorded.transaction.id,
+        paid_at: paidAt,
+      })
+
+      return {
+        billPayment,
+        transaction: recorded.transaction,
+        pots: [recorded.pot],
+        accounts: [recorded.account],
+        accountSummaries: [recorded.accountSummary],
+        creditCardStatements: [],
+      }
+    }
+
     const sourceAccount = await getPrimaryPaymentAccount(client, userId)
 
     let transaction: TransactionRecord
@@ -3007,6 +3248,7 @@ export async function payRecurringBillOccurrence(
     return {
       billPayment,
       transaction,
+      pots: [] as PotRecord[],
       accounts: effects?.account ? [effects.account] : [],
       accountSummaries: effects?.accountSummary ? [effects.accountSummary] : [],
       creditCardStatements: creditCardStatement ? [creditCardStatement] : [],
@@ -3393,30 +3635,63 @@ export async function movePotBalance(
       }
     }
 
-    const currentPotResult = await client.query<PotRecord>(
-      `
-        SELECT ${potColumns.join(", ")}
-        FROM pots
-        WHERE user_id = $1
-          AND id = $2
-        FOR UPDATE
-      `,
-      [userId, movement.potId],
-    )
-    const currentPot = currentPotResult.rows[0]
+    const recorded = await recordPrimaryAccountPotMovement(client, userId, {
+      potId: movement.potId,
+      amountCents: movement.amountCents,
+      isDeposit,
+      categoryId: movement.source.categoryId ?? null,
+      concept: movement.source.concept ?? null,
+      postedAt: movement.source.postedAt ?? null,
+      description: null,
+    })
 
-    if (!currentPot) {
-      throw new Error("Pot not found.")
+    return {
+      pots: [recorded.pot],
+      transaction: recorded.transaction,
+      accounts: [recorded.account],
+      accountSummaries: [recorded.accountSummary],
     }
+  })
+}
 
-    if (!isDeposit && currentPot.balance_cents < movement.amountCents) {
-      throw new Error(
-        "This pot does not have enough money for that withdrawal.",
-      )
-    }
+interface PrimaryAccountPotMovementInput {
+  potId: string
+  amountCents: number
+  isDeposit: boolean
+  categoryId: string | null
+  concept: string | null
+  postedAt: string | null
+  description: string | null
+}
 
-    const primaryAccountResult = await client.query<AccountRecord>(
-      `
+async function recordPrimaryAccountPotMovement(
+  client: PoolClient,
+  userId: string,
+  input: PrimaryAccountPotMovementInput,
+) {
+  const { isDeposit } = input
+  const currentPotResult = await client.query<PotRecord>(
+    `
+      SELECT ${potColumns.join(", ")}
+      FROM pots
+      WHERE user_id = $1
+        AND id = $2
+      FOR UPDATE
+    `,
+    [userId, input.potId],
+  )
+  const currentPot = currentPotResult.rows[0]
+
+  if (!currentPot) {
+    throw new Error("Pot not found.")
+  }
+
+  if (!isDeposit && currentPot.balance_cents < input.amountCents) {
+    throw new Error("This pot does not have enough money for that withdrawal.")
+  }
+
+  const primaryAccountResult = await client.query<AccountRecord>(
+    `
             SELECT ${accountColumns.join(", ")}
             FROM accounts
             WHERE user_id = $1
@@ -3425,69 +3700,68 @@ export async function movePotBalance(
             LIMIT 1
             FOR UPDATE
           `,
-      [userId],
-    )
-    const ownerContactResult = await client.query<CounterpartyRecord>(
-      `
+    [userId],
+  )
+  const ownerContactResult = await client.query<CounterpartyRecord>(
+    `
             SELECT ${counterpartyColumns.join(", ")}
             FROM counterparties
             WHERE user_id = $1
               AND is_account_owner
             LIMIT 1
           `,
-      [userId],
-    )
-    const categoryResult = movement.source.categoryId
-      ? await client.query<CategoryRecord>(
-          `
+    [userId],
+  )
+  const categoryResult = input.categoryId
+    ? await client.query<CategoryRecord>(
+        `
                 SELECT ${categoryColumns.join(", ")}
                 FROM categories
                 WHERE user_id = $1
                   AND id = $2
                 LIMIT 1
               `,
-          [userId, movement.source.categoryId],
-        )
-      : await client.query<CategoryRecord>(
-          `
+        [userId, input.categoryId],
+      )
+    : await client.query<CategoryRecord>(
+        `
                 SELECT ${categoryColumns.join(", ")}
                 FROM categories
                 WHERE user_id = $1
                   AND lower(name) = 'general'
                 LIMIT 1
               `,
-          [userId],
-        )
-    const primaryAccount = primaryAccountResult.rows[0]
-    const ownerContact = ownerContactResult.rows[0]
-    const category = categoryResult.rows[0]
-
-    if (!primaryAccount) {
-      throw new Error(
-        "Your primary bank account is not ready yet. Refresh and try again.",
+        [userId],
       )
-    }
+  const primaryAccount = primaryAccountResult.rows[0]
+  const ownerContact = ownerContactResult.rows[0]
+  const category = categoryResult.rows[0]
 
-    if (!ownerContact) {
-      throw new Error(
-        "Your account owner contact is not ready yet. Refresh and try again.",
-      )
-    }
+  if (!primaryAccount) {
+    throw new Error(
+      "Your primary bank account is not ready yet. Refresh and try again.",
+    )
+  }
 
-    if (!category) {
-      throw new Error(
-        movement.source.categoryId
-          ? "Category not found."
-          : "Your General category is not ready yet. Refresh and try again.",
-      )
-    }
+  if (!ownerContact) {
+    throw new Error(
+      "Your account owner contact is not ready yet. Refresh and try again.",
+    )
+  }
 
-    const postedAt =
-      movement.source.postedAt ?? (await getUserLocalToday(client, userId))
-    await assertDateNotAfterUserLocalToday(client, userId, postedAt)
+  if (!category) {
+    throw new Error(
+      input.categoryId
+        ? "Category not found."
+        : "Your General category is not ready yet. Refresh and try again.",
+    )
+  }
 
-    const updatedPotResult = await client.query<PotRecord>(
-      `
+  const postedAt = input.postedAt ?? (await getUserLocalToday(client, userId))
+  await assertDateNotAfterUserLocalToday(client, userId, postedAt)
+
+  const updatedPotResult = await client.query<PotRecord>(
+    `
         UPDATE pots
         SET balance_cents =
           CASE
@@ -3498,72 +3772,85 @@ export async function movePotBalance(
           AND id = $4
         RETURNING ${potColumns.join(", ")}
       `,
-      [userId, movement.amountCents, isDeposit, movement.potId],
-    )
-    const updatedPot = updatedPotResult.rows[0]
-    const concept =
-      movement.source.concept?.trim() ||
-      (isDeposit
-        ? `Deposit to ${currentPot.name}`
-        : `Taken from ${currentPot.name}`)
-    const transactionResult = await client.query<TransactionRecord>(
-      `
-        INSERT INTO transactions (
-          user_id,
-          id,
-          account_id,
-          counterparty_id,
-          category_id,
-          concept,
-          amount_cents,
-          is_voucher_expense,
-          payment_method,
-          credit_card_id,
-          credit_card_statement_id,
-          posted_at,
-          description
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, false, 'bank_account', null, null, $8, null)
-        RETURNING ${transactionSelectColumns.join(", ")}
-      `,
-      [
-        userId,
-        crypto.randomUUID(),
-        primaryAccount.id,
-        ownerContact.id,
-        category.id,
-        concept,
-        isDeposit ? -movement.amountCents : movement.amountCents,
-        postedAt,
-      ],
-    )
-    const transaction = transactionResult.rows[0]
-    const effects = await applyTransactionEffects(
-      client,
-      userId,
-      transaction,
-      1,
-    )
-
-    return {
-      pots: [updatedPot],
-      transaction,
-      accounts: [effects.account],
-      accountSummaries: [effects.accountSummary],
-    }
+    [userId, input.amountCents, isDeposit, input.potId],
+  )
+  const updatedPot = updatedPotResult.rows[0]
+  const concept =
+    input.concept?.trim() ||
+    (isDeposit
+      ? `Deposit to ${currentPot.name}`
+      : `Taken from ${currentPot.name}`)
+  const transaction = await insertTransactionRecord(client, userId, {
+    id: crypto.randomUUID(),
+    account_id: primaryAccount.id,
+    counterparty_id: ownerContact.id,
+    category_id: category.id,
+    concept,
+    amount_cents: isDeposit ? -input.amountCents : input.amountCents,
+    is_voucher_expense: false,
+    payment_method: "bank_account",
+    credit_card_id: null,
+    credit_card_statement_id: null,
+    posted_at: postedAt,
+    description: input.description,
+    is_pot_movement: true,
+    pot_id: currentPot.id,
   })
+  const effects = await applyTransactionEffects(client, userId, transaction, 1)
+
+  return {
+    pot: updatedPot,
+    transaction,
+    account: effects.account,
+    accountSummary: effects.accountSummary,
+  }
 }
 
 export async function deletePot(userId: string, id: string) {
   return withFinanceTransaction(userId, async (client) => {
-    const result = await client.query(
-      "DELETE FROM pots WHERE user_id = $1 AND id = $2",
+    const potResult = await client.query(
+      "SELECT id FROM pots WHERE user_id = $1 AND id = $2 FOR UPDATE",
       [userId, id],
     )
 
-    if (!result.rowCount) {
+    if (!potResult.rowCount) {
       throw new Error("Pot not found.")
     }
+
+    const fundingBillResult = await client.query<{ concept: string }>(
+      `
+        SELECT concept
+        FROM recurring_bills
+        WHERE user_id = $1
+          AND pot_id = $2
+          AND archived_at IS NULL
+        ORDER BY concept
+        LIMIT 1
+      `,
+      [userId, id],
+    )
+    const fundingBill = fundingBillResult.rows[0]
+
+    if (fundingBill) {
+      throw new Error(
+        `This pot is funded by the recurring bill '${fundingBill.concept}'. Remove the pot from that bill first.`,
+      )
+    }
+
+    // Archived Planned Saves and past movements keep their history; only the
+    // pot link goes away with the pot.
+    await client.query(
+      "UPDATE recurring_bills SET pot_id = NULL WHERE user_id = $1 AND pot_id = $2",
+      [userId, id],
+    )
+    await client.query(
+      "UPDATE transactions SET pot_id = NULL WHERE user_id = $1 AND pot_id = $2",
+      [userId, id],
+    )
+    await client.query("DELETE FROM pots WHERE user_id = $1 AND id = $2", [
+      userId,
+      id,
+    ])
   })
 }
 

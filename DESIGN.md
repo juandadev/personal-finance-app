@@ -563,7 +563,10 @@ Button labels should be action-specific: `Add Money`, `Create Budget`,
 ### Recurring Bills
 
 - A bill's identity comes from its contact: rows use the shared `ContactAvatar`
-  with initials fallback, never raw images.
+  with initials fallback, never raw images. **Planned Saves** are the
+  exception: their identity comes from the destination pot. The avatar uses
+  the pot's theme color and initials, and the subtitle reads
+  `Saves to {pot name}` instead of the contact name.
 - Occurrence statuses use fixed labels and icon + color together: `Paid`
   (check, `accent`), `Skipped` (muted), `Upcoming` (muted foreground),
   `Due Soon` and `Due Today` (warning icon, `warning` text), `Overdue`
@@ -592,7 +595,24 @@ Button labels should be action-specific: `Add Money`, `Create Budget`,
   to archive and recreate the bill to reschedule frequency. Resume is the
   allowed path to set a new start date without recreating the bill.
 - Paying an occurrence always asks for the payment source: the bank account or
-  one of the user's credit cards (using `CreditCardBadge`).
+  one of the user's credit cards (using `CreditCardBadge`). Planned Saves are
+  the exception (see below).
+- **Planned Saves.** In the bill dialog, a `Save to a pot` `Switch` sits under
+  `Charges To` and only appears while `Charges To` is
+  `None - choose when paying`. Turning it on reveals a required `Pot` select
+  and hides `Contact`; picking a card hides the switch and clears the pot.
+  When the user has no pots, the switch is disabled with the helper text
+  `Create a pot first.` Turning the switch on changes the category to
+  `General` only while it is still the default `Bills`.
+- Planned Save rows use `Save` (not `Pay Bill`) as their settle action. The
+  Save dialog is titled `Save to {pot name}?`, has no payment-source picker
+  (money always leaves the Primary Account), shows the pot balance before and
+  after the save, keeps the payment date picker, and confirms with
+  `Save to Pot`. When the save would exceed the pot target, show muted helper
+  text `This exceeds your {target} target.` without blocking.
+- Planned Saves otherwise behave like manual bills: they count in bill totals
+  and status groups, appear in **Due for payment**, and match the
+  `source=bank_account` filter.
 - Skip, Pause, Cancel, and Resume are confirmed with `AlertDialog`. Skipping
   records no money movement. For **card-assigned** bills, Pause and Cancel
   schedule an end on the next due date after today: the bill stays in the
@@ -616,6 +636,27 @@ Button labels should be action-specific: `Add Money`, `Create Budget`,
   soon. Rows and `View All` deep-link to Recurring Bills filtered by
   `source=bank_account` and those three statuses. This card is a reminder only
   (no pay/skip). The right-column Recurring Bills summary buckets stay as-is.
+
+### Protected Transactions
+
+- Pot-movement transactions and recurring-bill payment transactions are
+  Protected Transactions. In Edit Transaction, render `Type`, `Amount`,
+  `Contact`, and `Date` disabled (plus the payment method and card for bill
+  payments) and hide `Delete Transaction`. `Concept` and `Category` stay
+  editable.
+- Explain the lock with one muted helper message above the submit button that
+  ends with an inline text link to the place where the record is managed:
+  - Pot movement: "This transaction is a pot movement for the {pot name} pot.
+    Its type, amount, contact, and date are locked, and it can't be deleted.
+    To correct it, use Add Money or Withdraw in Pots." Link `Pots` to `/pots`.
+    When the pot no longer exists, say "a pot movement" and omit the pot name.
+  - Planned Save: "This transaction is a Planned Save for the {pot name} pot."
+    followed by the same lock and correction sentences.
+  - Bill payment: "This transaction pays the recurring bill '{concept}'. Its
+    type, amount, contact, payment method, and date are locked, and it can't
+    be deleted. Manage it in Recurring Bills." Link `Recurring Bills` to
+    `/recurring-bills`.
+- Do not use a tooltip for this explanation; it must be visible on touch.
 
 ### Credit Cards
 

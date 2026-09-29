@@ -290,11 +290,15 @@ function BillIdentity({
           ) : null}
         </div>
         <span className="text-muted-foreground block truncate text-xs font-semibold">
-          {bill.name}
+          {billSubtitle(bill)}
         </span>
       </div>
     </div>
   )
+}
+
+function billSubtitle(bill: RecurringBill) {
+  return bill.potName ? `Saves to ${bill.potName}` : bill.name
 }
 
 function isEndingBill(bill: RecurringBill) {
@@ -362,7 +366,7 @@ function BillActions({
           {canSettleManually && collapseSettleActions ? (
             <>
               <DropdownMenuItem onSelect={() => setIsPayOpen(true)}>
-                Pay Bill
+                {bill.potId ? "Save" : "Pay Bill"}
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setIsSkipOpen(true)}>
                 Skip
@@ -519,7 +523,7 @@ export function MobileBillRow({ bill }: BillTableRowProps) {
           {bill.concept}
         </span>
         <span className="text-muted-foreground block truncate text-xs font-semibold">
-          {bill.name}
+          {billSubtitle(bill)}
         </span>
         <div className="mt-1">
           <MobileDueDateIndicator bill={bill} />

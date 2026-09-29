@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState, type ReactNode } from "react"
+import Link from "next/link"
 import { z } from "zod"
 
 import { CategorySelectWithQuickCreate } from "@/components/category-select-with-quick-create"
@@ -32,6 +33,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useFinance } from "@/hooks/use-finance"
 import { getForecastLocalDate } from "@/lib/finance/forecast-period"
 import { formatDollarInput } from "@/lib/finance/form-utils"
+import { describeProtectedTransaction } from "@/lib/finance/transaction-protection"
 import type { NewTransactionRecord } from "@/lib/finance/types"
 import {
   currencyCentsSchema,
@@ -40,7 +42,7 @@ import {
   requiredStringSchema,
 } from "@/lib/forms/validation"
 import { useStandardForm } from "@/lib/forms/use-standard-form"
-import type { Transaction } from "@/lib/types"
+import type { Transaction, TransactionProtection } from "@/lib/types"
 import type { ThemeColor } from "@/lib/theme-colors"
 import { getInitials } from "@/lib/utils"
 
@@ -160,6 +162,8 @@ function TransactionDialog({
     state.preferences.timezone,
   )
   const isEditing = Boolean(transaction)
+  const protection = transaction?.protection
+  const isLocked = Boolean(protection)
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
   const isControlled = controlledOpen !== undefined
   const open = isControlled ? controlledOpen : uncontrolledOpen
@@ -335,6 +339,10 @@ function TransactionDialog({
           onSubmit={mainForm.handleSubmit}
           actions={
             <>
+              {protection ? (
+                <ProtectedTransactionMessage protection={protection} />
+              ) : null}
+
               {mainForm.status?.message ? (
                 <FormStatusMessage variant={mainForm.status.variant}>
                   {mainForm.status.message}
@@ -357,7 +365,7 @@ function TransactionDialog({
                 )}
               </mainForm.form.Subscribe>
 
-              {transaction ? (
+              {transaction && !isLocked ? (
                 <>
                   <Button
                     type="button"
@@ -384,6 +392,7 @@ function TransactionDialog({
                 <FormSelect
                   id="transaction-type"
                   label="Type"
+                  disabled={isLocked}
                   value={field.state.value}
                   onValueChange={(value) => {
                     const nextType = value as "expense" | "income"
@@ -414,6 +423,7 @@ function TransactionDialog({
                     <CurrencyInput
                       {...fieldProps}
                       inputMode="decimal"
+                      disabled={isLocked}
                       value={field.state.value}
                       onChange={(event) =>
                         mainForm.setValue("amount", event.target.value)
@@ -445,6 +455,7 @@ function TransactionDialog({
                       <FormSelect
                         id="transaction-payment-method"
                         label="Payment Source"
+                        disabled={isLocked}
                         value={field.state.value}
                         onValueChange={(value) => {
                           const nextMethod = value as
@@ -471,6 +482,7 @@ function TransactionDialog({
                         <FormSelect
                           id="transaction-credit-card"
                           label="Credit Card"
+                          disabled={isLocked}
                           value={field.state.value}
                           onValueChange={(value) =>
                             mainForm.setValue("creditCardId", value)
@@ -514,6 +526,7 @@ function TransactionDialog({
                 {(fieldProps) => (
                   <DatePicker
                     {...fieldProps}
+                    disabled={isLocked}
                     max={localToday}
                     value={field.state.value}
                     onChange={(nextDate) => {
@@ -577,6 +590,7 @@ function TransactionDialog({
                     : "transaction-contact-closed"
                 }
                 id="transaction-contact"
+                disabled={isLocked}
                 excludeAccountOwner
                 value={field.state.value}
                 onValueChange={(value) =>
@@ -595,7 +609,10 @@ function TransactionDialog({
             })}
           >
             {({ budgetId, postedAt, transactionType }) => {
-              if (transactionType !== "expense") {
+              if (
+                transactionType !== "expense" ||
+                protection?.kind === "pot_movement"
+              ) {
                 return null
               }
 
@@ -685,8 +702,41 @@ function SelectOptionLabel({ option }: { option: SelectOption }) {
   return option.label
 }
 
+function ProtectedTransactionMessage({
+  protection,
+}: {
+  protection: TransactionProtection
+}) {
+  const destination =
+    protection.kind === "pot_movement"
+      ? {
+          prefix: "To correct it, use Add Money or Withdraw in",
+          href: "/pots",
+          label: "Pots",
+        }
+      : {
+          prefix: "Manage it in",
+          href: "/recurring-bills",
+          label: "Recurring Bills",
+        }
+
+  return (
+    <p className="text-muted-foreground text-sm leading-normal">
+      {describeProtectedTransaction(protection)} {destination.prefix}{" "}
+      <Link
+        href={destination.href}
+        className="text-foreground focus-visible:ring-ring font-bold underline-offset-4 hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:outline-none"
+      >
+        {destination.label}
+      </Link>
+      .
+    </p>
+  )
+}
+
 function FormSelect({
   createItem,
+  disabled,
   error,
   id,
   label,
@@ -696,6 +746,7 @@ function FormSelect({
   value,
 }: {
   createItem?: { value: string; label: string; onSelect: () => void }
+  disabled?: boolean
   error?: string
   id: string
   label: string
@@ -720,7 +771,12 @@ function FormSelect({
   return (
     <FormField id={id} label={label} error={error}>
       {(fieldProps) => (
-        <Select key={selectKey} value={value} onValueChange={handleValueChange}>
+        <Select
+          key={selectKey}
+          value={value}
+          onValueChange={handleValueChange}
+          disabled={disabled}
+        >
           <SelectTrigger {...fieldProps} variant="form">
             <SelectValue placeholder={placeholder}>
               {selectedOption ? (

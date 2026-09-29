@@ -29,6 +29,7 @@ function makeState(
             first_due_date: "2026-08-01",
             total_payments: 3,
             credit_card_id: "card-1",
+            pot_id: null,
             category_id: "category-1",
             archived_at: null,
             paused_at: null,
@@ -243,6 +244,8 @@ describe("selectFinanceViewModel summary stats", () => {
             posted_at: "2026-07-03",
             description: null,
             created_at: "2026-07-03T00:00:00.000Z",
+            is_pot_movement: false,
+            pot_id: null,
           },
           {
             id: "pot-withdrawal",
@@ -259,6 +262,8 @@ describe("selectFinanceViewModel summary stats", () => {
             posted_at: "2026-07-05",
             description: null,
             created_at: "2026-07-05T00:00:00.000Z",
+            is_pot_movement: true,
+            pot_id: null,
           },
         ],
       }),
@@ -1032,6 +1037,7 @@ describe("selectFinanceViewModel manualBillsDueReminder", () => {
       frequency: "monthly",
       total_payments: null,
       credit_card_id: null,
+      pot_id: null,
       category_id: "category-1",
       archived_at: null,
       paused_at: null,
@@ -1122,5 +1128,155 @@ describe("selectFinanceViewModel manualBillsDueReminder", () => {
     )
 
     expect(viewModel.manualBillsDueReminder).toEqual([])
+  })
+})
+
+describe("selectFinanceViewModel planned saves", () => {
+  const vacationPot = {
+    id: "pot-1",
+    user_id: "user-1",
+    name: "Vacation Fund",
+    balance_cents: 20_000,
+    target_cents: 50_000,
+    theme_color: "finance-purple" as const,
+    due_date: null,
+  }
+  const ownerContact = {
+    id: "owner-1",
+    user_id: "user-1",
+    display_name: "Account Owner",
+    avatar_url: null,
+    type: "person" as const,
+    theme_color: "finance-grey" as const,
+    notes: null,
+    is_account_owner: true,
+  }
+  const plannedSave: FinanceState["recurringBills"][number] = {
+    id: "save-1",
+    user_id: "user-1",
+    counterparty_id: ownerContact.id,
+    concept: "Monthly vacation save",
+    amount_cents: 5_000,
+    currency: "MXN",
+    frequency: "monthly",
+    first_due_date: "2026-07-01",
+    total_payments: null,
+    credit_card_id: null,
+    pot_id: vacationPot.id,
+    category_id: "category-1",
+    archived_at: null,
+    paused_at: null,
+    scheduled_end_date: null,
+    scheduled_end_mode: null,
+  }
+  const baseTransaction = {
+    user_id: "user-1",
+    account_id: "account-1",
+    category_id: "category-1",
+    is_voucher_expense: false,
+    payment_method: "bank_account" as const,
+    credit_card_id: null,
+    credit_card_statement_id: null,
+    posted_at: "2026-07-01",
+    description: null,
+    created_at: "2026-07-01T00:00:00.000Z",
+  }
+
+  function plannedSaveState(overrides: Partial<FinanceState> = {}) {
+    const base = makeState()
+
+    return makeState({
+      counterparties: [...base.counterparties, ownerContact],
+      pots: [vacationPot],
+      recurringBills: [plannedSave],
+      ...overrides,
+    })
+  }
+
+  test("takes the bill identity from the destination pot", () => {
+    const viewModel = selectFinanceViewModel(plannedSaveState(), TODAY)
+    const bill = viewModel.recurringBills[0]
+
+    expect(bill?.potId).toBe(vacationPot.id)
+    expect(bill?.potName).toBe("Vacation Fund")
+    expect(bill?.name).toBe("Vacation Fund")
+    expect(bill?.contactInitials).toBe("VF")
+    expect(bill?.contactColor).toBe("finance-purple")
+  })
+
+  test("marks pot movements and bill payments as protected", () => {
+    const viewModel = selectFinanceViewModel(
+      plannedSaveState({
+        recurringBills: [
+          plannedSave,
+          {
+            ...plannedSave,
+            id: "internet",
+            counterparty_id: "merchant-1",
+            concept: "Internet",
+            pot_id: null,
+          },
+        ],
+        recurringBillPayments: [
+          makePayment({
+            due_date: "2026-07-01",
+            recurring_bill_id: plannedSave.id,
+            transaction_id: "save-transaction",
+          }),
+          makePayment({
+            due_date: "2026-07-02",
+            recurring_bill_id: "internet",
+            transaction_id: "internet-transaction",
+          }),
+        ],
+        transactions: [
+          {
+            ...baseTransaction,
+            id: "save-transaction",
+            counterparty_id: ownerContact.id,
+            concept: "Monthly vacation save",
+            amount_cents: -5_000,
+            is_pot_movement: true,
+            pot_id: vacationPot.id,
+          },
+          {
+            ...baseTransaction,
+            id: "internet-transaction",
+            counterparty_id: "merchant-1",
+            concept: "Internet",
+            amount_cents: -10_000,
+            is_pot_movement: false,
+            pot_id: null,
+          },
+          {
+            ...baseTransaction,
+            id: "groceries",
+            counterparty_id: "merchant-1",
+            concept: "Groceries",
+            amount_cents: -3_000,
+            is_pot_movement: false,
+            pot_id: null,
+          },
+        ],
+      }),
+      TODAY,
+    )
+    const protectionById = Object.fromEntries(
+      viewModel.transactions.map((transaction) => [
+        transaction.id,
+        transaction.protection,
+      ]),
+    )
+
+    expect(protectionById["save-transaction"]).toEqual({
+      kind: "pot_movement",
+      potName: "Vacation Fund",
+      isPlannedSave: true,
+    })
+    expect(protectionById["internet-transaction"]).toEqual({
+      kind: "bill_payment",
+      billConcept: "Internet",
+    })
+    expect(protectionById.groceries).toBeUndefined()
   })
 })

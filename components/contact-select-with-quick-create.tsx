@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import { z } from "zod"
 
 import { ContactAvatar } from "@/components/contact-avatar"
@@ -54,6 +54,7 @@ type ContactSelectOption = SelectWithCreateOption & {
 }
 
 interface ContactSelectWithQuickCreateProps {
+  disabled?: boolean
   error?: string
   excludeAccountOwner?: boolean
   id: string
@@ -64,6 +65,7 @@ interface ContactSelectWithQuickCreateProps {
 }
 
 export function ContactSelectWithQuickCreate({
+  disabled,
   error,
   excludeAccountOwner = false,
   id,
@@ -73,12 +75,10 @@ export function ContactSelectWithQuickCreate({
   value,
 }: ContactSelectWithQuickCreateProps) {
   const { actions, state } = useFinance()
+  const triggerRef = useRef<HTMLButtonElement>(null)
   const [showQuickContactForm, setShowQuickContactForm] = useState(false)
   const [createdContactOption, setCreatedContactOption] =
     useState<ContactSelectOption | null>(null)
-  const [pendingContactSelectionId, setPendingContactSelectionId] = useState<
-    string | null
-  >(null)
   const quickContactDefaultValues = useMemo(
     () =>
       ({
@@ -136,36 +136,22 @@ export function ContactSelectWithQuickCreate({
           color: value.themeColor,
         },
       })
-      setPendingContactSelectionId(id)
+      onValueChange(id)
       setShowQuickContactForm(false)
       resetForm(quickContactDefaultValues)
+      triggerRef.current?.focus({ preventScroll: true })
     },
   })
-
-  useEffect(() => {
-    if (!pendingContactSelectionId) {
-      return
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      onValueChange(pendingContactSelectionId)
-      setPendingContactSelectionId(null)
-    }, 0)
-
-    return () => window.clearTimeout(timeoutId)
-  }, [onValueChange, pendingContactSelectionId])
 
   return (
     <div className="space-y-3">
       <SelectWithCreate
         id={id}
+        disabled={disabled}
         label={label}
-        value={
-          pendingContactSelectionId ?? createdContactOption?.value ?? value
-        }
+        value={value}
+        triggerRef={triggerRef}
         onValueChange={(nextValue) => {
-          setCreatedContactOption(null)
-          setPendingContactSelectionId(null)
           onValueChange(nextValue)
           setShowQuickContactForm(false)
         }}
@@ -183,7 +169,10 @@ export function ContactSelectWithQuickCreate({
       {showQuickContactForm ? (
         <QuickContactPanel
           form={quickContactForm}
-          onCancel={() => setShowQuickContactForm(false)}
+          onCancel={() => {
+            setShowQuickContactForm(false)
+            triggerRef.current?.focus({ preventScroll: true })
+          }}
         />
       ) : null}
     </div>

@@ -63,7 +63,12 @@ export interface Transaction {
   description?: string
   budgetId?: string
   budgetCategory?: TransactionCategory
+  protection?: TransactionProtection
 }
+
+export type TransactionProtection =
+  | { kind: "pot_movement"; potName?: string; isPlannedSave: boolean }
+  | { kind: "bill_payment"; billConcept: string }
 
 export type SortOption =
   "latest" | "oldest" | "a-z" | "z-a" | "highest" | "lowest"
@@ -103,6 +108,8 @@ export interface RecurringBill {
   totalPayments?: number
   settledCount: number
   creditCardId?: string
+  potId?: string
+  potName?: string
   categoryId: string
   category: TransactionCategory
   archivedAt?: string

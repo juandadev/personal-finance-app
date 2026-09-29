@@ -175,6 +175,7 @@ function ScheduledCreditCardChargeDialog({
         first_due_date: value.chargeDate,
         total_payments: 1,
         credit_card_id: creditCard.id,
+        pot_id: null,
         category_id: value.categoryId,
       }
       const result = bill

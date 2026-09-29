@@ -45,8 +45,12 @@ Information created, submitted, or derived through use of the live service.
 _Avoid_: Test data, sample data
 
 **Recurring Bill**:
-A repeating obligation with a due schedule, optional credit-card assignment, and a lifecycle of Active, Paused, or Archived.
+A repeating obligation with a due schedule, optional credit-card assignment or destination pot, and a lifecycle of Active, Paused, or Archived.
 _Avoid_: Subscription (as a persistence term), standing order
+
+**Planned Save**:
+A Recurring Bill with a destination pot and no credit card; settling an occurrence is a Pot Main-Account Movement from the Primary Account into that pot.
+_Avoid_: Savings bill, auto-save, pot subscription
 
 **Scheduled End**:
 A pending Cancel or Pause date on a still-Active card-assigned Recurring Bill; the bill remains Active until that date, then becomes Archived or Paused.
@@ -69,5 +73,9 @@ Today's Primary Account balance plus still-pending income minus still-pending ou
 _Avoid_: Reconstructed opening, month-to-date actuals
 
 **Pot Main-Account Movement**:
-An Add Money or Withdraw routed through the Primary Account and already reflected in today's live balance.
+An Add Money or Withdraw routed through the Primary Account and already reflected in today's live balance, including a Planned Save settlement.
 _Avoid_: External outflow, forecast actual
+
+**Protected Transaction**:
+A transaction that a pot movement or Recurring Bill payment depends on; its type, amount, contact, date, and payment method cannot change and it cannot be deleted.
+_Avoid_: Read-only transaction, system transaction

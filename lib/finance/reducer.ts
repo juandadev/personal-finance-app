@@ -97,6 +97,7 @@ export type FinanceAction =
       type: "recurring-bill/settle"
       billPayment: RecurringBillPaymentRecord
       transaction?: TransactionRecord
+      pots?: PotRecord[]
       accounts?: AccountRecord[]
       accountSummaries?: AccountSummaryRecord[]
       creditCardStatements?: CreditCardStatementRecord[]
@@ -570,7 +571,18 @@ export function financeReducer(
         pots: updateById(state.pots, action.id, action.updates),
       }
     case "pot/delete":
-      return { ...state, pots: removeById(state.pots, action.id) }
+      return {
+        ...state,
+        pots: removeById(state.pots, action.id),
+        recurringBills: state.recurringBills.map((bill) =>
+          bill.pot_id === action.id ? { ...bill, pot_id: null } : bill,
+        ),
+        transactions: state.transactions.map((transaction) =>
+          transaction.pot_id === action.id
+            ? { ...transaction, pot_id: null }
+            : transaction,
+        ),
+      }
     case "pot/move":
       return {
         ...state,
@@ -612,6 +624,9 @@ export function financeReducer(
           state.recurringBillPayments,
           action.billPayment,
         ),
+        pots: action.pots
+          ? upsertManyById(state.pots, action.pots)
+          : state.pots,
         transactions: action.transaction
           ? upsertById(state.transactions, action.transaction).sort(
               compareTransactionRecordsByDateThenCreatedAt,
