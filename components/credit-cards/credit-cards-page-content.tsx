@@ -5,6 +5,7 @@ import type { ReactNode } from "react"
 import { CreditCardIcon } from "@phosphor-icons/react"
 
 import { ItemActions } from "@/components/actions"
+import { AdjustCreditCardStatementDialog } from "@/components/credit-cards/adjust-credit-card-statement-dialog"
 import { CloseCreditCardStatementDialog } from "@/components/credit-cards/close-credit-card-statement-dialog"
 import { CreditCardBadge } from "@/components/credit-cards/credit-card-badge"
 import { EditCreditCardDialog } from "@/components/credit-cards/credit-card-dialog"
@@ -106,6 +107,10 @@ function CreditCardTile({ creditCard }: { creditCard: CreditCard }) {
   const { state } = useFinance()
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isArchiveOpen, setIsArchiveOpen] = useState(false)
+  const [isAdjustOpen, setIsAdjustOpen] = useState(false)
+  const canAdjustStatement = creditCard.statements.some(
+    (statement) => statement.lifecycleStatus !== "paid",
+  )
   const rawCreditCard = state.creditCards.find(
     (card) => card.id === creditCard.id,
   )
@@ -143,6 +148,11 @@ function CreditCardTile({ creditCard }: { creditCard: CreditCard }) {
               {statusLabels[status]}
             </span>
             <ItemActions ariaLabel={`More options for ${creditCard.nickname}`}>
+              {canAdjustStatement ? (
+                <DropdownMenuItem onSelect={() => setIsAdjustOpen(true)}>
+                  Adjust Statement
+                </DropdownMenuItem>
+              ) : null}
               {rawCreditCard ? (
                 <DropdownMenuItem onSelect={() => setIsEditOpen(true)}>
                   Edit Credit Card
@@ -267,6 +277,14 @@ function CreditCardTile({ creditCard }: { creditCard: CreditCard }) {
         open={isArchiveOpen}
         onOpenChange={setIsArchiveOpen}
       />
+      {canAdjustStatement ? (
+        <AdjustCreditCardStatementDialog
+          creditCard={creditCard}
+          open={isAdjustOpen}
+          onOpenChange={setIsAdjustOpen}
+          hideTrigger
+        />
+      ) : null}
     </Card>
   )
 }

@@ -17,7 +17,11 @@ export type TransactionPageRow = {
   amount_cents: number
   is_voucher_expense: boolean
   payment_method:
-    "bank_account" | "credit_card" | "voucher" | "credit_card_payment"
+    | "bank_account"
+    | "credit_card"
+    | "voucher"
+    | "credit_card_payment"
+    | "credit_card_statement_adjustment"
   credit_card_id: string | null
   credit_card_statement_id: string | null
   posted_at: string
@@ -191,9 +195,13 @@ export function buildTransactionQueryParts(
   }
 
   if (filters.direction === "income") {
-    clauses.push("t.amount_cents > 0")
+    clauses.push(
+      "t.amount_cents > 0 AND t.payment_method <> 'credit_card_statement_adjustment'",
+    )
   } else if (filters.direction === "expense") {
-    clauses.push("t.amount_cents < 0")
+    clauses.push(
+      "t.amount_cents < 0 AND t.payment_method <> 'credit_card_statement_adjustment'",
+    )
   }
 
   if (filters.dateRange.from) {

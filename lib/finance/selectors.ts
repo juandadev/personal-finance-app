@@ -22,6 +22,7 @@ import {
   type RecurringBillOccurrenceState,
 } from "@/lib/finance/recurring-bill-schedule"
 import { formatDisplayDate } from "@/lib/format"
+import { statementPeriodHasCardTransactions } from "@/lib/finance/statement-adjustment"
 import { getTransactionProtection } from "@/lib/finance/transaction-protection"
 import { sortRecurringBills } from "@/lib/finance/url-filters/recurring-bill-filters"
 import type {
@@ -159,6 +160,9 @@ function selectTransactions(
           ? (pots.get(transaction.pot_id)?.name ?? null)
           : null,
         billConcept: billConceptByTransactionId.get(transaction.id) ?? null,
+        paymentMethod: transaction.payment_method,
+        creditCardId: transaction.credit_card_id,
+        cardNickname: creditCard?.nickname ?? null,
       }),
     }
   })
@@ -192,6 +196,10 @@ function getPaymentMethodLabel(
         : "Credit Card"
     case "credit_card_payment":
       return creditCard ? `${creditCard.nickname} Payment` : "Card Payment"
+    case "credit_card_statement_adjustment":
+      return creditCard
+        ? `${creditCard.nickname} •••• ${creditCard.last_four}`
+        : "Credit Card"
     case "voucher":
       return "Voucher"
   }
@@ -614,6 +622,7 @@ function selectCreditCardStatements(
   obligations: CreditCardObligation[],
   counterparties: Map<string, CounterpartyRecord>,
   categories: Map<string, CategoryRecord>,
+  transactions: TransactionRecord[],
   today: string,
 ): CreditCardStatement[] {
   return obligations.map((obligation) => {
@@ -649,6 +658,12 @@ function selectCreditCardStatements(
         today,
       ),
       paidAt: obligation.paidAt ?? undefined,
+      hasTransactions: statementPeriodHasCardTransactions(
+        transactions,
+        obligation.cardId,
+        obligation.periodStart,
+        obligation.periodEnd,
+      ),
       isVirtual: obligation.isVirtual || undefined,
     }
   })
@@ -786,6 +801,7 @@ function selectCreditCards(
     obligations,
     counterparties,
     categories,
+    transactions,
     today,
   )
   const selectedPayments = selectCreditCardPayments(payments)

@@ -194,6 +194,55 @@ describe("transaction sort", () => {
 })
 
 describe("transaction filters", () => {
+  test("keeps statement adjustments out of income and expense filters", () => {
+    const credit = makeTransaction({
+      id: "adjustment-credit",
+      amount: 80,
+      paymentMethod: "credit_card_statement_adjustment",
+      concept: "Statement adjustment",
+    })
+    const charge = makeTransaction({
+      id: "adjustment-charge",
+      amount: -30,
+      paymentMethod: "credit_card_statement_adjustment",
+      concept: "Statement adjustment",
+    })
+    const income = makeTransaction({
+      id: "income",
+      amount: 100,
+      budgetId: undefined,
+    })
+    const expense = makeTransaction({ id: "expense", amount: -40 })
+    const baseFilters = {
+      q: "",
+      sort: "latest" as const,
+      page: 1,
+      category: [],
+      budget: [],
+      account: [],
+      counterparty: [],
+      method: [],
+      card: [],
+      from: null,
+      to: null,
+      minAmount: null,
+      maxAmount: null,
+    }
+
+    expect(
+      filterTransactions(
+        [credit, charge, income, expense],
+        normalizeTransactionFilters({ ...baseFilters, direction: "income" }),
+      ).map((transaction) => transaction.id),
+    ).toEqual(["income"])
+    expect(
+      filterTransactions(
+        [credit, charge, income, expense],
+        normalizeTransactionFilters({ ...baseFilters, direction: "expense" }),
+      ).map((transaction) => transaction.id),
+    ).toEqual(["expense"])
+  })
+
   test("combines groups with AND and values in a group with OR", () => {
     const matching = makeTransaction()
     const anotherCategory = makeTransaction({

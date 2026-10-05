@@ -656,6 +656,15 @@ Button labels should be action-specific: `Add Money`, `Create Budget`,
     type, amount, contact, payment method, and date are locked, and it can't
     be deleted. Manage it in Recurring Bills." Link `Recurring Bills` to
     `/recurring-bills`.
+  - Statement adjustment: "This transaction is a statement adjustment for
+    {card nickname}. Its type, amount, concept, category, contact, and date
+    are locked, and it can't be deleted. To correct the amount, use Adjust
+    Statement on Credit Cards." Link `Credit Cards` to that card. When the
+    card no longer exists, say "a statement adjustment" and link `Credit
+Cards` to `/credit-cards`.
+- A Statement Adjustment locks `Type`, `Amount`, `Concept`, `Category`,
+  `Contact`, and `Date`, and hides `Delete Transaction`. `Type` reads
+  `Statement adjustment`. The note stays editable.
 - Do not use a tooltip for this explanation; it must be visible on touch.
 
 ### Credit Cards
@@ -682,10 +691,30 @@ Today`, then `Due Soon`, then `Upcoming`. `Overdue` uses destructive text.
 - When a card-level payment targets the oldest payable statement, the dialog
   explains that selection, emphasizes the statement period, and offers a
   secondary route to card details for choosing another statement.
-- On Credit Card Details, each statement with a non-zero purchase amount or
-  pending bills exposes a `View statement transactions` text link under the
-  period and due date (shared card action-link styling). It opens Transactions
-  filtered to that card and inclusive statement period (`card`, `from`, `to`).
+- `Adjust Statement` sets one unpaid statement to the amount the bank wants.
+  It lives in the card overflow menu, the detail header menu, and beside `Pay
+Statement` or `Close Statement` on each unpaid statement row. Archived cards
+  and paid statements do not show it. From a statement row the statement is
+  fixed. From the card, the default is the oldest unpaid statement that still
+  has a balance. If every unpaid statement is $0, the default is the statement
+  whose period contains today.
+- The dialog shows the amount owed, including pending charges, and asks for
+  the bank amount. It states whether you will owe more or less. An optional
+  note is stored as the transaction description and does not appear in the
+  transactions list. Submitting the current amount does nothing. An amount
+  below the pending charges is refused. If the amount owed changes before
+  confirm, the dialog shows the new amount and asks for the bank amount again.
+- A bank amount of $0 with nothing pending closes the statement without a
+  payment, the same result as `Close Statement`.
+- The recorded transaction concept is `Statement adjustment`. A lower bank
+  amount is positive. A higher bank amount is negative. Neither changes
+  monthly income, monthly expenses, budgets, or the Primary Account. The
+  budget cell reads `Not available`. Income and expense filters skip it.
+- On Credit Card Details, `View statement transactions` shows when the
+  statement has a purchase amount, pending charges, or any card transaction
+  in that statement period, including an adjustment that brought the statement
+  to $0. It opens Transactions filtered to that card and inclusive statement
+  period (`card`, `from`, `to`).
 - Credit Card Details does not list Card Transactions inline; statement-scoped
   review and edits happen on Transactions via that deep-link.
 - Credit Card Details shows a Recurring Bills section for monthly and yearly
@@ -715,6 +744,8 @@ Today`, then `Due Soon`, then `Upcoming`. `Overdue` uses destructive text.
 - Positive amounts use a plus sign and `text-accent`.
 - Negative or outgoing amounts use normal foreground text unless representing an
   error or destructive state.
+- A Statement Adjustment uses the normal foreground color in both directions.
+  A lower bank figure still shows a plus sign.
 - Always show enough context for money values: label, category, date, or target.
 - Use two decimals for balances, budgets, and saved amounts when precision
   matters.

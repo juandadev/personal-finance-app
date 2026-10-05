@@ -27,6 +27,7 @@ const quickCategorySchema = z.object({
 type QuickCategoryValues = z.input<typeof quickCategorySchema>
 
 interface CategorySelectWithQuickCreateProps {
+  disabled?: boolean
   error?: string
   id: string
   label?: string
@@ -36,6 +37,7 @@ interface CategorySelectWithQuickCreateProps {
 }
 
 export function CategorySelectWithQuickCreate({
+  disabled = false,
   error,
   id,
   label = "Category",
@@ -110,6 +112,7 @@ export function CategorySelectWithQuickCreate({
       <SelectWithCreate
         id={id}
         label={label}
+        disabled={disabled}
         value={
           pendingCategorySelectionId ?? createdCategoryOption?.value ?? value
         }
@@ -121,11 +124,15 @@ export function CategorySelectWithQuickCreate({
         }}
         options={categoryOptions}
         placeholder={placeholder}
-        createItem={{
-          value: createCategoryValue,
-          label: "Add a new category",
-          onSelect: () => setShowQuickCategoryForm(true),
-        }}
+        createItem={
+          disabled
+            ? undefined
+            : {
+                value: createCategoryValue,
+                label: "Add a new category",
+                onSelect: () => setShowQuickCategoryForm(true),
+              }
+        }
         error={error}
       />
 

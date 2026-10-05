@@ -55,6 +55,7 @@ import {
   updatePotAction,
   updateRecurringBillAction,
   updateTransactionAction,
+  adjustCreditCardStatementAction,
   payCreditCardCycleAction,
   payCreditCardStatementAction,
   resetCreditCardAnnualityOverridesAction,
@@ -618,6 +619,21 @@ export function FinanceProvider({
               dispatch({
                 type: "credit-card/statement-upsert",
                 statements: [result.data],
+              })
+            }
+
+            return result
+          }),
+        ),
+      adjustCreditCardStatement: (input) =>
+        runFinanceAction(() =>
+          adjustCreditCardStatementAction(input).then((result) => {
+            if (result.ok) {
+              dispatch({
+                type: "credit-card/statement-adjusted",
+                statement: result.data.statement,
+                transaction: result.data.transaction,
+                counterparty: result.data.counterparty,
               })
             }
 

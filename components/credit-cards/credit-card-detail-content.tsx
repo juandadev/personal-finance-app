@@ -10,6 +10,7 @@ import {
   ModuleHeaderActions,
 } from "@/components/actions"
 import { CreditCardAnnualitySection } from "@/components/credit-cards/credit-card-annuality-section"
+import { AdjustCreditCardStatementDialog } from "@/components/credit-cards/adjust-credit-card-statement-dialog"
 import { CloseCreditCardStatementDialog } from "@/components/credit-cards/close-credit-card-statement-dialog"
 import { CreditCardBadge } from "@/components/credit-cards/credit-card-badge"
 import { PayCreditCardStatementDialog } from "@/components/credit-cards/pay-credit-card-statement-dialog"
@@ -90,6 +91,8 @@ export function CreditCardDetailContent({
   const [isMobilePayDialogOpen, setIsMobilePayDialogOpen] = useState(false)
   const [isCloseStatementDialogOpen, setIsCloseStatementDialogOpen] =
     useState(false)
+  const [isAdjustStatementDialogOpen, setIsAdjustStatementDialogOpen] =
+    useState(false)
   const creditCard = creditCards.find((card) => card.id === creditCardId)
 
   if (!creditCard) {
@@ -131,6 +134,11 @@ export function CreditCardDetailContent({
     creditCard.currentStatement.lifecycleStatus !== "paid" &&
     creditCard.currentStatement.totalAmount === 0,
   )
+  const canAdjustStatement =
+    !creditCard.archivedAt &&
+    creditCard.statements.some(
+      (statement) => statement.lifecycleStatus !== "paid",
+    )
 
   return (
     <div className="min-h-0 flex-1 space-y-6 overflow-y-auto pr-3">
@@ -183,6 +191,13 @@ export function CreditCardDetailContent({
             >
               Add Scheduled Charge
             </HeaderMenuItem>
+            {canAdjustStatement ? (
+              <HeaderMenuItem
+                onSelect={() => setIsAdjustStatementDialogOpen(true)}
+              >
+                Adjust Statement
+              </HeaderMenuItem>
+            ) : null}
             {canCloseStatement ? (
               <HeaderMenuItem
                 onSelect={() => setIsCloseStatementDialogOpen(true)}
@@ -244,6 +259,14 @@ export function CreditCardDetailContent({
         onOpenChange={setIsMobilePayDialogOpen}
         hideTrigger
       />
+      {canAdjustStatement ? (
+        <AdjustCreditCardStatementDialog
+          creditCard={creditCard}
+          open={isAdjustStatementDialogOpen}
+          onOpenChange={setIsAdjustStatementDialogOpen}
+          hideTrigger
+        />
+      ) : null}
       <AddScheduledCreditCardChargeDialog
         creditCard={creditCard}
         open={isScheduledChargeDialogOpen}
@@ -454,7 +477,9 @@ function StatementsCard({ creditCard }: { creditCard: CreditCard }) {
                     Due {formatDisplayDate(statement.paymentDueDate)}
                   </p>
                 </div>
-                {statement.amount > 0 || statement.pendingBillsAmount > 0 ? (
+                {statement.amount > 0 ||
+                statement.pendingBillsAmount > 0 ||
+                statement.hasTransactions ? (
                   <Link
                     href={`/transactions?card=${encodeURIComponent(creditCard.id)}&from=${encodeURIComponent(statement.periodStart)}&to=${encodeURIComponent(statement.periodEnd)}`}
                     className={cardActionLinkClasses}
@@ -498,6 +523,10 @@ function StatementsCard({ creditCard }: { creditCard: CreditCard }) {
                   {statusLabels[statement.dueStatus]}
                 </p>
                 <PayCreditCardStatementDialog
+                  creditCard={creditCard}
+                  statement={statement}
+                />
+                <AdjustCreditCardStatementDialog
                   creditCard={creditCard}
                   statement={statement}
                 />

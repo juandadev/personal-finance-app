@@ -44,6 +44,23 @@ describe("getTransactionProtection", () => {
     })
   })
 
+  test("protects statement adjustments", () => {
+    expect(
+      getTransactionProtection({
+        isPotMovement: false,
+        potName: null,
+        billConcept: null,
+        paymentMethod: "credit_card_statement_adjustment",
+        creditCardId: "card-1",
+        cardNickname: "Travel Card",
+      }),
+    ).toEqual({
+      kind: "statement_adjustment",
+      creditCardId: "card-1",
+      cardNickname: "Travel Card",
+    })
+  })
+
   test("protects bill payments", () => {
     expect(
       getTransactionProtection({
@@ -76,6 +93,18 @@ describe("describeProtectedTransaction", () => {
       }),
     ).toBe(
       "This transaction is a Planned Save. Its type, amount, contact, and date are locked, and it can't be deleted.",
+    )
+  })
+
+  test("names the card for a statement adjustment", () => {
+    expect(
+      describeProtectedTransaction({
+        kind: "statement_adjustment",
+        creditCardId: "card-1",
+        cardNickname: "Travel Card",
+      }),
+    ).toBe(
+      "This transaction is a statement adjustment for Travel Card. Its type, amount, concept, category, contact, and date are locked, and it can't be deleted.",
     )
   })
 

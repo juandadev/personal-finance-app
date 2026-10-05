@@ -113,6 +113,12 @@ export type FinanceAction =
       statements: CreditCardStatementRecord[]
     }
   | {
+      type: "credit-card/statement-adjusted"
+      statement: CreditCardStatementRecord
+      transaction: TransactionRecord
+      counterparty: CounterpartyRecord
+    }
+  | {
       type: "credit-card/payment"
       payment: CreditCardPaymentRecord
       transaction: TransactionRecord
@@ -250,6 +256,15 @@ export interface FinanceActions {
   closeCreditCardStatement: (
     statementId: string,
   ) => Promise<FinanceMutationResult>
+  adjustCreditCardStatement: (input: {
+    creditCardId: string
+    statementId: string | null
+    periodStart: string
+    periodEnd: string
+    expectedTotalCents: number
+    targetTotalCents: number
+    note: string | null
+  }) => Promise<FinanceMutationResult>
   saveCreditCardAnnualityOverrides: (
     creditCardId: string,
     anniversaryYear: number,
@@ -288,6 +303,7 @@ export type FinanceMutationResult =
       ok: false
       message: string
       fieldErrors?: Record<string, string[] | undefined>
+      currentTotalCents?: number
     }
 
 /**
@@ -670,6 +686,23 @@ export function financeReducer(
         creditCardStatements: upsertManyById(
           state.creditCardStatements,
           action.statements,
+        ),
+      }
+    case "credit-card/statement-adjusted":
+      return {
+        ...state,
+        creditCardStatements: upsertById(
+          state.creditCardStatements,
+          action.statement,
+        ),
+        transactions: upsertById(state.transactions, action.transaction).sort(
+          compareTransactionRecordsByDateThenCreatedAt,
+        ),
+        counterparties: upsertById(
+          state.counterparties,
+          action.counterparty,
+        ).sort((left, right) =>
+          left.display_name.localeCompare(right.display_name),
         ),
       }
     case "credit-card/payment":

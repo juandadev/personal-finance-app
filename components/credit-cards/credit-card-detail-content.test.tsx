@@ -212,6 +212,10 @@ mock.module("./close-credit-card-statement-dialog", () => ({
   CloseCreditCardStatementDialog: () => null,
 }))
 
+mock.module("./adjust-credit-card-statement-dialog", () => ({
+  AdjustCreditCardStatementDialog: () => null,
+}))
+
 mock.module("./scheduled-credit-card-charge-dialog", () => ({
   AddScheduledCreditCardChargeDialog: () => null,
   EditScheduledCreditCardChargeDialog: () => null,

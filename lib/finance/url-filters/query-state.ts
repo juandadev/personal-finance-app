@@ -31,6 +31,7 @@ const transactionPaymentMethodValues = [
   "credit_card",
   "voucher",
   "credit_card_payment",
+  "credit_card_statement_adjustment",
 ] as const
 
 const transactionDirectionValues = ["income", "expense"] as const

@@ -24,6 +24,7 @@ import {
   insertRecurringBill,
   insertTransaction,
   payCreditCardCycle,
+  adjustCreditCardStatement,
   payCreditCardStatement,
   payRecurringBillOccurrence,
   resetCreditCardAnnualityOverrides,
@@ -81,6 +82,7 @@ import type {
   RecurringBillRecord,
   TransactionRecord,
 } from "@/lib/finance/types"
+import { StatementAdjustmentConflictError } from "@/lib/finance/statement-adjustment"
 import { themeColorClasses } from "@/lib/theme-colors"
 
 function revalidateFinanceViews() {
@@ -97,6 +99,7 @@ type FinanceActionResult<T = undefined> =
       ok: false
       message: string
       fieldErrors?: Record<string, string[] | undefined>
+      currentTotalCents?: number
     }
 
 const themeColorSchema = z.enum(
@@ -497,7 +500,13 @@ const transactionBaseSchema = z.object({
     }),
   is_voucher_expense: z.boolean().default(false),
   payment_method: z
-    .enum(["bank_account", "credit_card", "voucher", "credit_card_payment"])
+    .enum([
+      "bank_account",
+      "credit_card",
+      "voucher",
+      "credit_card_payment",
+      "credit_card_statement_adjustment",
+    ])
     .default("bank_account"),
   credit_card_id: recordIdSchema.nullable().default(null),
   credit_card_statement_id: recordIdSchema.nullable().default(null),
@@ -598,6 +607,14 @@ function handlePostgresError<T>(error: PostgresError): FinanceActionResult<T> {
 }
 
 function handleFinanceActionError<T>(error: unknown): FinanceActionResult<T> {
+  if (error instanceof StatementAdjustmentConflictError) {
+    return {
+      ok: false,
+      message: error.message,
+      currentTotalCents: error.currentTotalCents,
+    }
+  }
+
   if (error instanceof z.ZodError) {
     return {
       ok: false,
@@ -861,6 +878,56 @@ export async function archiveCreditCardAction(
     return {
       ok: true,
       message: "Credit card archived.",
+      data,
+    }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function adjustCreditCardStatementAction(input: {
+  creditCardId: string
+  statementId: string | null
+  periodStart: string
+  periodEnd: string
+  expectedTotalCents: number
+  targetTotalCents: number
+  note: string | null
+}): Promise<
+  FinanceActionResult<{
+    statement: CreditCardStatementRecord
+    transaction: TransactionRecord
+    counterparty: CounterpartyRecord
+  }>
+> {
+  try {
+    const userId = await getUserId()
+    const parsed = z
+      .object({
+        creditCardId: idSchema,
+        statementId: idSchema.nullable(),
+        periodStart: isoDateSchema,
+        periodEnd: isoDateSchema,
+        expectedTotalCents: z
+          .number()
+          .int()
+          .nonnegative()
+          .max(maximumMoneyCents),
+        targetTotalCents: z.number().int().nonnegative().max(maximumMoneyCents),
+        note: z
+          .string()
+          .trim()
+          .max(240)
+          .transform((value) => value || null)
+          .nullable(),
+      })
+      .parse(input)
+    const data = await adjustCreditCardStatement(userId, parsed)
+    revalidateFinanceViews()
+
+    return {
+      ok: true,
+      message: "Statement adjusted.",
       data,
     }
   } catch (error) {

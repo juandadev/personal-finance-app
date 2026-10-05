@@ -55,7 +55,11 @@ export interface Transaction {
   createdAt: string
   isVoucherExpense: boolean
   paymentMethod:
-    "bank_account" | "credit_card" | "voucher" | "credit_card_payment"
+    | "bank_account"
+    | "credit_card"
+    | "voucher"
+    | "credit_card_payment"
+    | "credit_card_statement_adjustment"
   creditCardId?: string
   creditCardStatementId?: string
   paymentMethodLabel: string
@@ -69,6 +73,11 @@ export interface Transaction {
 export type TransactionProtection =
   | { kind: "pot_movement"; potName?: string; isPlannedSave: boolean }
   | { kind: "bill_payment"; billConcept: string }
+  | {
+      kind: "statement_adjustment"
+      creditCardId?: string
+      cardNickname?: string
+    }
 
 export type SortOption =
   "latest" | "oldest" | "a-z" | "z-a" | "highest" | "lowest"
@@ -172,6 +181,7 @@ export interface CreditCardStatement {
   lifecycleStatus: "open" | "closed" | "paid"
   dueStatus: CreditCardDueStatus
   paidAt?: string
+  hasTransactions?: boolean
   /**
    * True when the cycle has pending bills but no statement row exists yet
    * (e.g. a subscription-only card with no purchases). Paying it creates the

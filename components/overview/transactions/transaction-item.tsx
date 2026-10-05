@@ -29,7 +29,10 @@ export function TransactionItem({ transaction }: TransactionItemProps) {
         <p
           className={cn(
             "text-sm font-bold",
-            transactionAmountClassName(transaction.amount),
+            transactionAmountClassName(
+              transaction.amount,
+              transaction.paymentMethod,
+            ),
           )}
         >
           <MoneyAmount amount={transaction.amount} variant="signed" />

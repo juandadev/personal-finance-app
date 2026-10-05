@@ -203,7 +203,10 @@ function MobileTransactionItem({ transaction }: { transaction: Transaction }) {
           <span
             className={cn(
               "text-sm font-bold tabular-nums",
-              transactionAmountClassName(transaction.amount),
+              transactionAmountClassName(
+                transaction.amount,
+                transaction.paymentMethod,
+              ),
             )}
           >
             <MoneyAmount amount={transaction.amount} variant="signed" />
@@ -280,7 +283,10 @@ function TransactionRow({
         className={cn(
           DESKTOP_STICKY_AMOUNT_CELL,
           "font-bold tabular-nums",
-          transactionAmountClassName(transaction.amount),
+          transactionAmountClassName(
+            transaction.amount,
+            transaction.paymentMethod,
+          ),
         )}
       >
         <MoneyAmount amount={transaction.amount} variant="signed" />
@@ -319,7 +325,10 @@ function BudgetAssignmentSelect({
   const isExpense = transaction.amount < 0
   const eligibleBudgets = budgets
 
-  if (!isExpense) {
+  if (
+    !isExpense ||
+    transaction.paymentMethod === "credit_card_statement_adjustment"
+  ) {
     return <span className="text-muted-foreground text-xs">Not available</span>
   }
 

@@ -1,3 +1,4 @@
+import { isStatementAdjustmentPaymentMethod } from "@/lib/finance/statement-adjustment"
 import type { Transaction } from "@/lib/types"
 import {
   compareCreatedAtThenId,
@@ -31,12 +32,18 @@ function matchesDate(postedAt: string, range: TransactionFilters["dateRange"]) {
 }
 
 function matchesDirection(
-  amount: number,
+  transaction: Transaction,
   direction: TransactionFilters["direction"],
 ) {
   if (!direction) return true
 
-  return direction === "income" ? amount > 0 : amount < 0
+  if (isStatementAdjustmentPaymentMethod(transaction.paymentMethod)) {
+    return false
+  }
+
+  return direction === "income"
+    ? transaction.amount > 0
+    : transaction.amount < 0
 }
 
 function comparePrimarySort(
@@ -114,7 +121,7 @@ export function filterTransactions(
       matchesAny(counterparties, transaction.counterpartyId) &&
       matchesAny(methods, transaction.paymentMethod) &&
       matchesAny(cards, transaction.creditCardId) &&
-      matchesDirection(transaction.amount, filters.direction) &&
+      matchesDirection(transaction, filters.direction) &&
       matchesDate(transaction.postedAt, filters.dateRange) &&
       matchesAmount(transaction.amount, filters.amountRange)
     )

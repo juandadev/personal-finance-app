@@ -164,6 +164,7 @@ function TransactionDialog({
   const isEditing = Boolean(transaction)
   const protection = transaction?.protection
   const isLocked = Boolean(protection)
+  const isStatementAdjustment = protection?.kind === "statement_adjustment"
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
   const isControlled = controlledOpen !== undefined
   const open = isControlled ? controlledOpen : uncontrolledOpen
@@ -195,10 +196,12 @@ function TransactionDialog({
             ? transaction.isVoucherExpense
             : false,
         paymentMethod:
-          transaction && transaction.amount < 0
-            ? transaction.paymentMethod === "credit_card_payment"
-              ? "bank_account"
-              : transaction.paymentMethod
+          transaction &&
+          transaction.amount < 0 &&
+          (transaction.paymentMethod === "bank_account" ||
+            transaction.paymentMethod === "credit_card" ||
+            transaction.paymentMethod === "voucher")
+            ? transaction.paymentMethod
             : "bank_account",
         creditCardId:
           transaction?.creditCardId ??
@@ -225,6 +228,33 @@ function TransactionDialog({
           ok: false,
           message: "Your main account is not ready yet. Refresh and try again.",
         })
+        return
+      }
+
+      if (transaction?.protection?.kind === "statement_adjustment") {
+        const result = await actions.updateTransaction(
+          transaction.id,
+          {
+            account_id: transaction.accountId,
+            counterparty_id: transaction.counterpartyId,
+            category_id: transaction.categoryId,
+            concept: transaction.concept,
+            amount_cents: Math.round(transaction.amount * 100),
+            is_voucher_expense: false,
+            payment_method: "credit_card_statement_adjustment",
+            credit_card_id: transaction.creditCardId ?? null,
+            credit_card_statement_id: transaction.creditCardStatementId ?? null,
+            posted_at: transaction.postedAt,
+            description: value.description || null,
+          },
+          null,
+        )
+
+        if (!applyActionResult(result)) {
+          return
+        }
+
+        setOpen(false)
         return
       }
 
@@ -387,31 +417,47 @@ function TransactionDialog({
           }
         >
           <div className="grid gap-4 sm:grid-cols-2">
-            <mainForm.form.Field name="transactionType">
-              {(field) => (
-                <FormSelect
-                  id="transaction-type"
-                  label="Type"
-                  disabled={isLocked}
-                  value={field.state.value}
-                  onValueChange={(value) => {
-                    const nextType = value as "expense" | "income"
+            {isStatementAdjustment ? (
+              <FormSelect
+                id="transaction-type"
+                label="Type"
+                disabled
+                value="statement_adjustment"
+                onValueChange={() => undefined}
+                options={[
+                  {
+                    value: "statement_adjustment",
+                    label: "Statement adjustment",
+                  },
+                ]}
+              />
+            ) : (
+              <mainForm.form.Field name="transactionType">
+                {(field) => (
+                  <FormSelect
+                    id="transaction-type"
+                    label="Type"
+                    disabled={isLocked}
+                    value={field.state.value}
+                    onValueChange={(value) => {
+                      const nextType = value as "expense" | "income"
 
-                    mainForm.setValue("transactionType", nextType)
+                      mainForm.setValue("transactionType", nextType)
 
-                    if (nextType === "income") {
-                      mainForm.setValue("isVoucherExpense", false)
-                      mainForm.setValue("paymentMethod", "bank_account")
-                    }
-                  }}
-                  options={[
-                    { value: "expense", label: "Expense" },
-                    { value: "income", label: "Income" },
-                  ]}
-                  error={mainForm.fieldErrors.transactionType}
-                />
-              )}
-            </mainForm.form.Field>
+                      if (nextType === "income") {
+                        mainForm.setValue("isVoucherExpense", false)
+                        mainForm.setValue("paymentMethod", "bank_account")
+                      }
+                    }}
+                    options={[
+                      { value: "expense", label: "Expense" },
+                      { value: "income", label: "Income" },
+                    ]}
+                    error={mainForm.fieldErrors.transactionType}
+                  />
+                )}
+              </mainForm.form.Field>
+            )}
             <mainForm.form.Field name="amount">
               {(field) => (
                 <FormField
@@ -444,7 +490,7 @@ function TransactionDialog({
             })}
           >
             {({ paymentMethod, transactionType }) => {
-              if (transactionType !== "expense") {
+              if (isStatementAdjustment || transactionType !== "expense") {
                 return null
               }
 
@@ -551,6 +597,7 @@ function TransactionDialog({
                 {(fieldProps) => (
                   <Input
                     {...fieldProps}
+                    disabled={isStatementAdjustment}
                     value={field.state.value}
                     onChange={(event) =>
                       mainForm.setValue("concept", event.target.value)
@@ -572,6 +619,7 @@ function TransactionDialog({
                     : "transaction-category-closed"
                 }
                 id="transaction-category"
+                disabled={isStatementAdjustment}
                 value={field.state.value}
                 onValueChange={(value) =>
                   mainForm.setValue("categoryId", value)
@@ -714,11 +762,19 @@ function ProtectedTransactionMessage({
           href: "/pots",
           label: "Pots",
         }
-      : {
-          prefix: "Manage it in",
-          href: "/recurring-bills",
-          label: "Recurring Bills",
-        }
+      : protection.kind === "statement_adjustment"
+        ? {
+            prefix: "To correct the amount, use Adjust Statement on",
+            href: protection.creditCardId
+              ? `/credit-cards/${protection.creditCardId}`
+              : "/credit-cards",
+            label: "Credit Cards",
+          }
+        : {
+            prefix: "Manage it in",
+            href: "/recurring-bills",
+            label: "Recurring Bills",
+          }
 
   return (
     <p className="text-muted-foreground text-sm leading-normal">

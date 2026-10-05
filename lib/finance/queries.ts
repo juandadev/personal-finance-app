@@ -31,6 +31,12 @@ import {
   type TransactionPageRow,
 } from "@/lib/finance/transaction-page-query"
 import {
+  STATEMENT_ADJUSTMENT_CONCEPT,
+  StatementAdjustmentConflictError,
+  adjustmentPostedAt,
+  statementAdjustmentTransactionCents,
+} from "@/lib/finance/statement-adjustment"
+import {
   describeProtectedTransaction,
   getTransactionProtection,
 } from "@/lib/finance/transaction-protection"
@@ -622,6 +628,10 @@ function getTransactionPaymentMethodLabel(row: TransactionPageRow) {
       return row.credit_card_nickname
         ? `${row.credit_card_nickname} Payment`
         : "Card Payment"
+    case "credit_card_statement_adjustment":
+      return row.credit_card_nickname && row.credit_card_last_four
+        ? `${row.credit_card_nickname} •••• ${row.credit_card_last_four}`
+        : "Credit Card"
     case "voucher":
       return "Voucher"
   }
@@ -655,6 +665,9 @@ function toTransactionView(row: TransactionPageRow): Transaction {
       isPotMovement: row.is_pot_movement,
       potName: row.pot_name,
       billConcept: row.bill_concept,
+      paymentMethod: row.payment_method,
+      creditCardId: row.credit_card_id,
+      cardNickname: row.credit_card_nickname,
     }),
   }
 }
@@ -891,6 +904,8 @@ async function applyAccountEffectsIfNeeded(
         ),
         accountSummary: null,
       }
+    case "credit_card_statement_adjustment":
+      return null
     case "bank_account":
       return applyTransactionEffects(client, userId, transaction, direction)
   }
@@ -1083,6 +1098,8 @@ async function prepareTransactionPaymentMethod(
         payment_method: paymentMethod,
         is_voucher_expense: false,
       }
+    case "credit_card_statement_adjustment":
+      throw new Error("Statement adjustments are made from the credit card.")
   }
 }
 
@@ -1509,10 +1526,24 @@ async function getStoredTransactionProtection(
       )
     : null
 
+  const cardNickname =
+    transaction.payment_method === "credit_card_statement_adjustment" &&
+    transaction.credit_card_id
+      ? ((
+          await client.query<{ nickname: string }>(
+            "SELECT nickname FROM credit_cards WHERE user_id = $1 AND id = $2",
+            [userId, transaction.credit_card_id],
+          )
+        ).rows[0]?.nickname ?? null)
+      : null
+
   return getTransactionProtection({
     isPotMovement: transaction.is_pot_movement,
     potName: potResult?.rows[0]?.name ?? null,
     billConcept: billResult.rows[0]?.concept ?? null,
+    paymentMethod: transaction.payment_method,
+    creditCardId: transaction.credit_card_id,
+    cardNickname,
   })
 }
 
@@ -1537,6 +1568,44 @@ async function updateProtectedTransaction(
   const changesLockedField = protectedTransactionFields.some(
     (field) => updates[field] !== existing[field],
   )
+
+  if (protection.kind === "statement_adjustment") {
+    if (
+      changesLockedField ||
+      updates.concept !== existing.concept ||
+      updates.category_id !== existing.category_id ||
+      updates.credit_card_statement_id !== existing.credit_card_statement_id
+    ) {
+      throw new Error(
+        `${describeProtectedTransaction(protection)} Only its note can change.`,
+      )
+    }
+
+    const transactionResult = await client.query<TransactionRecord>(
+      `
+        UPDATE transactions
+        SET description = $2
+        WHERE user_id = $1 AND id = $3
+        RETURNING ${transactionSelectColumns.join(", ")}
+      `,
+      [userId, updates.description, existing.id],
+    )
+    const savedTransaction = transactionResult.rows[0]
+    const budgetAssignment = await syncBudgetAssignment(
+      client,
+      userId,
+      savedTransaction,
+      null,
+    )
+
+    return {
+      transaction: savedTransaction,
+      accounts: [] as AccountRecord[],
+      accountSummaries: [] as AccountSummaryRecord[],
+      creditCardStatements: [] as CreditCardStatementRecord[],
+      budgetAssignment,
+    }
+  }
 
   if (changesLockedField) {
     throw new Error(
@@ -2581,6 +2650,181 @@ export async function closeZeroBalanceCreditCardStatement(
     )
 
     return closedStatementResult.rows[0]
+  })
+}
+
+async function lockCreditCardStatement(
+  client: PoolClient,
+  userId: string,
+  statementId: string,
+) {
+  const result = await client.query<CreditCardStatementRecord>(
+    `
+      SELECT ${creditCardStatementColumns.join(", ")}
+      FROM credit_card_statements
+      WHERE user_id = $1 AND id = $2
+      FOR UPDATE
+    `,
+    [userId, statementId],
+  )
+
+  if (!result.rowCount) {
+    throw new Error("Credit card statement not found.")
+  }
+
+  return result.rows[0]
+}
+
+export async function adjustCreditCardStatement(
+  userId: string,
+  input: {
+    creditCardId: string
+    statementId: string | null
+    periodStart: string
+    periodEnd: string
+    expectedTotalCents: number
+    targetTotalCents: number
+    note: string | null
+  },
+) {
+  return withFinanceTransaction(userId, async (client) => {
+    const card = await getCreditCard(client, userId, input.creditCardId)
+    const localToday = await getUserLocalToday(client, userId)
+    const postedAt = adjustmentPostedAt(
+      input.periodStart,
+      input.periodEnd,
+      localToday,
+    )
+    const statement = input.statementId
+      ? await lockCreditCardStatement(client, userId, input.statementId)
+      : await lockCreditCardStatement(
+          client,
+          userId,
+          (await ensureOpenCreditCardStatement(client, userId, card, postedAt))
+            .id,
+        )
+
+    if (
+      statement.credit_card_id !== card.id ||
+      statement.period_start !== input.periodStart ||
+      statement.period_end !== input.periodEnd
+    ) {
+      throw new Error("Credit card statement not found.")
+    }
+
+    if (statement.lifecycle_status === "paid") {
+      throw new Error("This statement is already paid.")
+    }
+
+    const pendingOccurrences = await getPendingBillOccurrencesForStatement(
+      client,
+      userId,
+      card,
+      statement,
+      localToday,
+    )
+    const pendingAnnuality = await getPendingAnnualityForStatement(
+      client,
+      userId,
+      card,
+      statement,
+      localToday,
+    )
+    const pendingCents =
+      pendingOccurrences.reduce(
+        (sum, { occurrence }) => sum + occurrence.amountCents,
+        0,
+      ) +
+      pendingAnnuality.reduce(
+        (sum, installment) => sum + installment.amountCents,
+        0,
+      )
+    const currentTotalCents = statement.statement_amount_cents + pendingCents
+
+    if (currentTotalCents !== input.expectedTotalCents) {
+      throw new StatementAdjustmentConflictError(currentTotalCents)
+    }
+
+    if (input.targetTotalCents < pendingCents) {
+      throw new Error("Enter an amount that covers the pending charges.")
+    }
+
+    if (input.targetTotalCents === currentTotalCents) {
+      throw new Error("This statement already matches that amount.")
+    }
+
+    const sourceAccount = await getPrimaryPaymentAccount(client, userId)
+    const category = await getDefaultPaymentCategory(client, userId)
+    const counterparty = await ensureCardPaymentCounterparty(
+      client,
+      userId,
+      card,
+    )
+    const savedTransaction = await insertTransactionRecord(client, userId, {
+      id: crypto.randomUUID(),
+      account_id: sourceAccount.id,
+      counterparty_id: counterparty.id,
+      category_id: category.id,
+      concept: STATEMENT_ADJUSTMENT_CONCEPT,
+      amount_cents: statementAdjustmentTransactionCents(
+        currentTotalCents,
+        input.targetTotalCents,
+      ),
+      is_voucher_expense: false,
+      payment_method: "credit_card_statement_adjustment",
+      credit_card_id: card.id,
+      credit_card_statement_id: statement.id,
+      posted_at: postedAt,
+      description: input.note,
+    })
+    const storedDeltaCents = input.targetTotalCents - currentTotalCents
+    const updatedStatementResult =
+      await client.query<CreditCardStatementRecord>(
+        `
+        UPDATE credit_card_statements
+        SET statement_amount_cents = statement_amount_cents + $3
+        WHERE user_id = $1
+          AND id = $2
+          AND lifecycle_status <> 'paid'
+          AND statement_amount_cents + $3 >= 0
+        RETURNING ${creditCardStatementColumns.join(", ")}
+      `,
+        [userId, statement.id, storedDeltaCents],
+      )
+
+    if (!updatedStatementResult.rowCount) {
+      throw new Error("This statement could not be adjusted.")
+    }
+
+    let savedStatement = updatedStatementResult.rows[0]
+
+    if (input.targetTotalCents === 0 && pendingCents === 0) {
+      const closedStatementResult =
+        await client.query<CreditCardStatementRecord>(
+          `
+          UPDATE credit_card_statements
+          SET lifecycle_status = 'paid', paid_at = now()
+          WHERE user_id = $1
+            AND id = $2
+            AND statement_amount_cents = 0
+            AND lifecycle_status <> 'paid'
+          RETURNING ${creditCardStatementColumns.join(", ")}
+        `,
+          [userId, statement.id],
+        )
+
+      if (!closedStatementResult.rowCount) {
+        throw new Error("This statement could not be adjusted.")
+      }
+
+      savedStatement = closedStatementResult.rows[0]
+    }
+
+    return {
+      statement: savedStatement,
+      transaction: savedTransaction,
+      counterparty,
+    }
   })
 }
 

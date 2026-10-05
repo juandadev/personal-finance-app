@@ -64,7 +64,14 @@ export function formatSignedAmount(
   return `${sign}${formatted}`
 }
 
-export function transactionAmountClassName(amount: number): string {
+export function transactionAmountClassName(
+  amount: number,
+  paymentMethod?: string,
+): string {
+  if (paymentMethod === "credit_card_statement_adjustment") {
+    return "text-foreground"
+  }
+
   return amount > 0 ? "text-accent" : "text-destructive"
 }
 
