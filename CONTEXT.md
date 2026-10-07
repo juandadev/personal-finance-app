@@ -64,6 +64,18 @@ _Avoid_: Delete, remove charge, keep/remove prompt
 A derived 13-month view of Primary Account cash from today's live balance through still-pending income and obligations.
 _Avoid_: Cash flow report, month-to-date reconciliation
 
+**Forecast Item**:
+Additional income or a planned outflow entered for the Cash Forecast alone. It falls in one month, or it repeats monthly from a start month.
+_Avoid_: Adjustment, forecast transaction
+
+**Start Month**:
+The first month a Forecast Item is included.
+_Avoid_: Due month, effective month
+
+**End Month**:
+The last month a repeating Forecast Item is included. It may fall after the months the Cash Forecast currently shows. No end month means the item has no scheduled stop.
+_Avoid_: Due month, expiry, remaining repeats, remaining months
+
 **Primary Account**:
 The single cash payment account whose live balance is the Cash Forecast anchor.
 _Avoid_: Checking account, main account, combined balances

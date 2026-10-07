@@ -500,6 +500,7 @@ describe("ForecastActivityReport month exclusions", () => {
             name: "Insurance",
             amount_cents: 15_000,
             start_period: "2026-08",
+            end_period: null,
             recurrence: "monthly",
             created_at: "2026-07-01T00:00:00.000Z",
             updated_at: "2026-07-01T00:00:00.000Z",
@@ -534,6 +535,51 @@ describe("ForecastActivityReport month exclusions", () => {
     expect(
       screen.getAllByRole("button", { name: "Delete Forecast Item" }).length,
     ).toBeGreaterThan(0)
+    expect(
+      screen.getAllByText("Pending · Planned outflow · Monthly").length,
+    ).toBeGreaterThan(0)
+  })
+
+  test("names the end month on a repeating forecast item", () => {
+    const adjustmentId = "ffffffff-ffff-4fff-8fff-ffffffffffff"
+
+    render(
+      <ForecastActivityReport
+        adjustments={[
+          {
+            id: adjustmentId,
+            user_id: "user-1",
+            kind: "planned_outflow",
+            name: "Insurance",
+            amount_cents: 15_000,
+            start_period: "2026-08",
+            end_period: "2027-01",
+            recurrence: "monthly",
+            created_at: "2026-07-01T00:00:00.000Z",
+            updated_at: "2026-07-01T00:00:00.000Z",
+          },
+        ]}
+        currency="USD"
+        month={makeMonth([
+          {
+            key: `forecast-adjustment:${adjustmentId}:2026-08`,
+            sourceType: "planned_outflow",
+            sourceId: adjustmentId,
+            label: "Insurance",
+            period: "2026-08",
+            amountCents: -15_000,
+            status: "pending",
+          },
+        ])}
+        periods={["2026-08"]}
+      />,
+    )
+
+    expect(
+      screen.getAllByText(
+        "Pending · Planned outflow · Monthly through January 2027",
+      ).length,
+    ).toBeGreaterThan(0)
   })
 
   test("mutes excluded adjustment rows and offers Include in the menu", () => {
@@ -549,6 +595,7 @@ describe("ForecastActivityReport month exclusions", () => {
             name: "Bonus",
             amount_cents: 25_000,
             start_period: "2026-08",
+            end_period: null,
             recurrence: "once",
             created_at: "2026-07-01T00:00:00.000Z",
             updated_at: "2026-07-01T00:00:00.000Z",
@@ -594,6 +641,7 @@ describe("ForecastActivityReport month exclusions", () => {
             name: "Insurance",
             amount_cents: 15_000,
             start_period: "2026-08",
+            end_period: null,
             recurrence: "monthly",
             created_at: "2026-07-01T00:00:00.000Z",
             updated_at: "2026-07-01T00:00:00.000Z",

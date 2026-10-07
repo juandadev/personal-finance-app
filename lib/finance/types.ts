@@ -287,6 +287,7 @@ export interface CashForecastAdjustmentRecord {
   name: string
   amount_cents: number
   start_period: string
+  end_period: string | null
   recurrence: CashForecastAdjustmentRecurrence
   created_at: string
   updated_at: string

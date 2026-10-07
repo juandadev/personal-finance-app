@@ -19,6 +19,7 @@ const adjustment: CashForecastAdjustmentRecord = {
   name: "Insurance",
   amount_cents: 10_000,
   start_period: "2026-08",
+  end_period: null,
   recurrence: "monthly",
   created_at: "2026-07-01T00:00:00.000Z",
   updated_at: "2026-07-01T00:00:00.000Z",

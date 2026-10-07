@@ -69,6 +69,7 @@ function makeAdjustment(
     name: overrides.id,
     amount_cents: 10_000,
     recurrence: "once",
+    end_period: null,
     created_at: `2026-07-01T00:00:0${overrides.id.at(-1) ?? "0"}.000Z`,
     updated_at: "2026-07-01T00:00:00.000Z",
     ...overrides,
@@ -1999,5 +2000,114 @@ describe("buildCashForecast month exclusions", () => {
           !activity.excludedFromProjection,
       ),
     ).toBe(true)
+  })
+
+  test("stops a monthly item after its end month without extending past an exclusion", () => {
+    const adjustmentId = "adjustment-end"
+    const forecast = expectReady(
+      makeState({
+        cashForecastSettings: {
+          ...makeState().cashForecastSettings!,
+          default_monthly_income_cents: 0,
+        },
+        cashForecastAdjustments: [
+          makeAdjustment({
+            id: adjustmentId,
+            kind: "planned_outflow",
+            name: "Insurance",
+            amount_cents: 15_000,
+            start_period: "2026-07",
+            recurrence: "monthly",
+            end_period: "2026-09",
+          }),
+        ],
+        cashForecastExclusions: [
+          {
+            id: "exclusion-end",
+            user_id: "user-1",
+            source_type: "planned_outflow",
+            source_key: adjustmentId,
+            period: "2026-08",
+            created_at: "2026-07-01T00:00:00.000Z",
+          },
+        ],
+      }),
+    )
+
+    expect(forecast.months[0]).toMatchObject({
+      period: "2026-07",
+      plannedOutflowCents: 15_000,
+    })
+    expect(forecast.months[1]).toMatchObject({
+      period: "2026-08",
+      plannedOutflowCents: 0,
+    })
+    expect(
+      forecast.months[1]?.activities.some(
+        (activity) =>
+          activity.sourceId === adjustmentId && activity.excludedFromProjection,
+      ),
+    ).toBe(true)
+    expect(forecast.months[2]).toMatchObject({
+      period: "2026-09",
+      plannedOutflowCents: 15_000,
+    })
+    expect(
+      forecast.months[3]?.activities.some(
+        (activity) => activity.sourceId === adjustmentId,
+      ),
+    ).toBe(false)
+  })
+
+  test("keeps a later end month inside every visible forecast month", () => {
+    const adjustmentId = "adjustment-later"
+    const forecast = expectReady(
+      makeState({
+        cashForecastSettings: {
+          ...makeState().cashForecastSettings!,
+          default_monthly_income_cents: 0,
+        },
+        cashForecastAdjustments: [
+          makeAdjustment({
+            id: adjustmentId,
+            kind: "planned_outflow",
+            start_period: "2026-07",
+            recurrence: "monthly",
+            end_period: "2027-09",
+            amount_cents: 15_000,
+          }),
+        ],
+      }),
+    )
+
+    expect(forecast.months.at(-1)?.period).toBe("2027-07")
+    expect(
+      forecast.months.every((month) =>
+        month.activities.some((activity) => activity.sourceId === adjustmentId),
+      ),
+    ).toBe(true)
+  })
+
+  test("omits a monthly item whose end month is already past", () => {
+    const adjustmentId = "adjustment-past"
+    const forecast = expectReady(
+      makeState({
+        cashForecastAdjustments: [
+          makeAdjustment({
+            id: adjustmentId,
+            kind: "planned_outflow",
+            start_period: "2026-05",
+            recurrence: "monthly",
+            end_period: "2026-06",
+          }),
+        ],
+      }),
+    )
+
+    expect(
+      forecast.months.some((month) =>
+        month.activities.some((activity) => activity.sourceId === adjustmentId),
+      ),
+    ).toBe(false)
   })
 })

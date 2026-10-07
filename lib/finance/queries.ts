@@ -18,6 +18,10 @@ import {
   type RecurringBillOccurrenceState,
 } from "@/lib/finance/recurring-bill-schedule"
 import {
+  getForecastCurrentPeriod,
+  getForecastEndValidationMessage,
+} from "@/lib/finance/forecast-period"
+import {
   assertDateNotAfterLocalToday,
   getLocalIsoDate,
 } from "@/lib/finance/local-date"
@@ -279,6 +283,7 @@ const cashForecastAdjustmentColumns = [
   "name",
   "amount_cents",
   "start_period",
+  "end_period",
   "recurrence",
   "created_at::text AS created_at",
   "updated_at::text AS updated_at",
@@ -390,6 +395,30 @@ async function getUserProfileTimezone(client: PoolClient, userId: string) {
   }
 
   return result.rows[0].timezone
+}
+
+async function assertForecastAdjustmentEnd(
+  client: PoolClient,
+  userId: string,
+  adjustment: Pick<
+    NewCashForecastAdjustmentRecord,
+    "recurrence" | "start_period" | "end_period"
+  >,
+) {
+  if (adjustment.recurrence !== "monthly" || adjustment.end_period === null) {
+    return
+  }
+
+  const timezone = await getUserProfileTimezone(client, userId)
+  const message = getForecastEndValidationMessage(
+    adjustment.start_period,
+    adjustment.end_period,
+    getForecastCurrentPeriod(new Date(), timezone),
+  )
+
+  if (message) {
+    throw new Error(message)
+  }
 }
 
 async function getUserLocalToday(client: PoolClient, userId: string) {
@@ -4151,6 +4180,8 @@ export async function insertCashForecastAdjustment(
   adjustment: NewCashForecastAdjustmentRecord,
 ) {
   return withFinanceTransaction(userId, async (client) => {
+    await assertForecastAdjustmentEnd(client, userId, adjustment)
+
     const result = await client.query<CashForecastAdjustmentRecord>(
       `
         INSERT INTO cash_forecast_adjustments (
@@ -4160,9 +4191,10 @@ export async function insertCashForecastAdjustment(
           name,
           amount_cents,
           start_period,
+          end_period,
           recurrence
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING ${cashForecastAdjustmentColumns.join(", ")}
       `,
       [
@@ -4172,6 +4204,7 @@ export async function insertCashForecastAdjustment(
         adjustment.name,
         adjustment.amount_cents,
         adjustment.start_period,
+        adjustment.end_period,
         adjustment.recurrence,
       ],
     )
@@ -4186,6 +4219,8 @@ export async function updateCashForecastAdjustment(
   adjustment: Omit<NewCashForecastAdjustmentRecord, "id">,
 ) {
   return withFinanceTransaction(userId, async (client) => {
+    await assertForecastAdjustmentEnd(client, userId, adjustment)
+
     const result = await client.query<CashForecastAdjustmentRecord>(
       `
         UPDATE cash_forecast_adjustments
@@ -4194,7 +4229,8 @@ export async function updateCashForecastAdjustment(
           name = $4,
           amount_cents = $5,
           start_period = $6,
-          recurrence = $7
+          end_period = $7,
+          recurrence = $8
         WHERE user_id = $1 AND id = $2
         RETURNING ${cashForecastAdjustmentColumns.join(", ")}
       `,
@@ -4205,6 +4241,7 @@ export async function updateCashForecastAdjustment(
         adjustment.name,
         adjustment.amount_cents,
         adjustment.start_period,
+        adjustment.end_period,
         adjustment.recurrence,
       ],
     )

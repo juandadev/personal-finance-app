@@ -26,6 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { formatForecastPeriodLabel } from "@/lib/finance/forecast-period"
 import { formatDisplayDate } from "@/lib/format"
 import type {
   CashForecastActivity,
@@ -713,7 +714,11 @@ function sourceLabel(
   const statusLabel = activity.status === "actual" ? "Actual" : "Pending"
 
   if (adjustment?.recurrence === "monthly") {
-    return `${statusLabel} · ${activitySourceLabels[activity.sourceType]} · Monthly`
+    const cadence = adjustment.end_period
+      ? `Monthly through ${formatForecastPeriodLabel(adjustment.end_period)}`
+      : "Monthly"
+
+    return `${statusLabel} · ${activitySourceLabels[activity.sourceType]} · ${cadence}`
   }
 
   return `${statusLabel} · ${activitySourceLabels[activity.sourceType]}`

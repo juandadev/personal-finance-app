@@ -1,6 +1,16 @@
 import { z } from "zod"
 
-import type { CashForecastAdjustmentKind } from "@/lib/finance/types"
+import {
+  MAXIMUM_FORECAST_REMAINING_MONTHS,
+  formatForecastPeriodLabel,
+  getForecastCountingStart,
+  getForecastEndPeriod,
+  getInclusiveForecastMonthCount,
+} from "@/lib/finance/forecast-period"
+import type {
+  CashForecastAdjustmentKind,
+  CashForecastAdjustmentRecurrence,
+} from "@/lib/finance/types"
 import {
   currencyCentsSchema,
   requiredStringSchema,
@@ -8,6 +18,10 @@ import {
 
 const MAXIMUM_MONEY_CENTS = 2_147_483_647
 const HORIZON_PERIOD_ERROR = "Choose a month in the forecast horizon."
+const REMAINING_MONTHS_ERROR = "Enter a whole number from 1 to 60."
+const END_MONTH_ERROR = "Choose an end month."
+
+export type ForecastEndChoice = "none" | "month" | "count"
 
 export type ForecastItemValues = {
   kind: CashForecastAdjustmentKind
@@ -15,6 +29,9 @@ export type ForecastItemValues = {
   amount: string
   startPeriod: string
   repeatMonthly: boolean
+  endChoice: ForecastEndChoice
+  endPeriod: string
+  remainingMonths: string
 }
 
 export function createForecastItemSchema(
@@ -30,6 +47,9 @@ export function createForecastItemSchema(
       ),
       startPeriod: z.string(),
       repeatMonthly: z.boolean(),
+      endChoice: z.enum(["none", "month", "count"]),
+      endPeriod: z.string(),
+      remainingMonths: z.string(),
     })
     .superRefine((value, context) => {
       const canRetainPastPeriod =
@@ -37,15 +57,47 @@ export function createForecastItemSchema(
         value.startPeriod === retainedMonthlyStartPeriod &&
         value.repeatMonthly
 
-      if (periods.includes(value.startPeriod) || canRetainPastPeriod) {
+      if (!periods.includes(value.startPeriod) && !canRetainPastPeriod) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: HORIZON_PERIOD_ERROR,
+          path: ["startPeriod"],
+        })
+      }
+
+      if (!value.repeatMonthly || value.endChoice === "none") {
         return
       }
 
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: HORIZON_PERIOD_ERROR,
-        path: ["startPeriod"],
-      })
+      const currentPeriod = periods[0] ?? ""
+      const countingStart = getForecastCountingStart(
+        value.startPeriod,
+        currentPeriod,
+      )
+
+      if (value.endChoice === "month") {
+        if (
+          !getForecastEndPeriodOptions(periods, countingStart).includes(
+            value.endPeriod,
+          )
+        ) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: END_MONTH_ERROR,
+            path: ["endPeriod"],
+          })
+        }
+
+        return
+      }
+
+      if (!isValidRemainingMonths(value.remainingMonths)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: REMAINING_MONTHS_ERROR,
+          path: ["remainingMonths"],
+        })
+      }
     })
 }
 
@@ -67,6 +119,149 @@ export function getForecastItemPeriodOptions({
   }
 
   return periods
+}
+
+export function getForecastEndPeriodOptions(
+  periods: string[],
+  countingStart: string,
+) {
+  return periods.filter((period) => period >= countingStart)
+}
+
+export function isValidRemainingMonths(value: string) {
+  return (
+    /^\d+$/.test(value) &&
+    Number(value) >= 1 &&
+    Number(value) <= MAXIMUM_FORECAST_REMAINING_MONTHS
+  )
+}
+
+export function getRemainingMonthsLabel(remainingMonths: number) {
+  return remainingMonths === 1
+    ? "1 remaining month"
+    : `${remainingMonths} remaining months`
+}
+
+export function getForecastEndMonthLabel(endPeriod: string) {
+  return `Ends ${formatForecastPeriodLabel(endPeriod)}`
+}
+
+export function getForecastItemEndDefaults({
+  recurrence,
+  startPeriod,
+  endPeriod,
+  periods,
+}: {
+  recurrence: CashForecastAdjustmentRecurrence
+  startPeriod: string
+  endPeriod: string | null
+  periods: string[]
+}) {
+  const currentPeriod = periods[0] ?? ""
+
+  if (recurrence !== "monthly" || !endPeriod || !currentPeriod) {
+    return {
+      endChoice: "none" as const,
+      endPeriod: "",
+      remainingMonths: "",
+    }
+  }
+
+  const countingStart = getForecastCountingStart(startPeriod, currentPeriod)
+
+  if (endPeriod < countingStart) {
+    return {
+      endChoice: "count" as const,
+      endPeriod: "",
+      remainingMonths: "",
+    }
+  }
+
+  const remainingMonths = String(
+    getInclusiveForecastMonthCount(countingStart, endPeriod),
+  )
+  const endChoice = getForecastEndPeriodOptions(
+    periods,
+    countingStart,
+  ).includes(endPeriod)
+    ? ("month" as const)
+    : ("count" as const)
+
+  return {
+    endChoice,
+    endPeriod,
+    remainingMonths,
+  }
+}
+
+export function reconcileForecastEndWithStart({
+  startPeriod,
+  currentPeriod,
+  endChoice,
+  endPeriod,
+  remainingMonths,
+}: {
+  startPeriod: string
+  currentPeriod: string
+  endChoice: ForecastEndChoice
+  endPeriod: string
+  remainingMonths: string
+}) {
+  if (endChoice === "none" || !endPeriod) {
+    return {
+      endPeriod: "",
+      remainingMonths: endChoice === "count" ? remainingMonths : "",
+    }
+  }
+
+  const countingStart = getForecastCountingStart(startPeriod, currentPeriod)
+
+  if (endPeriod < countingStart) {
+    return {
+      endPeriod: "",
+      remainingMonths: "",
+    }
+  }
+
+  return {
+    endPeriod,
+    remainingMonths: String(
+      getInclusiveForecastMonthCount(countingStart, endPeriod),
+    ),
+  }
+}
+
+export function getResolvedForecastEndPeriod({
+  repeatMonthly,
+  endChoice,
+  endPeriod,
+  remainingMonths,
+  startPeriod,
+  currentPeriod,
+}: {
+  repeatMonthly: boolean
+  endChoice: ForecastEndChoice
+  endPeriod: string
+  remainingMonths: string
+  startPeriod: string
+  currentPeriod: string
+}) {
+  if (!repeatMonthly || endChoice === "none") {
+    return null
+  }
+
+  if (endChoice === "month") {
+    return endPeriod || null
+  }
+
+  if (!isValidRemainingMonths(remainingMonths)) {
+    return null
+  }
+
+  return getForecastEndPeriod(
+    getForecastCountingStart(startPeriod, currentPeriod),
+    Number(remainingMonths),
+  )
 }
 
 export function getHorizonStartPeriod(

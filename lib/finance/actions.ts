@@ -124,18 +124,42 @@ const cashForecastAdjustmentFields = {
   amount_cents: z.number().int().positive().max(maximumMoneyCents),
   start_period: forecastPeriodSchema,
 }
-const cashForecastAdjustmentSchema = z.discriminatedUnion("kind", [
-  z.object({
-    ...cashForecastAdjustmentFields,
-    kind: z.literal("additional_income"),
-    recurrence: z.enum(["once", "monthly"]),
-  }),
-  z.object({
-    ...cashForecastAdjustmentFields,
-    kind: z.literal("planned_outflow"),
-    recurrence: z.enum(["once", "monthly"]),
-  }),
-])
+const cashForecastAdjustmentSchema = z
+  .discriminatedUnion("kind", [
+    z.object({
+      ...cashForecastAdjustmentFields,
+      kind: z.literal("additional_income"),
+      recurrence: z.enum(["once", "monthly"]),
+      end_period: forecastPeriodSchema.nullable(),
+    }),
+    z.object({
+      ...cashForecastAdjustmentFields,
+      kind: z.literal("planned_outflow"),
+      recurrence: z.enum(["once", "monthly"]),
+      end_period: forecastPeriodSchema.nullable(),
+    }),
+  ])
+  .superRefine((value, context) => {
+    if (value.recurrence === "once" && value.end_period !== null) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "A one-time forecast item has no end month.",
+        path: ["end_period"],
+      })
+    }
+
+    if (
+      value.recurrence === "monthly" &&
+      value.end_period !== null &&
+      value.end_period < value.start_period
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Choose an end month on or after the start month.",
+        path: ["end_period"],
+      })
+    }
+  })
 
 const budgetSchema = z
   .object({

@@ -268,9 +268,14 @@ function adjustmentApplies(
   adjustment: CashForecastAdjustmentRecord,
   period: string,
 ) {
-  return adjustment.recurrence === "monthly"
-    ? period >= adjustment.start_period
-    : period === adjustment.start_period
+  if (adjustment.recurrence !== "monthly") {
+    return period === adjustment.start_period
+  }
+
+  return (
+    period >= adjustment.start_period &&
+    (adjustment.end_period === null || period <= adjustment.end_period)
+  )
 }
 
 function adjustmentActivity(

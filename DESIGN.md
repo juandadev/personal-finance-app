@@ -524,17 +524,23 @@ Button labels should be action-specific: `Add Money`, `Create Budget`,
   Future months remain projections, and the saved default monthly income starts
   with the first future month.
 - User-created additional-income and planned-outflow adjustments may be
-  one-time or repeat monthly from their selected start month. They remain
-  pending forecast-only entries until edited or deleted.
+  one-time or repeat monthly from their selected start month. A repeating item
+  may have an end month, the last month it is included. The editor sets that
+  month from the visible forecast months or from a remaining-months count of 1
+  through 60, which can fall after the current forecast. With no end month, the
+  item continues until edited or deleted. Repeating rows say
+  `Monthly through {Month Year}` when an end month is set, and `Monthly`
+  otherwise. They remain pending forecast-only entries until edited or deleted.
 - User-created forecast adjustments expose item-level Edit and Delete in an
   overflow menu, plus Exclude/Include for the pinned month only. Excludable
   generated rows (`budget_projection`, `default_income`, `recurring_bill`)
   expose Exclude/Include as a text action. Exclusions persist and keep the row
   visible muted and struck through while totals and the chart ignore the
-  amount. Generated excludable rows also show a compact muted `Projected` cue
-  beside the Source text. Credit card and actual cash rows remain plain
-  Read-only. Global Budget projections opt-in remains the horizon-wide budget
-  gate.
+  amount. Excluding one month does not change a repeating item's end month, and
+  the exclusion remains if that month later returns to the series. Generated
+  excludable rows also show a compact muted `Projected` cue beside the Source
+  text. Credit card and actual cash rows remain plain Read-only. Global Budget
+  projections opt-in remains the horizon-wide budget gate.
 - Inside the summary chart card, above the color legend and chart, a
   collapsible Budget projections control (collapsed by default) lists active
   budgets as compact checkbox + name rows. Desktop wraps them in a row; mobile
