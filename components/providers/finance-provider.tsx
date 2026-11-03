@@ -7,6 +7,7 @@ import {
   useMemo,
   useReducer,
   useRef,
+  useState,
 } from "react"
 import type { Dispatch, ReactNode } from "react"
 import { useRouter } from "next/navigation"
@@ -87,6 +88,7 @@ interface FinanceContextValue extends FinanceViewModel {
   state: FinanceState
   dispatch: Dispatch<FinanceAction>
   actions: FinanceActions
+  isTransactionMutationPending: boolean
 }
 
 const FinanceContext = createContext<FinanceContextValue | null>(null)
@@ -107,10 +109,15 @@ export function FinanceProvider({
   )
   const stateRef = useRef(state)
   const initialStateRef = useRef(initialState)
+  const [pendingTransactionMutations, setPendingTransactionMutations] =
+    useState(0)
+  const [awaitingTransactionRefresh, setAwaitingTransactionRefresh] =
+    useState(false)
 
   useEffect(() => {
     if (initialState && initialStateRef.current !== initialState) {
       dispatch({ type: "state/replace", state: initialState })
+      setAwaitingTransactionRefresh(false)
     }
 
     initialStateRef.current = initialState
@@ -126,48 +133,70 @@ export function FinanceProvider({
         transaction: NewTransactionRecord,
         budgetId: string | null,
       ) =>
-        runFinanceAction(() =>
-          createTransactionAction(transaction, budgetId).then((result) => {
-            if (result.ok) {
-              dispatch({ type: "transaction/save", payload: result.data })
-              router.refresh()
-            }
+        runFinanceAction(async () => {
+          setPendingTransactionMutations((count) => count + 1)
+          try {
+            return await createTransactionAction(transaction, budgetId).then(
+              (result) => {
+                if (result.ok) {
+                  dispatch({ type: "transaction/save", payload: result.data })
+                  setAwaitingTransactionRefresh(true)
+                  router.refresh()
+                }
 
-            return result
-          }),
-        ),
+                return result
+              },
+            )
+          } finally {
+            setPendingTransactionMutations((count) => Math.max(0, count - 1))
+          }
+        }),
       updateTransaction: (
         id: string,
         updates: Omit<NewTransactionRecord, "id">,
         budgetId: string | null,
       ) =>
-        runFinanceAction(() =>
-          updateTransactionAction(id, updates, budgetId).then((result) => {
-            if (result.ok) {
-              dispatch({ type: "transaction/save", payload: result.data })
-              router.refresh()
-            }
+        runFinanceAction(async () => {
+          setPendingTransactionMutations((count) => count + 1)
+          try {
+            return await updateTransactionAction(id, updates, budgetId).then(
+              (result) => {
+                if (result.ok) {
+                  dispatch({ type: "transaction/save", payload: result.data })
+                  setAwaitingTransactionRefresh(true)
+                  router.refresh()
+                }
 
-            return result
-          }),
-        ),
+                return result
+              },
+            )
+          } finally {
+            setPendingTransactionMutations((count) => Math.max(0, count - 1))
+          }
+        }),
       deleteTransaction: (id: string) =>
-        runFinanceAction(() =>
-          deleteTransactionAction(id).then((result) => {
-            if (result.ok) {
-              dispatch({
-                type: "transaction/delete",
-                id,
-                accounts: result.data.accounts,
-                accountSummaries: result.data.accountSummaries,
-                creditCardStatements: result.data.creditCardStatements,
-              })
-              router.refresh()
-            }
+        runFinanceAction(async () => {
+          setPendingTransactionMutations((count) => count + 1)
+          try {
+            return await deleteTransactionAction(id).then((result) => {
+              if (result.ok) {
+                dispatch({
+                  type: "transaction/delete",
+                  id,
+                  accounts: result.data.accounts,
+                  accountSummaries: result.data.accountSummaries,
+                  creditCardStatements: result.data.creditCardStatements,
+                })
+                setAwaitingTransactionRefresh(true)
+                router.refresh()
+              }
 
-            return result
-          }),
-        ),
+              return result
+            })
+          } finally {
+            setPendingTransactionMutations((count) => Math.max(0, count - 1))
+          }
+        }),
       addCategory: (
         category: Pick<NewCategoryRecord, "id" | "name" | "theme_color">,
       ) =>
@@ -855,9 +884,11 @@ export function FinanceProvider({
       state,
       dispatch,
       actions,
+      isTransactionMutationPending:
+        pendingTransactionMutations > 0 || awaitingTransactionRefresh,
       ...selectFinanceViewModel(state),
     }),
-    [actions, state],
+    [actions, awaitingTransactionRefresh, pendingTransactionMutations, state],
   )
 
   return (

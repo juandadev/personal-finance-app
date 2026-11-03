@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { Spinner } from "@/components/ui/spinner"
 
 import { ItemActions } from "@/components/actions"
 import { AuthStatusMessage } from "@/components/auth/auth-page-shell"
@@ -90,7 +91,7 @@ function TransactionPaymentMethodBadge({
 }
 
 export function TransactionsTable({ transactions }: TransactionsTableProps) {
-  const { budgets, actions } = useFinance()
+  const { budgets, actions, isTransactionMutationPending } = useFinance()
   const [pendingTransactionId, setPendingTransactionId] = useState<
     string | null
   >(null)
@@ -120,48 +121,62 @@ export function TransactionsTable({ transactions }: TransactionsTableProps) {
       {statusMessage ? (
         <AuthStatusMessage variant="error">{statusMessage}</AuthStatusMessage>
       ) : null}
-      <ul className="divide-muted-foreground/10 divide-y md:hidden">
-        {transactions.map((transaction) => (
-          <MobileTransactionItem
-            key={transaction.id}
-            transaction={transaction}
-          />
-        ))}
-      </ul>
+      <div
+        className="relative min-h-0 flex-1"
+        aria-busy={isTransactionMutationPending}
+      >
+        <ul className="divide-muted-foreground/10 divide-y md:hidden">
+          {transactions.map((transaction) => (
+            <MobileTransactionItem
+              key={transaction.id}
+              transaction={transaction}
+            />
+          ))}
+        </ul>
 
-      <div className="hidden md:block">
-        <Table className="min-w-max border-separate border-spacing-0">
-          <TableHeader>
-            <TableRow>
-              <TableHead className={DESKTOP_TABLE_CELL}>
-                Recipient / Sender
-              </TableHead>
-              <TableHead className={DESKTOP_TABLE_CELL}>Concept</TableHead>
-              <TableHead className={DESKTOP_TABLE_CELL}>Category</TableHead>
-              <TableHead className={DESKTOP_TABLE_CELL}>Budget</TableHead>
-              <TableHead className={DESKTOP_TABLE_CELL}>
-                Transaction Date
-              </TableHead>
-              <TableHead className={DESKTOP_STICKY_AMOUNT_HEAD}>
-                Amount
-              </TableHead>
-              <TableHead className={DESKTOP_STICKY_ACTIONS_HEAD}>
-                Actions
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {transactions.map((transaction) => (
-              <TransactionRow
-                key={transaction.id}
-                transaction={transaction}
-                budgets={budgets}
-                isPending={pendingTransactionId === transaction.id}
-                onBudgetChange={handleBudgetChange}
-              />
-            ))}
-          </TableBody>
-        </Table>
+        <div className="hidden md:block">
+          <Table className="min-w-max border-separate border-spacing-0">
+            <TableHeader>
+              <TableRow>
+                <TableHead className={DESKTOP_TABLE_CELL}>
+                  Recipient / Sender
+                </TableHead>
+                <TableHead className={DESKTOP_TABLE_CELL}>Concept</TableHead>
+                <TableHead className={DESKTOP_TABLE_CELL}>Category</TableHead>
+                <TableHead className={DESKTOP_TABLE_CELL}>Budget</TableHead>
+                <TableHead className={DESKTOP_TABLE_CELL}>
+                  Transaction Date
+                </TableHead>
+                <TableHead className={DESKTOP_STICKY_AMOUNT_HEAD}>
+                  Amount
+                </TableHead>
+                <TableHead className={DESKTOP_STICKY_ACTIONS_HEAD}>
+                  Actions
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {transactions.map((transaction) => (
+                <TransactionRow
+                  key={transaction.id}
+                  transaction={transaction}
+                  budgets={budgets}
+                  isPending={pendingTransactionId === transaction.id}
+                  onBudgetChange={handleBudgetChange}
+                />
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+        {isTransactionMutationPending ? (
+          <div
+            className="bg-background/60 absolute inset-0 z-40 flex cursor-wait items-center justify-center backdrop-blur-[1px]"
+            aria-label="Updating transactions"
+          >
+            <Spinner className="text-primary size-6" />
+            <span className="sr-only">Updating transactions</span>
+          </div>
+        ) : null}
       </div>
     </>
   )
