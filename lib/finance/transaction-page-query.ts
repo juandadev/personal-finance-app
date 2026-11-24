@@ -6,6 +6,7 @@ export const TRANSACTION_PAGE_SIZE = 10
 export type TransactionFilterOption = {
   value: string
   label: string
+  color?: ThemeColor
 }
 
 export type TransactionPageRow = {

@@ -2,6 +2,7 @@
 
 import { useMemo } from "react"
 import {
+  CreditCardIcon,
   FunnelIcon,
   ReceiptIcon,
   SortAscendingIcon,
@@ -40,6 +41,7 @@ interface TransactionsContentProps {
     totalPages: number
   }
   categoryOptions: TransactionFilterOption[]
+  creditCardOptions: TransactionFilterOption[]
 }
 
 export function TransactionsContent({
@@ -48,15 +50,21 @@ export function TransactionsContent({
   totalTransactionCount,
   pagination,
   categoryOptions: availableCategories,
+  creditCardOptions: availableCreditCards,
 }: TransactionsContentProps) {
   const [query, setQuery] = useQueryStates(transactionQueryParsers)
   const filters = useMemo(() => normalizeTransactionFilters(query), [query])
   const hasActiveQuery = hasActiveTransactionQuery(query)
   const selectedCategory =
     filters.category.length === 1 ? filters.category[0] : "all"
+  const selectedCard = filters.card.length === 1 ? filters.card[0] : "all"
   const categoryOptions: TransactionFilterOption[] = [
     { value: "all", label: "All Transactions" },
     ...availableCategories,
+  ]
+  const creditCardOptions: TransactionFilterOption[] = [
+    { value: "all", label: "All Cards" },
+    ...availableCreditCards,
   ]
   const hasTransactions = totalTransactionCount > 0
   const hasVisibleTransactions = totalCount > 0
@@ -72,6 +80,13 @@ export function TransactionsContent({
   const handleCategoryChange = (value: string) => {
     void setQuery({
       category: value === "all" ? null : [value],
+      page: 1,
+    })
+  }
+
+  const handleCardChange = (value: string) => {
+    void setQuery({
+      card: value === "all" ? null : [value],
       page: 1,
     })
   }
@@ -110,6 +125,15 @@ export function TransactionsContent({
             onChange={handleCategoryChange}
             icon={<FunnelIcon weight="fill" className="size-5" aria-hidden />}
           />
+          <FilterDropdown
+            label="Credit card"
+            value={selectedCard}
+            options={creditCardOptions}
+            onChange={handleCardChange}
+            icon={
+              <CreditCardIcon weight="fill" className="size-5" aria-hidden />
+            }
+          />
           {hasActiveQuery ? (
             <ResetUrlFiltersButton onReset={handleReset} />
           ) : null}
@@ -135,7 +159,7 @@ export function TransactionsContent({
           }
           description={
             hasTransactions
-              ? "Try a different search term or category to find more activity."
+              ? "Try a different search term, category, or credit card to find more activity."
               : "There is no transaction data available to show yet. New activity will appear here once it has been added."
           }
         />

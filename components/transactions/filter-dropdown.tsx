@@ -10,11 +10,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { themeColorClasses, type ThemeColor } from "@/lib/theme-colors"
 
 interface FilterDropdownProps<T extends string> {
   label: string
   value: T
-  options: { value: T; label: string }[]
+  options: { value: T; label: string; color?: ThemeColor }[]
   onChange: (value: T) => void
   icon?: ReactNode
   className?: string
@@ -57,6 +58,15 @@ export function FilterDropdown<T extends string>({
               {icon}
             </span>
           )}
+          {selectedOption?.color ? (
+            <span
+              aria-hidden
+              className={cn(
+                "border-border size-3 shrink-0 rounded-full border @[806px]/transactions:hidden",
+                themeColorClasses[selectedOption.color].bg,
+              )}
+            />
+          ) : null}
           <span className="hidden @[806px]/transactions:inline-flex">
             <SelectValue />
           </span>
@@ -68,7 +78,18 @@ export function FilterDropdown<T extends string>({
               value={option.value}
               className={cn(option.value === value && "font-bold")}
             >
-              {option.label}
+              <span className="flex items-center gap-2">
+                {option.color ? (
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "border-border size-3 shrink-0 rounded-full border",
+                      themeColorClasses[option.color].bg,
+                    )}
+                  />
+                ) : null}
+                {option.label}
+              </span>
             </SelectItem>
           ))}
         </SelectContent>

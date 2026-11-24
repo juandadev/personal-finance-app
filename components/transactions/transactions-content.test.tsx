@@ -146,6 +146,7 @@ const contentProps = {
     { value: "category-1", label: "Groceries" },
     { value: "category-2", label: "Books" },
   ],
+  creditCardOptions: [{ value: "card-1", label: "Daily card •••• 4242" }],
 }
 
 afterEach(cleanup)

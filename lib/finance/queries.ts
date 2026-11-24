@@ -708,6 +708,7 @@ export type TransactionPageData = {
   totalTransactionCount: number
   pagination: ReturnType<typeof getTransactionPageBounds>
   categoryOptions: TransactionFilterOption[]
+  creditCardOptions: TransactionFilterOption[]
 }
 
 export async function loadTransactionPage(
@@ -752,6 +753,26 @@ export async function loadTransactionPage(
       "SELECT id, name FROM categories WHERE user_id = $1 ORDER BY name, id",
       [userId],
     )
+    const creditCardsResult = await client.query<{
+      id: string
+      nickname: string
+      last_four: string
+      theme_color: ThemeColor
+      archived_at: string | null
+    }>(
+      `
+        SELECT
+          id,
+          nickname,
+          last_four,
+          theme_color,
+          archived_at::text AS archived_at
+        FROM credit_cards
+        WHERE user_id = $1
+        ORDER BY archived_at NULLS FIRST, created_at, id
+      `,
+      [userId],
+    )
 
     return {
       transactions: pageResult.rows.map(toTransactionView),
@@ -761,6 +782,13 @@ export async function loadTransactionPage(
       categoryOptions: categoriesResult.rows.map((category) => ({
         value: category.id,
         label: category.name,
+      })),
+      creditCardOptions: creditCardsResult.rows.map((creditCard) => ({
+        value: creditCard.id,
+        color: creditCard.theme_color,
+        label: `${creditCard.nickname} •••• ${creditCard.last_four}${
+          creditCard.archived_at ? " (Archived)" : ""
+        }`,
       })),
     }
   })
