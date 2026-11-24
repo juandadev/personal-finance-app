@@ -17,7 +17,7 @@ const DropdownMenuOpenContext =
   React.createContext<DropdownMenuOpenContextValue | null>(null)
 
 function isImmediatePointerOpen(event: React.PointerEvent) {
-  return event.pointerType === "mouse" || event.pointerType === ""
+  return !event.pointerType || event.pointerType === "mouse"
 }
 
 function DropdownMenu({

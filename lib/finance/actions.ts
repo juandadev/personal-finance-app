@@ -30,6 +30,7 @@ import {
   resetCreditCardAnnualityOverrides,
   resumeRecurringBill,
   saveCreditCardAnnualityOverrides,
+  savePotCardSize,
   setRecurringBillInactive,
   skipRecurringBillOccurrence,
   undoScheduledRecurringBillEnd,
@@ -49,8 +50,12 @@ import {
   upsertCashForecastSettings,
   type SetRecurringBillInactiveResult,
 } from "@/lib/finance/queries"
-import { uiPreferencesSchema } from "@/lib/finance/ui-preferences"
 import { isFutureISODate } from "@/lib/finance/pot-due-date"
+import {
+  potCardSizeSchema,
+  type PotCardSize,
+  type PotLayout,
+} from "@/lib/finance/pot-layout"
 import { potProductUrlSchema } from "@/lib/finance/pot-product-url"
 import type {
   AccountRecord,
@@ -1700,16 +1705,34 @@ export async function updateUiPreferencesAction(patch: {
 }): Promise<FinanceActionResult<{ hideAmounts: boolean }>> {
   try {
     const userId = await getUserId()
-    const parsedPatch = uiPreferencesSchema.parse(patch)
-    const data = await updateUiPreferences(userId, parsedPatch)
+    const hideAmounts = z.boolean().default(false).parse(patch.hideAmounts)
+    const data = await updateUiPreferences(userId, { hideAmounts })
 
     return {
       ok: true,
-      message: parsedPatch.hideAmounts ? "Amounts hidden." : "Amounts visible.",
+      message: hideAmounts ? "Amounts hidden." : "Amounts visible.",
       data: {
         hideAmounts: data.hideAmounts,
       },
     }
+  } catch (error) {
+    return handleFinanceActionError(error)
+  }
+}
+
+export async function resizePotCardAction(
+  potId: string,
+  size: PotCardSize,
+): Promise<FinanceActionResult<PotLayout>> {
+  try {
+    const userId = await getUserId()
+    const data = await savePotCardSize(
+      userId,
+      recordIdSchema.parse(potId),
+      potCardSizeSchema.parse(size),
+    )
+
+    return { ok: true, message: "Pot size saved.", data }
   } catch (error) {
     return handleFinanceActionError(error)
   }

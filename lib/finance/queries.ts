@@ -77,12 +77,16 @@ import type {
   UserPreferencesRecord,
 } from "@/lib/finance/types"
 import { getCurrentPeriod } from "@/lib/finance/period"
-import { parseUiPreferences } from "@/lib/finance/ui-preferences"
+import { getOrderedPotLayout, type PotCardSize } from "@/lib/finance/pot-layout"
+import {
+  parseUiPreferences,
+  type UiPreferences,
+} from "@/lib/finance/ui-preferences"
 import { formatDisplayDate } from "@/lib/format"
 import type { Transaction, TransactionProtection } from "@/lib/types"
 import type { ThemeColor } from "@/lib/theme-colors"
 
-type ProfileRow = Omit<UserPreferencesRecord, "hideAmounts"> & {
+type ProfileRow = Omit<UserPreferencesRecord, keyof UiPreferences> & {
   ui_preferences: unknown
 }
 
@@ -493,7 +497,7 @@ export async function loadFinanceShellState(
       user_id: profileRow.user_id,
       default_currency: profileRow.default_currency,
       timezone: profileRow.timezone,
-      hideAmounts: uiPreferences.hideAmounts,
+      ...uiPreferences,
     }
     const accounts = await client.query<AccountRecord>(
       `SELECT ${accountColumns.join(", ")} FROM accounts WHERE user_id = $1 ORDER BY id`,
@@ -4370,23 +4374,67 @@ export async function updateUiPreferences(
   userId: string,
   patch: { hideAmounts: boolean },
 ) {
-  return withFinanceTransaction(userId, async (client) => {
-    const result = await client.query<{ ui_preferences: unknown }>(
-      `
-        UPDATE profiles
-        SET ui_preferences = COALESCE(ui_preferences, '{}'::jsonb) || $2::jsonb
-        WHERE user_id = $1
-        RETURNING ui_preferences
-      `,
-      [userId, JSON.stringify(patch)],
-    )
+  return withFinanceTransaction(userId, (client) =>
+    writeUiPreferences(client, userId, patch),
+  )
+}
 
-    if (!result.rowCount) {
+export async function savePotCardSize(
+  userId: string,
+  potId: string,
+  size: PotCardSize,
+) {
+  return withFinanceTransaction(userId, async (client) => {
+    const profile = await client.query<{ ui_preferences: unknown }>(
+      `
+        SELECT ui_preferences FROM profiles
+        WHERE user_id = $1
+        FOR UPDATE
+      `,
+      [userId],
+    )
+    if (!profile.rowCount) {
       throw new Error("Profile not found.")
     }
 
-    return parseUiPreferences(result.rows[0].ui_preferences)
+    const pots = await client.query<{ id: string }>(
+      "SELECT id FROM pots WHERE user_id = $1 ORDER BY created_at, id",
+      [userId],
+    )
+    const potIds = pots.rows.map(({ id }) => id)
+    if (!potIds.includes(potId)) {
+      throw new Error("Pot not found.")
+    }
+
+    const preferences = parseUiPreferences(profile.rows[0].ui_preferences)
+    const potLayout = getOrderedPotLayout(potIds, preferences.potLayout).map(
+      (entry) => (entry.potId === potId ? { potId, size } : entry),
+    )
+
+    return (await writeUiPreferences(client, userId, { potLayout })).potLayout
   })
+}
+
+async function writeUiPreferences(
+  client: PoolClient,
+  userId: string,
+  patch: Partial<UiPreferences>,
+) {
+  const result = await client.query<{ ui_preferences: unknown }>(
+    `
+      UPDATE profiles
+      SET ui_preferences = COALESCE(ui_preferences, '{}'::jsonb) || $2::jsonb
+      WHERE user_id = $1
+      RETURNING ui_preferences
+    `,
+    [userId, JSON.stringify(patch)],
+  )
+
+  if (!result.rowCount) {
+    throw new Error("Profile not found.")
+  }
+
+  return parseUiPreferences(result.rows[0].ui_preferences)
 }
 
 export async function saveCreditCardAnnualityOverrides(

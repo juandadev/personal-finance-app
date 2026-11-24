@@ -60,9 +60,11 @@ import {
   payCreditCardCycleAction,
   payCreditCardStatementAction,
   resetCreditCardAnnualityOverridesAction,
+  resizePotCardAction,
   saveCreditCardAnnualityOverridesAction,
   updateUiPreferencesAction,
 } from "@/lib/finance/actions"
+import type { PotCardSize } from "@/lib/finance/pot-layout"
 import { createInitialFinanceState } from "@/lib/finance/seed"
 import { selectFinanceViewModel } from "@/lib/finance/selectors"
 import type {
@@ -84,11 +86,14 @@ import type {
 } from "@/lib/finance/types"
 import { SidebarProvider } from "@/components/ui/sidebar"
 
+type PendingPotResize = { size: PotCardSize }
+
 interface FinanceContextValue extends FinanceViewModel {
   state: FinanceState
   dispatch: Dispatch<FinanceAction>
   actions: FinanceActions
   isTransactionMutationPending: boolean
+  pendingPotResizes: ReadonlyMap<string, PendingPotResize>
 }
 
 const FinanceContext = createContext<FinanceContextValue | null>(null)
@@ -113,6 +118,10 @@ export function FinanceProvider({
     useState(0)
   const [awaitingTransactionRefresh, setAwaitingTransactionRefresh] =
     useState(false)
+  const [pendingPotResizes, setPendingPotResizes] = useState<
+    ReadonlyMap<string, PendingPotResize>
+  >(() => new Map())
+  const potResizeQueue = useRef(Promise.resolve())
 
   useEffect(() => {
     if (initialState && initialStateRef.current !== initialState) {
@@ -890,6 +899,32 @@ export function FinanceProvider({
           }),
         )
       },
+      resizePotCard: (potId, size) => {
+        const pending = { size }
+        setPendingPotResizes((current) => new Map(current).set(potId, pending))
+
+        const request = potResizeQueue.current.then(async () => {
+          const result = await runFinanceAction(() =>
+            resizePotCardAction(potId, size),
+          )
+          if (result.ok) {
+            dispatch({ type: "preferences/pot-layout", potLayout: result.data })
+          } else {
+            toast.error(result.message)
+          }
+
+          setPendingPotResizes((current) => {
+            if (current.get(potId) !== pending) return current
+            const next = new Map(current)
+            next.delete(potId)
+            return next
+          })
+
+          return result
+        })
+        potResizeQueue.current = request.then(() => undefined)
+        return request
+      },
     }),
     [dispatch, router],
   )
@@ -899,11 +934,18 @@ export function FinanceProvider({
       state,
       dispatch,
       actions,
+      pendingPotResizes,
       isTransactionMutationPending:
         pendingTransactionMutations > 0 || awaitingTransactionRefresh,
       ...selectFinanceViewModel(state),
     }),
-    [actions, awaitingTransactionRefresh, pendingTransactionMutations, state],
+    [
+      actions,
+      awaitingTransactionRefresh,
+      pendingPotResizes,
+      pendingTransactionMutations,
+      state,
+    ],
   )
 
   return (

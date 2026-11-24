@@ -2,17 +2,10 @@ import { PageHeading } from "@/components/overview/page-heading"
 import styles from "@/components/pots/pots-layout.module.css"
 import { Card } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { cn } from "@/lib/utils"
 
-function PotCardSkeleton({ nearGoal }: { nearGoal?: boolean }) {
+function PotCardSkeleton() {
   return (
-    <Card
-      className={cn(
-        "flex flex-col gap-8",
-        nearGoal && [styles.wideTablet, styles.wideDesktop],
-      )}
-      padding="compact"
-    >
+    <Card className="flex flex-col gap-8" padding="compact">
       <div className="flex items-center justify-between gap-4">
         <Skeleton className="h-6 w-32" />
         <Skeleton className="size-5 rounded-full" />
@@ -59,7 +52,7 @@ export default function PotsLoading() {
         <div className="space-y-4">
           <Skeleton className="h-7 w-24" />
           <div className={styles.grid}>
-            <PotCardSkeleton nearGoal />
+            <PotCardSkeleton />
             <PotCardSkeleton />
             <PotCardSkeleton />
             <PotCardSkeleton />

@@ -5,49 +5,10 @@ import { TipJarIcon } from "@phosphor-icons/react"
 import { EmptyDataCard } from "@/components/empty-data-card"
 import { MoneyAmount } from "@/components/money-amount"
 import { Card } from "@/components/ui/card"
-import { TooltipProvider } from "@/components/ui/tooltip"
 import { useFinance } from "@/hooks/use-finance"
-import type { Pot } from "@/lib/types"
-import { cn } from "@/lib/utils"
 import { AddPotDialog } from "./add-pot-dialog"
-import { PotCard } from "./pot-card"
+import { PotsGrid } from "./pots-grid"
 import styles from "./pots-layout.module.css"
-
-function getPotCardLayouts(pots: Pot[]) {
-  const tabletColumns = 2
-  const desktopColumns = 3
-  let tabletSlotsUsed = 0
-  let desktopSlotsUsed = 0
-
-  const orderedPots = pots.map((pot) => {
-    const savedCents = Math.round(pot.amount * 100)
-    const targetCents = Math.round(pot.target * 100)
-    const percentage = (savedCents / targetCents) * 100
-    const isNearGoal = !pot.isCompleted && savedCents * 10 > targetCents * 7
-
-    return { pot, percentage, isNearGoal }
-  })
-  orderedPots.sort((a, b) => b.percentage - a.percentage)
-
-  return orderedPots.map(({ pot, percentage, isNearGoal }) => {
-    const wideTablet = isNearGoal && tabletColumns - tabletSlotsUsed >= 2
-    const wideDesktop = isNearGoal && desktopColumns - desktopSlotsUsed >= 2
-
-    tabletSlotsUsed = (tabletSlotsUsed + (wideTablet ? 2 : 1)) % tabletColumns
-    desktopSlotsUsed =
-      (desktopSlotsUsed + (wideDesktop ? 2 : 1)) % desktopColumns
-
-    return {
-      pot,
-      percentage,
-      isNearGoal,
-      className: cn(
-        wideTablet && styles.wideTablet,
-        wideDesktop && styles.wideDesktop,
-      ),
-    }
-  })
-}
 
 export function PotsPageContent() {
   const { pots, potsSummary } = useFinance()
@@ -89,13 +50,7 @@ export function PotsPageContent() {
             action={<AddPotDialog />}
           />
         ) : (
-          <TooltipProvider delayDuration={300} skipDelayDuration={300}>
-            <div className={styles.grid}>
-              {getPotCardLayouts(pots).map(({ pot, ...layout }) => (
-                <PotCard key={pot.id} pot={pot} {...layout} />
-              ))}
-            </div>
-          </TooltipProvider>
+          <PotsGrid />
         )}
       </section>
     </div>

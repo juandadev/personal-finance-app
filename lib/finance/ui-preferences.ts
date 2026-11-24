@@ -1,13 +1,16 @@
 import { z } from "zod"
+import { potLayoutSchema } from "@/lib/finance/pot-layout"
 
-export const uiPreferencesSchema = z.object({
-  hideAmounts: z.boolean().default(false),
+const uiPreferencesSchema = z.object({
+  hideAmounts: z.boolean().default(false).catch(false),
+  potLayout: potLayoutSchema.default([]).catch([]),
 })
 
 export type UiPreferences = z.infer<typeof uiPreferencesSchema>
 
 export const defaultUiPreferences: UiPreferences = {
   hideAmounts: false,
+  potLayout: [],
 }
 
 export function parseUiPreferences(raw: unknown): UiPreferences {
@@ -19,9 +22,7 @@ export function parseUiPreferences(raw: unknown): UiPreferences {
     return { ...defaultUiPreferences }
   }
 
-  return {
-    hideAmounts: parsed.data.hideAmounts,
-  }
+  return parsed.data
 }
 
 export function getHiddenValueAriaLabel(): string {

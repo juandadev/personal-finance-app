@@ -1,6 +1,7 @@
 "use client"
 
 import { ArrowSquareOutIcon } from "@phosphor-icons/react"
+import { motion } from "motion/react"
 import { useState } from "react"
 import { ItemActions } from "@/components/actions"
 import { MoneyAmount } from "@/components/money-amount"
@@ -20,16 +21,10 @@ import { PotTransferDialog } from "./pot-transfer-dialog"
 interface PotCardProps {
   pot: Pot
   percentage: number
-  isNearGoal: boolean
-  className?: string
+  animateLayout: boolean
 }
 
-export function PotCard({
-  pot,
-  percentage,
-  isNearGoal,
-  className,
-}: PotCardProps) {
+export function PotCard({ pot, percentage, animateLayout }: PotCardProps) {
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [isAddMoneyOpen, setIsAddMoneyOpen] = useState(false)
@@ -38,17 +33,8 @@ export function PotCard({
   const dueDateDuration = dueDateLabel?.replace("Due in ", "")
 
   return (
-    <Card
-      asChild
-      padding="compact"
-      className={cn(
-        "flex flex-col",
-        isNearGoal &&
-          "ring-accent/30 bg-[color-mix(in_srgb,var(--color-accent)_8%,var(--color-card))] ring-1 ring-inset",
-        className,
-      )}
-    >
-      <article>
+    <Card asChild padding="compact" className="flex h-full flex-col">
+      <motion.article layout={animateLayout && "position"}>
         <CardHeader>
           <CardTitle>
             <span
@@ -164,7 +150,7 @@ export function PotCard({
           open={isDeleteOpen}
           onOpenChange={setIsDeleteOpen}
         />
-      </article>
+      </motion.article>
     </Card>
   )
 }

@@ -47,6 +47,7 @@ function makeState(
       default_currency: "MXN",
       timezone: "America/Mexico_City",
       hideAmounts: false,
+      potLayout: [],
     },
     accounts: [],
     accountSummaries: [],

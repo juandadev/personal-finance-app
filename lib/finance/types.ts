@@ -11,6 +11,7 @@ import type {
 } from "@/lib/types"
 import type { ThemeColor } from "@/lib/theme-colors"
 import type { BudgetCloseStatus } from "./budget-balance"
+import type { UiPreferences } from "./ui-preferences"
 
 export type CurrencyCode = "USD" | "MXN"
 export type AccountType = "checking" | "savings" | "credit"
@@ -53,11 +54,10 @@ export interface PotMovementRequest {
   source: PotMovementSource
 }
 
-export interface UserPreferencesRecord {
+export interface UserPreferencesRecord extends UiPreferences {
   user_id: FinanceUserId
   default_currency: CurrencyCode
   timezone: string
-  hideAmounts: boolean
 }
 
 export interface AccountRecord {

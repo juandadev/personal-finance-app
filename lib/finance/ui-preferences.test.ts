@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 
+import type { PotLayout } from "@/lib/finance/pot-layout"
 import {
   defaultUiPreferences,
   getHiddenAmountAriaLabel,
@@ -15,15 +16,17 @@ describe("parseUiPreferences", () => {
   })
 
   test("fills missing keys with defaults", () => {
-    expect(parseUiPreferences({})).toEqual({ hideAmounts: false })
+    expect(parseUiPreferences({})).toEqual(defaultUiPreferences)
   })
 
   test("preserves valid hideAmounts values", () => {
     expect(parseUiPreferences({ hideAmounts: true })).toEqual({
       hideAmounts: true,
+      potLayout: [],
     })
     expect(parseUiPreferences({ hideAmounts: false })).toEqual({
       hideAmounts: false,
+      potLayout: [],
     })
   })
 
@@ -32,7 +35,25 @@ describe("parseUiPreferences", () => {
       parseUiPreferences({ hideAmounts: "yes", futureFlag: true }),
     ).toEqual({
       hideAmounts: false,
+      potLayout: [],
     })
+  })
+
+  test("preserves a saved pot layout independently of privacy mode", () => {
+    const potLayout: PotLayout = [
+      { potId: "c14e4ced-f134-4344-840b-f91d26cadfcf", size: "tall" },
+    ]
+
+    expect(parseUiPreferences({ hideAmounts: "yes", potLayout })).toEqual({
+      hideAmounts: false,
+      potLayout,
+    })
+    expect(parseUiPreferences({ hideAmounts: true, potLayout: false })).toEqual(
+      {
+        hideAmounts: true,
+        potLayout: [],
+      },
+    )
   })
 })
 

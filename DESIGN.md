@@ -185,10 +185,14 @@ Reference patterns:
 
 ### Pots
 
-- Use up to three pot columns based on the available content width. Give
-  active pots above 70% a light accent tint and two columns when the current
-  row has room. Order all pots by descending completion percentage and keep
-  that order across screen sizes.
+- Use up to three pot columns based on the available content width. Use the
+  default card background for every pot and start in creation order.
+- In the three-column layout on devices with a fine pointer, show a resize grip
+  in the bottom-right corner on hover and keyboard focus. Offer one cell, two
+  columns, or two rows. Show the new grid during the drag and save the size on
+  release. Respect reduced motion when the grid reflows.
+- Store pot sizes and order in `profiles.ui_preferences`. Use the saved order
+  across screen sizes and render single-cell cards on smaller layouts.
 - Use a primary card for Total Savings and default cards for the Active Goals
   and Goals Completed counts.
 

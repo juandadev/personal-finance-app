@@ -7,6 +7,7 @@ export function createInitialFinanceState(): FinanceState {
       default_currency: "USD",
       timezone: "America/Mexico_City",
       hideAmounts: false,
+      potLayout: [],
     },
     accounts: [],
     accountSummaries: [],
