@@ -4,6 +4,7 @@
       money that exceeds the original goal amount, we won't prevent it but just to make sure the user understands that it
       exceeded the estimated amount. Same with the withdrawal action, but this time we have to prevent the user to withdraw
       more money than the available amount and also have visual UI feedback for it
+- [ ] Add a monthly deposits chart to the Pots page.
 - [ ] Use tanstack-query to handle client fetching and scan the entire project so we can replace custom
       implementation/hooks with a proper and robust data-fetching layer
 - [ ] Improve login and sign in experience. Manually check to improve the UI feedback for errors and stuff.

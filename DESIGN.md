@@ -183,6 +183,15 @@ Reference patterns:
 
 ## Layout Patterns
 
+### Pots
+
+- Use up to three pot columns based on the available content width. Give
+  active pots above 70% a light accent tint and two columns when the current
+  row has room. Order all pots by descending completion percentage and keep
+  that order across screen sizes.
+- Use a primary card for Total Savings and default cards for the Active Goals
+  and Goals Completed counts.
+
 ### App Shell
 
 The product shell uses a dark sidebar on desktop and a dark bottom navigation on
@@ -390,6 +399,8 @@ in `ADMIN_EMAIL_PRIVILEGES`.
   two-action limit.
 - Empty-state calls to action are exempt because they provide onboarding rather
   than per-record management.
+- Pot cards also show an icon-only completion action beside Add Money and
+  Withdraw. Confirm completion before saving it.
 - Keep header-level and item-level ellipsis menus as separate variants: header
   menus contain secondary module actions; item menus contain actions for one
   record.

@@ -453,6 +453,7 @@ const potUpdateSchema = z.object({
   theme_color: themeColorSchema.optional(),
   due_date: potDueDateSchema.optional(),
   product_url: potProductUrlSchema.nullable().optional(),
+  is_completed: z.boolean().optional(),
 })
 
 const idSchema = recordIdSchema

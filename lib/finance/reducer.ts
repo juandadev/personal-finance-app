@@ -367,6 +367,19 @@ function upsertManyById<T extends { id: string }>(
   return nextRecords.reduce(upsertById, records)
 }
 
+function upsertPotBalances(pots: PotRecord[], updatedPots: PotRecord[]) {
+  return updatedPots.reduce((records, updatedPot) => {
+    const currentPot = records.find((pot) => pot.id === updatedPot.id)
+
+    return upsertById(
+      records,
+      currentPot
+        ? { ...currentPot, balance_cents: updatedPot.balance_cents }
+        : updatedPot,
+    )
+  }, pots)
+}
+
 function upsertBudgetSummary(
   summaries: FinanceState["budgetSummaries"],
   budget_id: string,
@@ -602,7 +615,7 @@ export function financeReducer(
     case "pot/move":
       return {
         ...state,
-        pots: upsertManyById(state.pots, action.payload.pots),
+        pots: upsertPotBalances(state.pots, action.payload.pots),
         transactions: action.payload.transaction
           ? upsertById(state.transactions, action.payload.transaction).sort(
               compareTransactionRecordsByDateThenCreatedAt,
@@ -641,7 +654,7 @@ export function financeReducer(
           action.billPayment,
         ),
         pots: action.pots
-          ? upsertManyById(state.pots, action.pots)
+          ? upsertPotBalances(state.pots, action.pots)
           : state.pots,
         transactions: action.transaction
           ? upsertById(state.transactions, action.transaction).sort(

@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useId, useMemo } from "react"
 import { z } from "zod"
 
 import { ThemeSelect } from "@/components/theme-select"
@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/dialog"
 import { FormField, FormStatusMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import { useFinance } from "@/hooks/use-finance"
 import { formatDollarInput } from "@/lib/finance/form-utils"
 import { isFutureISODate } from "@/lib/finance/pot-due-date"
@@ -35,6 +37,7 @@ const maxPotNameLength = 30
 
 type EditPotFormValues = {
   dueDate: string | null
+  isCompleted: boolean
   name: string
   productUrl: string
   target: string
@@ -48,6 +51,7 @@ interface EditPotDialogProps {
 }
 
 export function EditPotDialog({ pot, open, onOpenChange }: EditPotDialogProps) {
+  const completionId = useId()
   const { state, actions } = useFinance()
   const currentPot = state.pots.find((potRecord) => potRecord.id === pot.id)
 
@@ -90,6 +94,7 @@ export function EditPotDialog({ pot, open, onOpenChange }: EditPotDialogProps) {
           ),
         productUrl: potProductUrlSchema,
         themeColor: themeColorSchema,
+        isCompleted: z.boolean(),
       }),
     [existingPotNames, pot.dueDate],
   )
@@ -101,14 +106,22 @@ export function EditPotDialog({ pot, open, onOpenChange }: EditPotDialogProps) {
         dueDate: pot.dueDate ?? null,
         productUrl: pot.productUrl ?? "",
         themeColor: pot.color,
+        isCompleted: pot.isCompleted,
       }) satisfies EditPotFormValues,
-    [pot.color, pot.dueDate, pot.name, pot.productUrl, pot.target],
+    [
+      pot.color,
+      pot.dueDate,
+      pot.isCompleted,
+      pot.name,
+      pot.productUrl,
+      pot.target,
+    ],
   )
 
   const standardForm = useStandardForm({
     defaultValues,
     schema: editPotFormSchema,
-    onSubmit: async ({ applyActionResult, resetForm, value }) => {
+    onSubmit: async ({ applyActionResult, formApi, resetForm, value }) => {
       if (!currentPot) {
         applyActionResult({
           ok: false,
@@ -125,6 +138,9 @@ export function EditPotDialog({ pot, open, onOpenChange }: EditPotDialogProps) {
           due_date: value.dueDate,
         }),
         product_url: value.productUrl,
+        ...(formApi.getFieldMeta("isCompleted")?.isDirty && {
+          is_completed: value.isCompleted,
+        }),
       })
 
       if (!applyActionResult(result)) {
@@ -274,6 +290,27 @@ export function EditPotDialog({ pot, open, onOpenChange }: EditPotDialogProps) {
                 }
                 usedThemeColors={usedThemeColors}
               />
+            )}
+          </standardForm.form.Field>
+
+          <standardForm.form.Field name="isCompleted">
+            {(field) => (
+              <div className="border-border flex items-center justify-between gap-4 border-t pt-4">
+                <Label
+                  htmlFor={completionId}
+                  className="min-h-11 flex-1 cursor-pointer"
+                >
+                  Completed
+                </Label>
+                <Switch
+                  id={completionId}
+                  checked={field.state.value}
+                  onCheckedChange={(checked) =>
+                    standardForm.setValue("isCompleted", checked)
+                  }
+                  className="relative touch-manipulation before:absolute before:-inset-2.5 before:min-h-11"
+                />
+              </div>
             )}
           </standardForm.form.Field>
         </DialogFinanceForm>

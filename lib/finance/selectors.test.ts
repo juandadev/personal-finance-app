@@ -5,6 +5,7 @@ import type {
   CreditCardPaymentRecord,
   CreditCardStatementRecord,
   FinanceState,
+  PotRecord,
   RecurringBillPaymentRecord,
 } from "@/lib/finance/types"
 
@@ -1131,6 +1132,38 @@ describe("selectFinanceViewModel manualBillsDueReminder", () => {
   })
 })
 
+test("counts completion explicitly and sums savings from active pots", () => {
+  const activePot: PotRecord = {
+    id: "pot-1",
+    user_id: "user-1",
+    name: "Vacation Fund",
+    balance_cents: 20_001,
+    target_cents: 20_000,
+    theme_color: "chart-1",
+    due_date: null,
+    product_url: null,
+    is_completed: false,
+  }
+  const completedPot: PotRecord = {
+    ...activePot,
+    id: "pot-2",
+    balance_cents: 5_000,
+    is_completed: true,
+  }
+
+  const viewModel = selectFinanceViewModel(
+    makeState({ pots: [activePot, completedPot] }),
+    TODAY,
+  )
+
+  expect(viewModel.potsSummary).toEqual({
+    activeSavings: 200.01,
+    activeCount: 1,
+    completedCount: 1,
+  })
+  expect(viewModel.pots.map((pot) => pot.isCompleted)).toEqual([false, true])
+})
+
 describe("selectFinanceViewModel planned saves", () => {
   const vacationPot = {
     id: "pot-1",
@@ -1141,6 +1174,7 @@ describe("selectFinanceViewModel planned saves", () => {
     theme_color: "finance-purple" as const,
     due_date: null,
     product_url: null,
+    is_completed: false,
   }
   const ownerContact = {
     id: "owner-1",

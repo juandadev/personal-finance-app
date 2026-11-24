@@ -190,6 +190,7 @@ const potColumns = [
   "theme_color",
   "due_date::text AS due_date",
   "product_url",
+  "is_completed",
 ]
 const recurringBillColumns = [
   "user_id",
@@ -3776,7 +3777,10 @@ export async function unassignTransactionFromBudget(
   })
 }
 
-export async function insertPot(userId: string, pot: PotRecord) {
+export async function insertPot(
+  userId: string,
+  pot: Omit<PotRecord, "is_completed">,
+) {
   return withFinanceTransaction(userId, async (client) => {
     const result = await client.query<PotRecord>(
       `
@@ -3815,8 +3819,9 @@ export async function updatePot(
           target_cents = COALESCE($4, target_cents),
           theme_color = COALESCE($5, theme_color),
           due_date = CASE WHEN $6::boolean THEN $7::date ELSE due_date END,
-          product_url = CASE WHEN $8::boolean THEN $9::text ELSE product_url END
-        WHERE user_id = $1 AND id = $10
+          product_url = CASE WHEN $8::boolean THEN $9::text ELSE product_url END,
+          is_completed = COALESCE($10::boolean, is_completed)
+        WHERE user_id = $1 AND id = $11
         RETURNING ${potColumns.join(", ")}
       `,
       [
@@ -3829,6 +3834,7 @@ export async function updatePot(
         updates.due_date ?? null,
         updates.product_url !== undefined,
         updates.product_url ?? null,
+        updates.is_completed ?? null,
         id,
       ],
     )

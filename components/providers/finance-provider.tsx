@@ -370,16 +370,30 @@ export function FinanceProvider({
         runFinanceAction(() =>
           updatePotAction(id, updates).then((result) => {
             if (result.ok) {
+              const pot = result.data
               dispatch({
                 type: "pot/update",
                 id,
                 updates: {
-                  name: result.data.name,
-                  balance_cents: result.data.balance_cents,
-                  target_cents: result.data.target_cents,
-                  theme_color: result.data.theme_color,
-                  due_date: result.data.due_date,
-                  product_url: result.data.product_url,
+                  ...(updates.name !== undefined && { name: pot.name }),
+                  ...(updates.balance_cents !== undefined && {
+                    balance_cents: pot.balance_cents,
+                  }),
+                  ...(updates.target_cents !== undefined && {
+                    target_cents: pot.target_cents,
+                  }),
+                  ...(updates.theme_color !== undefined && {
+                    theme_color: pot.theme_color,
+                  }),
+                  ...(updates.due_date !== undefined && {
+                    due_date: pot.due_date,
+                  }),
+                  ...(updates.product_url !== undefined && {
+                    product_url: pot.product_url,
+                  }),
+                  ...(updates.is_completed !== undefined && {
+                    is_completed: pot.is_completed,
+                  }),
                 },
               })
             }

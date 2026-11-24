@@ -1,0 +1,56 @@
+.summary {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.grid {
+  --pot-columns: 1;
+  --pot-gap: 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pot-gap);
+}
+
+.grid > * {
+  --pot-span: 1;
+  flex: 1 0
+    calc(
+      var(--pot-span) * (100% + var(--pot-gap)) / var(--pot-columns) -
+        var(--pot-gap)
+    );
+  min-width: 0;
+}
+
+@container (width >= 40rem) {
+  .summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .summary > :first-child {
+    grid-column: span 2;
+  }
+
+  .grid {
+    --pot-columns: 2;
+  }
+}
+
+@container (40rem <= width < 62rem) {
+  .grid > .wideTablet {
+    --pot-span: 2;
+  }
+}
+
+@container (width >= 62rem) {
+  .summary {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .grid {
+    --pot-columns: 3;
+  }
+
+  .grid > .wideDesktop {
+    --pot-span: 2;
+  }
+}

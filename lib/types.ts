@@ -24,6 +24,7 @@ export interface Pot {
   amount: number
   target: number
   color: ThemeColor
+  isCompleted: boolean
   dueDate?: string
   productUrl?: string
 }

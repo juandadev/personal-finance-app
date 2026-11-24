@@ -990,15 +990,27 @@ export function selectFinanceViewModel(
     state.budgetTransactionAssignments,
     state.budgets,
   )
-  const pots = state.pots.map((pot) => ({
-    id: pot.id,
-    name: pot.name,
-    amount: centsToDollars(pot.balance_cents),
-    target: centsToDollars(pot.target_cents),
-    color: pot.theme_color,
-    dueDate: pot.due_date ?? undefined,
-    productUrl: pot.product_url ?? undefined,
-  }))
+  let activeSavingsCents = 0
+  let completedCount = 0
+  const pots = state.pots.map((pot) => {
+    const isCompleted = pot.is_completed ?? false
+    if (isCompleted) {
+      completedCount += 1
+    } else {
+      activeSavingsCents += pot.balance_cents
+    }
+
+    return {
+      id: pot.id,
+      name: pot.name,
+      amount: centsToDollars(pot.balance_cents),
+      target: centsToDollars(pot.target_cents),
+      color: pot.theme_color,
+      isCompleted,
+      dueDate: pot.due_date ?? undefined,
+      productUrl: pot.product_url ?? undefined,
+    }
+  })
   const budgets = selectBudgets(
     state.budgets,
     currentBudgetAssignments,
@@ -1067,6 +1079,11 @@ export function selectFinanceViewModel(
     summaryStats: selectSummaryStats(state),
     pots,
     totalSaved: pots.reduce((sum, pot) => sum + pot.amount, 0),
+    potsSummary: {
+      activeSavings: centsToDollars(activeSavingsCents),
+      activeCount: pots.length - completedCount,
+      completedCount,
+    },
     budgets,
     budgetSpent: budgets.reduce((sum, budget) => sum + budget.spent, 0),
     budgetLimit: budgets.reduce((sum, budget) => sum + budget.maximum, 0),

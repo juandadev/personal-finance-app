@@ -135,8 +135,13 @@ describe("financeReducer pot movements", () => {
       theme_color: "chart-1",
       due_date: null,
       product_url: null,
+      is_completed: true,
     }
-    const updatedPot = { ...existingPot, balance_cents: 30_000 }
+    const updatedPot = {
+      ...existingPot,
+      balance_cents: 30_000,
+      is_completed: false,
+    }
     const account: AccountRecord = {
       id: "account-1",
       user_id: "user-1",
@@ -191,6 +196,7 @@ describe("financeReducer pot movements", () => {
     )
 
     expect(next.pots[0]?.balance_cents).toBe(30_000)
+    expect(next.pots[0]?.is_completed).toBe(true)
     expect(next.transactions).toEqual([transaction])
     expect(next.accounts[0]?.current_balance_cents).toBe(90_000)
     expect(next.accountSummaries).toEqual([summary])
@@ -208,6 +214,7 @@ describe("financeReducer pot movements", () => {
       theme_color: "chart-1",
       due_date: null,
       product_url: null,
+      is_completed: false,
     }
     const destination: PotRecord = {
       ...source,
@@ -247,6 +254,7 @@ describe("financeReducer planned saves", () => {
     theme_color: "chart-1",
     due_date: null,
     product_url: null,
+    is_completed: false,
   }
   const bill: RecurringBillRecord = {
     id: "bill-1",
