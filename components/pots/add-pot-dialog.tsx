@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input"
 import { useFinance } from "@/hooks/use-finance"
 import { themeOptions } from "@/lib/finance/form-utils"
 import { isFutureISODate } from "@/lib/finance/pot-due-date"
+import { potProductUrlSchema } from "@/lib/finance/pot-product-url"
 import {
   currencyCentsSchema,
   requiredStringSchema,
@@ -28,6 +29,7 @@ import {
 } from "@/lib/forms/validation"
 import { useStandardForm } from "@/lib/forms/use-standard-form"
 import { PotDueDatePicker } from "./pot-due-date-picker"
+import { PotProductUrlField } from "./pot-product-url-field"
 
 const maxPotNameLength = 30
 
@@ -41,6 +43,7 @@ const dueDateSchema = z
 type AddPotFormValues = {
   dueDate: string | null
   name: string
+  productUrl: string
   target: string
   themeColor: (typeof themeOptions)[number]["value"]
 }
@@ -69,6 +72,7 @@ export function AddPotDialog() {
         ),
         target: currencyCentsSchema("Enter a target greater than $0."),
         dueDate: dueDateSchema,
+        productUrl: potProductUrlSchema,
         themeColor: themeColorSchema,
       }),
     [existingPotNames],
@@ -79,6 +83,7 @@ export function AddPotDialog() {
         name: "",
         target: "",
         dueDate: null,
+        productUrl: "",
         themeColor: themeOptions[0].value,
       }) satisfies AddPotFormValues,
     [],
@@ -95,6 +100,7 @@ export function AddPotDialog() {
         target_cents: value.target,
         theme_color: value.themeColor,
         due_date: value.dueDate,
+        product_url: value.productUrl,
       })
 
       if (!applyActionResult(result)) {
@@ -131,6 +137,7 @@ export function AddPotDialog() {
         <DialogCloseButton aria-label="Close add pot dialog" />
 
         <DialogFinanceForm
+          noValidate
           onSubmit={standardForm.handleSubmit}
           actions={
             <>
@@ -222,6 +229,20 @@ export function AddPotDialog() {
                   />
                 )}
               </FormField>
+            )}
+          </standardForm.form.Field>
+
+          <standardForm.form.Field name="productUrl">
+            {(field) => (
+              <PotProductUrlField
+                id="pot-product-url"
+                error={standardForm.fieldErrors.productUrl}
+                value={field.state.value}
+                onChange={(event) =>
+                  standardForm.setValue("productUrl", event.target.value)
+                }
+                onBlur={field.handleBlur}
+              />
             )}
           </standardForm.form.Field>
 

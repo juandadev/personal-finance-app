@@ -379,6 +379,7 @@ export function FinanceProvider({
                   target_cents: result.data.target_cents,
                   theme_color: result.data.theme_color,
                   due_date: result.data.due_date,
+                  product_url: result.data.product_url,
                 },
               })
             }

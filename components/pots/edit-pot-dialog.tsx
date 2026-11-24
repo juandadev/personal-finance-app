@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input"
 import { useFinance } from "@/hooks/use-finance"
 import { formatDollarInput } from "@/lib/finance/form-utils"
 import { isFutureISODate } from "@/lib/finance/pot-due-date"
+import { potProductUrlSchema } from "@/lib/finance/pot-product-url"
 import {
   currencyCentsSchema,
   requiredStringSchema,
@@ -28,19 +29,14 @@ import {
 import { useStandardForm } from "@/lib/forms/use-standard-form"
 import type { Pot } from "@/lib/types"
 import { PotDueDatePicker } from "./pot-due-date-picker"
+import { PotProductUrlField } from "./pot-product-url-field"
 
 const maxPotNameLength = 30
-
-const dueDateSchema = z
-  .string()
-  .nullable()
-  .refine((value) => !value || isFutureISODate(value), {
-    message: "Choose a future due date.",
-  })
 
 type EditPotFormValues = {
   dueDate: string | null
   name: string
+  productUrl: string
   target: string
   themeColor: Pot["color"]
 }
@@ -84,10 +80,18 @@ export function EditPotDialog({ pot, open, onOpenChange }: EditPotDialogProps) {
           "A pot with this name already exists.",
         ),
         target: currencyCentsSchema("Enter a target greater than $0."),
-        dueDate: dueDateSchema,
+        dueDate: z
+          .string()
+          .nullable()
+          .refine(
+            (value) =>
+              value === null || value === pot.dueDate || isFutureISODate(value),
+            "Choose a future due date.",
+          ),
+        productUrl: potProductUrlSchema,
         themeColor: themeColorSchema,
       }),
-    [existingPotNames],
+    [existingPotNames, pot.dueDate],
   )
   const defaultValues = useMemo(
     () =>
@@ -95,15 +99,16 @@ export function EditPotDialog({ pot, open, onOpenChange }: EditPotDialogProps) {
         name: pot.name,
         target: formatDollarInput(pot.target),
         dueDate: pot.dueDate ?? null,
+        productUrl: pot.productUrl ?? "",
         themeColor: pot.color,
       }) satisfies EditPotFormValues,
-    [pot.color, pot.dueDate, pot.name, pot.target],
+    [pot.color, pot.dueDate, pot.name, pot.productUrl, pot.target],
   )
 
   const standardForm = useStandardForm({
     defaultValues,
     schema: editPotFormSchema,
-    onSubmit: async ({ applyActionResult, value }) => {
+    onSubmit: async ({ applyActionResult, resetForm, value }) => {
       if (!currentPot) {
         applyActionResult({
           ok: false,
@@ -116,19 +121,23 @@ export function EditPotDialog({ pot, open, onOpenChange }: EditPotDialogProps) {
         name: value.name,
         target_cents: value.target,
         theme_color: value.themeColor,
-        due_date: value.dueDate,
+        ...(value.dueDate !== currentPot.due_date && {
+          due_date: value.dueDate,
+        }),
+        product_url: value.productUrl,
       })
 
       if (!applyActionResult(result)) {
         return
       }
 
+      resetForm()
       onOpenChange(false)
     },
   })
 
   const handleOpenChange = (nextOpen: boolean) => {
-    if (nextOpen) {
+    if (!nextOpen) {
       standardForm.reset(defaultValues)
     }
 
@@ -148,6 +157,7 @@ export function EditPotDialog({ pot, open, onOpenChange }: EditPotDialogProps) {
         <DialogCloseButton aria-label="Close edit pot dialog" />
 
         <DialogFinanceForm
+          noValidate
           onSubmit={standardForm.handleSubmit}
           actions={
             <>
@@ -237,6 +247,20 @@ export function EditPotDialog({ pot, open, onOpenChange }: EditPotDialogProps) {
                   />
                 )}
               </FormField>
+            )}
+          </standardForm.form.Field>
+
+          <standardForm.form.Field name="productUrl">
+            {(field) => (
+              <PotProductUrlField
+                id="edit-pot-product-url"
+                error={standardForm.fieldErrors.productUrl}
+                value={field.state.value}
+                onChange={(event) =>
+                  standardForm.setValue("productUrl", event.target.value)
+                }
+                onBlur={field.handleBlur}
+              />
             )}
           </standardForm.form.Field>
 

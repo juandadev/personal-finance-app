@@ -1,5 +1,6 @@
 "use client"
 
+import { ArrowSquareOutIcon } from "@phosphor-icons/react"
 import { useState } from "react"
 import { ItemActions } from "@/components/actions"
 import { MoneyAmount } from "@/components/money-amount"
@@ -82,6 +83,25 @@ export function PotCard({ pot }: PotCardProps) {
               {dueDateDuration}
             </strong>
           </p>
+        ) : null}
+
+        {pot.productUrl ? (
+          <Button
+            asChild
+            variant="link"
+            size="text-link"
+            className="mt-2 min-h-9 gap-1.5"
+          >
+            <a
+              href={pot.productUrl}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={`View product for ${pot.name} (opens in a new tab)`}
+            >
+              View product
+              <ArrowSquareOutIcon className="size-4" aria-hidden />
+            </a>
+          </Button>
         ) : null}
 
         <div className="mt-6 grid grid-cols-2 gap-3">

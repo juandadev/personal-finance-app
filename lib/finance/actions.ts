@@ -51,6 +51,7 @@ import {
 } from "@/lib/finance/queries"
 import { uiPreferencesSchema } from "@/lib/finance/ui-preferences"
 import { isFutureISODate } from "@/lib/finance/pot-due-date"
+import { potProductUrlSchema } from "@/lib/finance/pot-product-url"
 import type {
   AccountRecord,
   AccountSummaryRecord,
@@ -442,6 +443,7 @@ const potSchema = z.object({
   target_cents: z.number().int().positive(),
   theme_color: themeColorSchema,
   due_date: potDueDateSchema,
+  product_url: potProductUrlSchema.nullable().default(null),
 })
 
 const potUpdateSchema = z.object({
@@ -450,6 +452,7 @@ const potUpdateSchema = z.object({
   target_cents: z.number().int().positive().optional(),
   theme_color: themeColorSchema.optional(),
   due_date: potDueDateSchema.optional(),
+  product_url: potProductUrlSchema.nullable().optional(),
 })
 
 const idSchema = recordIdSchema

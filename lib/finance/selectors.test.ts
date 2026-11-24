@@ -1140,6 +1140,7 @@ describe("selectFinanceViewModel planned saves", () => {
     target_cents: 50_000,
     theme_color: "finance-purple" as const,
     due_date: null,
+    product_url: null,
   }
   const ownerContact = {
     id: "owner-1",

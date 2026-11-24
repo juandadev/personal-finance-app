@@ -189,6 +189,7 @@ const potColumns = [
   "target_cents",
   "theme_color",
   "due_date::text AS due_date",
+  "product_url",
 ]
 const recurringBillColumns = [
   "user_id",
@@ -3751,9 +3752,9 @@ export async function insertPot(userId: string, pot: PotRecord) {
   return withFinanceTransaction(userId, async (client) => {
     const result = await client.query<PotRecord>(
       `
-        INSERT INTO pots (user_id, id, name, balance_cents, target_cents, theme_color, due_date)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-        RETURNING user_id, id, name, balance_cents, target_cents, theme_color, due_date::text AS due_date
+        INSERT INTO pots (user_id, id, name, balance_cents, target_cents, theme_color, due_date, product_url)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        RETURNING ${potColumns.join(", ")}
       `,
       [
         userId,
@@ -3763,6 +3764,7 @@ export async function insertPot(userId: string, pot: PotRecord) {
         pot.target_cents,
         pot.theme_color,
         pot.due_date,
+        pot.product_url,
       ],
     )
 
@@ -3784,9 +3786,10 @@ export async function updatePot(
           balance_cents = COALESCE($3, balance_cents),
           target_cents = COALESCE($4, target_cents),
           theme_color = COALESCE($5, theme_color),
-          due_date = CASE WHEN $6::boolean THEN $7::date ELSE due_date END
-        WHERE user_id = $1 AND id = $8
-        RETURNING user_id, id, name, balance_cents, target_cents, theme_color, due_date::text AS due_date
+          due_date = CASE WHEN $6::boolean THEN $7::date ELSE due_date END,
+          product_url = CASE WHEN $8::boolean THEN $9::text ELSE product_url END
+        WHERE user_id = $1 AND id = $10
+        RETURNING ${potColumns.join(", ")}
       `,
       [
         userId,
@@ -3796,6 +3799,8 @@ export async function updatePot(
         updates.theme_color ?? null,
         updates.due_date !== undefined,
         updates.due_date ?? null,
+        updates.product_url !== undefined,
+        updates.product_url ?? null,
         id,
       ],
     )

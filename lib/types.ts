@@ -25,6 +25,7 @@ export interface Pot {
   target: number
   color: ThemeColor
   dueDate?: string
+  productUrl?: string
 }
 
 export interface Budget {

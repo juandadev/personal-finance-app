@@ -134,6 +134,7 @@ describe("financeReducer pot movements", () => {
       target_cents: 50_000,
       theme_color: "chart-1",
       due_date: null,
+      product_url: null,
     }
     const updatedPot = { ...existingPot, balance_cents: 30_000 }
     const account: AccountRecord = {
@@ -206,6 +207,7 @@ describe("financeReducer pot movements", () => {
       target_cents: 50_000,
       theme_color: "chart-1",
       due_date: null,
+      product_url: null,
     }
     const destination: PotRecord = {
       ...source,
@@ -244,6 +246,7 @@ describe("financeReducer planned saves", () => {
     target_cents: 50_000,
     theme_color: "chart-1",
     due_date: null,
+    product_url: null,
   }
   const bill: RecurringBillRecord = {
     id: "bill-1",

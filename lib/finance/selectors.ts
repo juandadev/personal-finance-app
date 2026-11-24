@@ -997,6 +997,7 @@ export function selectFinanceViewModel(
     target: centsToDollars(pot.target_cents),
     color: pot.theme_color,
     dueDate: pot.due_date ?? undefined,
+    productUrl: pot.product_url ?? undefined,
   }))
   const budgets = selectBudgets(
     state.budgets,

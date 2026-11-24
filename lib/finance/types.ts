@@ -182,6 +182,7 @@ export interface PotRecord {
   target_cents: number
   theme_color: ThemeColor
   due_date: string | null
+  product_url: string | null
 }
 
 export interface RecurringBillRecord {
@@ -303,7 +304,9 @@ export interface CashForecastExclusionRecord {
 }
 
 export type NewBudgetRecord = Omit<BudgetRecord, "user_id">
-export type NewPotRecord = Omit<PotRecord, "user_id">
+export type NewPotRecord = Omit<PotRecord, "user_id" | "product_url"> & {
+  product_url?: PotRecord["product_url"]
+}
 export type NewCategoryRecord = Omit<CategoryRecord, "user_id">
 export type NewCounterpartyRecord = Omit<
   CounterpartyRecord,
