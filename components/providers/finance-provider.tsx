@@ -60,11 +60,11 @@ import {
   payCreditCardCycleAction,
   payCreditCardStatementAction,
   resetCreditCardAnnualityOverridesAction,
-  resizePotCardAction,
+  savePotLayoutChangeAction,
   saveCreditCardAnnualityOverridesAction,
   updateUiPreferencesAction,
 } from "@/lib/finance/actions"
-import type { PotCardSize } from "@/lib/finance/pot-layout"
+import type { PotLayoutChange } from "@/lib/finance/pot-layout"
 import { createInitialFinanceState } from "@/lib/finance/seed"
 import { selectFinanceViewModel } from "@/lib/finance/selectors"
 import type {
@@ -86,14 +86,12 @@ import type {
 } from "@/lib/finance/types"
 import { SidebarProvider } from "@/components/ui/sidebar"
 
-type PendingPotResize = { size: PotCardSize }
-
 interface FinanceContextValue extends FinanceViewModel {
   state: FinanceState
   dispatch: Dispatch<FinanceAction>
   actions: FinanceActions
   isTransactionMutationPending: boolean
-  pendingPotResizes: ReadonlyMap<string, PendingPotResize>
+  pendingPotLayoutChanges: readonly PotLayoutChange[]
 }
 
 const FinanceContext = createContext<FinanceContextValue | null>(null)
@@ -118,10 +116,10 @@ export function FinanceProvider({
     useState(0)
   const [awaitingTransactionRefresh, setAwaitingTransactionRefresh] =
     useState(false)
-  const [pendingPotResizes, setPendingPotResizes] = useState<
-    ReadonlyMap<string, PendingPotResize>
-  >(() => new Map())
-  const potResizeQueue = useRef(Promise.resolve())
+  const [pendingPotLayoutChanges, setPendingPotLayoutChanges] = useState<
+    PotLayoutChange[]
+  >([])
+  const potLayoutQueue = useRef(Promise.resolve())
 
   useEffect(() => {
     if (initialState && initialStateRef.current !== initialState) {
@@ -899,13 +897,13 @@ export function FinanceProvider({
           }),
         )
       },
-      resizePotCard: (potId, size) => {
-        const pending = { size }
-        setPendingPotResizes((current) => new Map(current).set(potId, pending))
+      changePotLayout: (change) => {
+        const pending = { ...change }
+        setPendingPotLayoutChanges((current) => [...current, pending])
 
-        const request = potResizeQueue.current.then(async () => {
+        const request = potLayoutQueue.current.then(async () => {
           const result = await runFinanceAction(() =>
-            resizePotCardAction(potId, size),
+            savePotLayoutChangeAction(pending),
           )
           if (result.ok) {
             dispatch({ type: "preferences/pot-layout", potLayout: result.data })
@@ -913,16 +911,13 @@ export function FinanceProvider({
             toast.error(result.message)
           }
 
-          setPendingPotResizes((current) => {
-            if (current.get(potId) !== pending) return current
-            const next = new Map(current)
-            next.delete(potId)
-            return next
-          })
+          setPendingPotLayoutChanges((current) =>
+            current.filter((change) => change !== pending),
+          )
 
           return result
         })
-        potResizeQueue.current = request.then(() => undefined)
+        potLayoutQueue.current = request.then(() => undefined)
         return request
       },
     }),
@@ -934,7 +929,7 @@ export function FinanceProvider({
       state,
       dispatch,
       actions,
-      pendingPotResizes,
+      pendingPotLayoutChanges,
       isTransactionMutationPending:
         pendingTransactionMutations > 0 || awaitingTransactionRefresh,
       ...selectFinanceViewModel(state),
@@ -942,7 +937,7 @@ export function FinanceProvider({
     [
       actions,
       awaitingTransactionRefresh,
-      pendingPotResizes,
+      pendingPotLayoutChanges,
       pendingTransactionMutations,
       state,
     ],

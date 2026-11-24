@@ -4,6 +4,7 @@
 }
 
 .grid {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 1.5rem;
@@ -14,6 +15,35 @@
   min-width: 0;
 }
 
+.item[data-highlighted],
+.draggedCard[data-highlighted] {
+  --pot-card-background: var(--color-accent);
+  --pot-card-content: var(--color-accent-foreground);
+
+  > article {
+    --color-card-foreground: var(--pot-card-content);
+    --color-foreground: var(--pot-card-content);
+    --color-muted-foreground: var(--pot-card-content);
+    --color-primary: var(--pot-card-content);
+    --color-ring: var(--pot-card-content);
+    background-color: var(--pot-card-background);
+  }
+
+  .cardActions > button {
+    background-color: var(--pot-card-content);
+    color: var(--pot-card-background);
+
+    &:not([aria-disabled="true"]):hover {
+      background-color: color-mix(
+        in oklab,
+        var(--pot-card-content) 95%,
+        var(--pot-card-background)
+      );
+    }
+  }
+}
+
+.moveHandle,
 .resizeHandle,
 .resizeFeedback {
   display: none;
@@ -30,6 +60,15 @@
 
   .grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: minmax(18rem, 1fr);
+  }
+
+  .item[data-size="wide"] {
+    grid-column: span 2;
+  }
+
+  .item[data-size="tall"] {
+    grid-row: span 2;
   }
 }
 
@@ -45,27 +84,15 @@
 
 @media (hover: hover) and (pointer: fine) {
   @container (width >= 62rem) {
-    .grid {
-      grid-auto-rows: minmax(18rem, 1fr);
-    }
-
     .item {
       overflow: clip;
       border-radius: var(--radius-xl, 0.75rem);
-      background: var(--color-card);
+      background: var(--pot-card-background, var(--color-card));
     }
 
     .item > article,
     .grid > [data-slot="card"] {
       padding-bottom: 2.75rem;
-    }
-
-    .item[data-size="wide"] {
-      grid-column: span 2;
-    }
-
-    .item[data-size="tall"] {
-      grid-row: span 2;
     }
 
     .item[data-resizing] {
@@ -76,45 +103,126 @@
       position: absolute;
       inset: 0;
       border-radius: inherit;
-      outline: 2px solid var(--color-ring);
+      outline: 2px solid var(--pot-card-content, var(--color-ring));
       outline-offset: -2px;
       pointer-events: none;
       content: "";
     }
 
+    .moveHandle,
     .resizeHandle {
       position: absolute;
-      right: 0.125rem;
-      bottom: 0;
       display: grid;
       width: 2.75rem;
       height: 2.75rem;
       place-items: center;
       border-radius: 0.5rem;
-      color: var(--color-muted-foreground);
-      cursor: nwse-resize;
+      color: var(--pot-card-content, var(--color-muted-foreground));
       opacity: 0;
       pointer-events: none;
       touch-action: none;
       user-select: none;
     }
 
-    .item:hover .resizeHandle,
-    .resizeHandle:focus-visible,
-    .resizeHandle[data-state="open"],
-    .item[data-resizing] .resizeHandle {
+    .moveHandle {
+      top: 0;
+      left: 50%;
+      align-items: start;
+      padding-top: 0.25rem;
+      translate: -50% -0.25rem;
+      cursor: grab;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .moveHandle,
+      .resizeHandle {
+        transition:
+          opacity 150ms ease-out,
+          translate 150ms ease-out;
+      }
+    }
+
+    .resizeHandle {
+      right: 0.125rem;
+      bottom: 0;
+      translate: 0 0.25rem;
+      cursor: nwse-resize;
+    }
+
+    .item:hover .moveHandle,
+    .moveHandle:focus-visible,
+    .moveHandle[data-state="open"] {
+      translate: -50% 0;
       opacity: 1;
       pointer-events: auto;
     }
 
+    .item:hover .resizeHandle,
+    .resizeHandle:focus-visible,
+    .resizeHandle[data-state="open"],
+    .item[data-resizing] .resizeHandle {
+      translate: 0 0;
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .highlightButton {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .item:hover .highlightButton,
+    .highlightButton:focus-visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .moveHandle:focus-visible {
+      outline: none;
+
+      > svg {
+        border-radius: 0.25rem;
+        outline: 2px solid var(--pot-card-content, var(--color-ring));
+        outline-offset: 1px;
+      }
+    }
+
     .item:not([data-resizing]) .resizeHandle:focus-visible {
-      outline: 2px solid var(--color-ring);
+      outline: 2px solid var(--pot-card-content, var(--color-ring));
       outline-offset: -4px;
     }
 
+    .moveHandle:hover,
     .resizeHandle:hover,
     .item[data-resizing] .resizeHandle {
-      color: var(--color-foreground);
+      color: var(--pot-card-content, var(--color-foreground));
+    }
+
+    .item[data-reordering] > article {
+      opacity: 0.16;
+    }
+
+    .item[data-reordering]::after {
+      position: absolute;
+      inset: 0;
+      border: 2px dashed var(--pot-card-content, var(--color-ring));
+      border-radius: inherit;
+      pointer-events: none;
+      content: "";
+    }
+
+    .grid[data-dragging] {
+      cursor: grabbing;
+    }
+
+    .grid[data-dragging] .moveHandle,
+    .grid[data-dragging] .resizeHandle,
+    .grid[data-dragging] .highlightButton,
+    .item[data-reordering] .moveHandle,
+    .item[data-reordering] .resizeHandle,
+    .item[data-reordering] .highlightButton {
+      opacity: 0;
+      pointer-events: none;
     }
   }
 
@@ -138,4 +246,25 @@
     font-size: 0.75rem;
     line-height: 1rem;
   }
+}
+
+.draggedCard {
+  position: fixed;
+  z-index: 50;
+  top: 0;
+  left: 0;
+  overflow: clip;
+  border-radius: var(--radius-xl, 0.75rem);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.16);
+  outline: 2px solid var(--pot-card-content, var(--color-ring));
+  outline-offset: -2px;
+  pointer-events: none;
+}
+
+.draggedCard > article {
+  padding-bottom: 2.75rem;
+}
+
+.draggedCard .highlightButton {
+  visibility: hidden;
 }

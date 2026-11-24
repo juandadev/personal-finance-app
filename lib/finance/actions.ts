@@ -30,7 +30,7 @@ import {
   resetCreditCardAnnualityOverrides,
   resumeRecurringBill,
   saveCreditCardAnnualityOverrides,
-  savePotCardSize,
+  savePotLayoutChange,
   setRecurringBillInactive,
   skipRecurringBillOccurrence,
   undoScheduledRecurringBillEnd,
@@ -52,9 +52,9 @@ import {
 } from "@/lib/finance/queries"
 import { isFutureISODate } from "@/lib/finance/pot-due-date"
 import {
-  potCardSizeSchema,
-  type PotCardSize,
+  potLayoutChangeSchema,
   type PotLayout,
+  type PotLayoutChange,
 } from "@/lib/finance/pot-layout"
 import { potProductUrlSchema } from "@/lib/finance/pot-product-url"
 import type {
@@ -1720,19 +1720,17 @@ export async function updateUiPreferencesAction(patch: {
   }
 }
 
-export async function resizePotCardAction(
-  potId: string,
-  size: PotCardSize,
+export async function savePotLayoutChangeAction(
+  change: PotLayoutChange,
 ): Promise<FinanceActionResult<PotLayout>> {
   try {
     const userId = await getUserId()
-    const data = await savePotCardSize(
+    const data = await savePotLayoutChange(
       userId,
-      recordIdSchema.parse(potId),
-      potCardSizeSchema.parse(size),
+      potLayoutChangeSchema.parse(change),
     )
 
-    return { ok: true, message: "Pot size saved.", data }
+    return { ok: true, message: "Pot layout saved.", data }
   } catch (error) {
     return handleFinanceActionError(error)
   }

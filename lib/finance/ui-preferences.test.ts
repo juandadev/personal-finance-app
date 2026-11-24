@@ -41,7 +41,12 @@ describe("parseUiPreferences", () => {
 
   test("preserves a saved pot layout independently of privacy mode", () => {
     const potLayout: PotLayout = [
-      { potId: "c14e4ced-f134-4344-840b-f91d26cadfcf", size: "tall" },
+      {
+        potId: "c14e4ced-f134-4344-840b-f91d26cadfcf",
+        size: "tall",
+        highlighted: true,
+      },
+      { potId: "00000000-0000-4000-8000-000000000001", size: "wide" },
     ]
 
     expect(parseUiPreferences({ hideAmounts: "yes", potLayout })).toEqual({

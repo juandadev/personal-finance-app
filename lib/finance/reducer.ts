@@ -30,7 +30,7 @@ import type {
   UpdatableRecurringBillRecord,
 } from "./types"
 import { compareTransactionRecordsByDateThenCreatedAt } from "./transaction-sort"
-import type { PotCardSize, PotLayout } from "./pot-layout"
+import type { PotLayout, PotLayoutChange } from "./pot-layout"
 
 interface TransactionMutationPayload {
   transaction: TransactionRecord
@@ -297,10 +297,7 @@ export interface FinanceActions {
     excluded: boolean
   }) => Promise<FinanceMutationResult>
   updateUiPreferences: (hideAmounts: boolean) => Promise<FinanceMutationResult>
-  resizePotCard: (
-    potId: string,
-    size: PotCardSize,
-  ) => Promise<FinanceMutationResult>
+  changePotLayout: (change: PotLayoutChange) => Promise<FinanceMutationResult>
 }
 
 export type FinanceMutationResult =

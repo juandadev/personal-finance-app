@@ -77,7 +77,11 @@ import type {
   UserPreferencesRecord,
 } from "@/lib/finance/types"
 import { getCurrentPeriod } from "@/lib/finance/period"
-import { getOrderedPotLayout, type PotCardSize } from "@/lib/finance/pot-layout"
+import {
+  applyPotLayoutChange,
+  getOrderedPotLayout,
+  type PotLayoutChange,
+} from "@/lib/finance/pot-layout"
 import {
   parseUiPreferences,
   type UiPreferences,
@@ -4379,10 +4383,9 @@ export async function updateUiPreferences(
   )
 }
 
-export async function savePotCardSize(
+export async function savePotLayoutChange(
   userId: string,
-  potId: string,
-  size: PotCardSize,
+  change: PotLayoutChange,
 ) {
   return withFinanceTransaction(userId, async (client) => {
     const profile = await client.query<{ ui_preferences: unknown }>(
@@ -4402,13 +4405,17 @@ export async function savePotCardSize(
       [userId],
     )
     const potIds = pots.rows.map(({ id }) => id)
-    if (!potIds.includes(potId)) {
+    if (
+      !potIds.includes(change.potId) ||
+      (change.type === "move" && !potIds.includes(change.targetId))
+    ) {
       throw new Error("Pot not found.")
     }
 
     const preferences = parseUiPreferences(profile.rows[0].ui_preferences)
-    const potLayout = getOrderedPotLayout(potIds, preferences.potLayout).map(
-      (entry) => (entry.potId === potId ? { potId, size } : entry),
+    const potLayout = applyPotLayoutChange(
+      getOrderedPotLayout(potIds, preferences.potLayout),
+      change,
     )
 
     return (await writeUiPreferences(client, userId, { potLayout })).potLayout

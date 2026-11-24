@@ -185,14 +185,23 @@ Reference patterns:
 
 ### Pots
 
-- Use up to three pot columns based on the available content width. Use the
-  default card background for every pot and start in creation order.
+- Use up to three pot columns based on the available content width. Start in
+  creation order. Use the solid accent background with white content and
+  white action buttons for highlighted pots. Keep the assigned pot color on
+  the dot beside its name.
 - In the three-column layout on devices with a fine pointer, show a resize grip
   in the bottom-right corner on hover and keyboard focus. Offer one cell, two
   columns, or two rows. Show the new grid during the drag and save the size on
   release. Respect reduced motion when the grid reflows.
-- Store pot sizes and order in `profiles.ui_preferences`. Use the saved order
-  across screen sizes and render single-cell cards on smaller layouts.
+- In the same layout, overlay a move grip at the top center on hover and
+  keyboard focus. Spring cards into their new positions during the drag, scroll
+  near the top or bottom of the viewport, and save the order on release.
+- Use a star beside the item menu to toggle a pot highlight. Show it on desktop
+  hover and keyboard focus and keep it visible on smaller layouts and touch
+  screens.
+- Store pot sizes, highlights, and order in `profiles.ui_preferences`. Use the
+  saved order across screen sizes. Apply saved card sizes on two- and
+  three-column grids, and render single-cell cards in the one-column layout.
 - Use a primary card for Total Savings and default cards for the Active Goals
   and Goals Completed counts.
 
